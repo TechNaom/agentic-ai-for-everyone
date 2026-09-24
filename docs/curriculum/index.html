@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agentic AI for Everyone Roadmap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">Home</a>
+      <a href="CURRICULUM_MAP.md">Markdown roadmap</a>
+      <a href="https://github.com/TechNaom/agentic-ai-for-everyone">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <h1>Roadmap</h1>
+  <p class="lede">
+    The course teaches the autonomous agent loop as a system: chapters
+    grouped into modules, each ending with exercises, a practice bank,
+    interview prep, and (where the curriculum map assigns one) a
+    project. Hands-on chapters that need a real model run against
+    Ollama by default — zero API cost, zero API key — with a documented
+    option to swap in a hosted provider instead.
+  </p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h3>Module 1: Foundations of the Agent Loop — In Progress</h3>
+      <p>What makes something an "agent" instead of a single model call, and how to break a goal into steps.</p>
+      <p><strong>Outcome:</strong> build and run a minimal agent loop; decompose and re-plan a multi-step goal.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Module 2: Giving Agents Capabilities — Planned</h3>
+      <p>Tool use and memory — how an agent acts on the world and carries state across steps.</p>
+      <p><strong>Outcome:</strong> design a tool-calling interface with real error handling; design a memory architecture with a defensible short-term/long-term split.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Module 3: Making Agents Reliable — Planned</h3>
+      <p>An agent that notices and corrects its own mistakes, and stays inside safe bounds while doing it.</p>
+      <p><strong>Outcome:</strong> add a reflection/self-correction loop; design guardrails mapped to specific failure modes.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Module 4: Measuring and Controlling Agents — Planned</h3>
+      <p>Knowing whether an agent is actually working, and keeping it affordable and fast.</p>
+      <p><strong>Outcome:</strong> design a reliability/observability plan; apply cost- and latency-control techniques.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Module 5: Multi-Agent Systems — Planned</h3>
+      <p>When and how to coordinate more than one agent, and running one in production.</p>
+      <p><strong>Outcome:</strong> choose and implement a multi-agent coordination pattern; operate an agent system in a production-shaped setting.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Module 6: Architecture and Capstone — Planned</h3>
+      <p>Architect-level synthesis — designing and defending a complete agent system.</p>
+      <p><strong>Outcome:</strong> design and defend a complete autonomous agent system architecture.</p>
+    </div>
+  </div>
+
+  <h2>Chapter Path</h2>
+  <div class="chapter-grid">
+    <a class="chapter-card" data-chapter-link="chapter-01" href="../../chapters/chapter-01-the-agent-loop-building-your-first-autonomous-agent/lesson.html"><span class="chapter-card-num">Chapter 1 — Live</span><h3>The Agent Loop: Building Your First Autonomous Agent</h3><p>Perception, reasoning, action, observation — the loop every agent in this course builds on.</p></a>
+    <div class="chapter-card" data-chapter-link="chapter-02"><span class="chapter-card-num">Chapter 2 — Planned</span><h3>Planning and Task Decomposition</h3><p>Breaking a goal into steps, re-planning on failure, fixed plans vs. emergent ReAct-style planning.</p></div>
+    <div class="chapter-card" data-chapter-link="chapter-03"><span class="chapter-card-num">Chapter 3 — Planned</span><h3>Tool Use and Function Calling</h3><p>Choosing the right tool, forming correct arguments, and handling tool failure.</p></div>
+    <div class="chapter-card" data-chapter-link="chapter-04"><span class="chapter-card-num">Chapter 4 — Planned</span><h3>Memory and State</h3><p>Short-term working memory vs. long-term persisted memory, and their real engineering trade-offs.</p></div>
+    <div class="chapter-card" data-chapter-link="chapter-05"><span class="chapter-card-num">Chapter 5 — Planned</span><h3>Reflection and Self-Correction</h3><p>An agent noticing and fixing its own mistakes, as a designed architectural component.</p></div>
+    <div class="chapter-card" data-chapter-link="chapter-06"><span class="chapter-card-num">Chapter 6 — Planned</span><h3>Guardrails and Safety for Autonomous Agents</h3><p>Iteration bounds, human approval, sandboxing, and rate limiting, mapped to the failures each one stops.</p></div>
+    <div class="chapter-card" data-chapter-link="chapter-07"><span class="chapter-card-num">Chapter 7 — Planned</span><h3>Evaluating Agent Reliability</h3><p>What makes agent behavior measurable, and what to log — the systems-design side of agent evaluation.</p></div>
+    <div class="chapter-card" data-chapter-link="chapter-08"><span class="chapter-card-num">Chapter 8 — Planned</span><h3>Cost and Latency Control of Agent Loops</h3><p>Iteration bounding, model tiering, caching, and early exit for a bounded, affordable agent loop.</p></div>
+    <div class="chapter-card" data-chapter-link="chapter-09"><span class="chapter-card-num">Chapter 9 — Planned</span><h3>Multi-Agent Orchestration Patterns</h3><p>Supervisor/worker, pipeline, and debate/critique patterns, and when each earns its complexity.</p></div>
+    <div class="chapter-card" data-chapter-link="chapter-10"><span class="chapter-card-num">Chapter 10 — Planned</span><h3>Multi-Agent Coordination and Communication</h3><p>Message passing between agents, and the new failure modes (miscommunication, duplicated work, deadlock).</p></div>
+    <div class="chapter-card" data-chapter-link="chapter-11"><span class="chapter-card-num">Chapter 11 — Planned</span><h3>Operating Agents in Production</h3><p>Retries, timeouts, structured logging, and operating a multi-agent system for real.</p></div>
+    <div class="chapter-card" data-chapter-link="chapter-12"><span class="chapter-card-num">Chapter 12 — Planned</span><h3>Designing Agent Architectures</h3><p>Architect-level synthesis: choosing a full agent architecture for a given problem.</p></div>
+    <div class="chapter-card" data-chapter-link="chapter-13"><span class="chapter-card-num">Chapter 13 — Planned</span><h3>Capstone: Designing and Defending an Autonomous Agent System</h3><p>A Level 4 architecture challenge composing loop design, planning, tools, memory, guardrails, evaluation, and cost control into one system.</p></div>
+  </div>
+
+  <p class="lede">
+    Chapter 1 is live end to end, opening Module 1. Chapters 2-13 are
+    scaffolded (<code>.gitkeep</code>'d directories under
+    <code>chapters/</code>) and planned per
+    <a href="CURRICULUM_MAP.md">CURRICULUM_MAP.md</a>, not yet
+    built — see <code>PROJECT_STATE.md</code> for the current,
+    authoritative build status and the next recommended session's task.
+  </p>
+
+  <h2>Canonical Source</h2>
+  <p>
+    The editable roadmap lives in
+    <a href="CURRICULUM_MAP.md">CURRICULUM_MAP.md</a>. Keep this page and
+    <code>assets/chapters-data.js</code> aligned as chapters are built.
+  </p>
+</main>
+
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

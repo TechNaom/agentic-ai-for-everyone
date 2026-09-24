@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 1 Project: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design SlipBot's guard yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-01">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the project</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 1 Project &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already built SlipBot's loop yourself. Now try the reverse: describe the same task to an AI assistant without showing it your own solution, and review what it hands back with the same scrutiny you'd bring to a teammate's pull request before merging it into Wavecrest Marina's real system.</p>
+  </div>
+
+  <h2>Step 1: Have the AI build it independently</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to specify the guard requirement explicitly and concretely (what should happen at max_iterations, and what the return value should be) or the AI is likely to produce a loop that "mostly works" on the happy path but handles the runaway case ambiguously — exactly the class of gap this exercise is designed to surface.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write a Python agent loop function run_agent(slip_id, model, max_iterations=4) that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this project's own solution.py.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write a Python function run_agent(slip_id, model, max_iterations=4) implementing an agent loop. `model` has a .step(iteration, slip_id, last_observation) method returning an object with .content and .tool_calls (a list of objects with .function.name and .function.arguments, a JSON string). If .tool_calls is empty, that's the final answer -- return (content, trace). Otherwise, for each tool call: parse the arguments, execute the matching function from a TOOL_IMPLS dict, append (name, args, result) to a trace list, and use the last result as last_observation for the next .step() call. If max_iterations is reached with no final answer, return (None, trace). Do not use any agent framework.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 2: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated loop tends to get wrong</span>
+    <ul>
+      <li><strong>Off-by-one on the guard.</strong> A common mistake is looping <code>max_iterations + 1</code> times, or returning <code>(None, trace)</code> one iteration too early or late — compare the returned <code>trace</code>'s length against <code>max_iterations</code> exactly, the same way Check 4 in this project's own self-check does.</li>
+      <li><strong>Silently swallowing a bad tool name.</strong> If <code>call.function.name</code> isn't in <code>TOOL_IMPLS</code>, does the generated code raise a clear error, or does it crash with an unhelpful <code>KeyError</code> three call frames deep? Neither is wrong per se, but an AI's first draft often doesn't handle this case at all.</li>
+      <li><strong>Forgetting to update <code>last_observation</code> across multiple tool calls in one turn.</strong> If a turn requests more than one tool call, which result becomes "the" last observation for the next step? The generated code should make a deliberate choice here, not an accidental one.</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against <code>solution.py</code> in this same folder. Where do they differ? Is the AI's version genuinely equivalent, or does it handle one of the three watch-outs above differently — and is that difference actually a bug, or a legitimate different design choice?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Project</a>
+    <a href="../../../docs/curriculum/index.html">Back to Roadmap &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

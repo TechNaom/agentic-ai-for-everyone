@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agentic AI for Everyone — Free, Interactive Agent Engineering Course</title>
+<meta name="description" content="A free, visual, engineering-first course on designing, building, and operating autonomous AI agents: the agent loop, planning, tool use, memory, reflection, guardrails, multi-agent orchestration, and reliability/cost control.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="#chapters">All Chapters</a>
+      <a href="docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="page">
+    <span class="hero-eyebrow">Free · in progress · open-source by default</span>
+    <h1>Give an LLM a loop, and it becomes an agent.</h1>
+    <p class="lede">
+      A 13-chapter course on designing, building, and operating
+      autonomous AI agents as systems: the agent loop (perception,
+      reasoning, action, observation), planning and task decomposition,
+      tool use and function calling, memory and state, reflection and
+      self-correction, guardrails and safety for autonomous systems,
+      multi-agent orchestration and coordination, and the reliability
+      and cost discipline of running an agent loop in production.
+    </p>
+    <div class="hero-badges">
+      <span>Plain-language first</span>
+      <span>Every guardrail tied to a real failure mode</span>
+      <span>Zero-cost by default</span>
+      <span>Interview-ready</span>
+    </div>
+    <div class="action-row">
+      <a href="chapters/chapter-01-the-agent-loop-building-your-first-autonomous-agent/lesson.html" class="btn-primary">Start Chapter 1</a>
+      <a href="#chapters" class="btn-secondary">Browse chapters</a>
+    </div>
+    <div class="hero-stats">
+      <div><strong>1</strong><span>of 13 chapters live</span></div>
+      <div><strong>1</strong><span>of 6 modules started</span></div>
+      <div><strong>0</strong><span>API key required</span></div>
+      <div><strong>0</strong><span>signup required</span></div>
+    </div>
+  </div>
+</section>
+
+<main class="page">
+  <h2>Why This Course Is Different</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h3>The Loop, Not One Model Call</h3>
+      <p>`ai-engineering-for-everyone` teaches prompting and fixed pipelines. This course teaches what happens once the model itself decides, iteratively, what to do next -- and how to keep that loop correct, safe, and bounded.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Architecture, Not One Domain or One Protocol</h3>
+      <p>`ai-coding-agents-for-everyone` builds a coding-specific agent; `mcp-for-everyone` teaches a tool-transport protocol. This course teaches the general loop, planning, memory, and multi-agent architecture underneath any domain or protocol.</p>
+    </div>
+    <div class="feature-card">
+      <h3>Reliability and Cost as Systems Problems</h3>
+      <p>An agent that can act on its own needs guardrails, observability, and cost control as first-class design concerns -- not an afterthought bolted on once something breaks in production.</p>
+    </div>
+  </div>
+
+  <section id="chapters" class="course-map" aria-labelledby="chapters-title">
+    <div class="section-heading-row">
+      <div>
+        <span class="section-kicker">Learning path, in progress</span>
+        <h2 id="chapters-title">All Chapters</h2>
+      </div>
+      <a href="docs/curriculum/index.html" class="section-link">Open roadmap</a>
+    </div>
+    <p class="section-intro">
+      Chapter 1 is live end to end -- lesson, quiz, exercises, practice
+      bank, interview prep, and a full graded L1 project -- opening
+      Module 1 (Foundations of the Agent Loop). Chapters 2-13 are
+      planned and scaffolded (see the roadmap), covering Module 2
+      (Giving Agents Capabilities), Module 3 (Making Agents Reliable),
+      Module 4 (Measuring and Controlling Agents), Module 5 (Multi-Agent
+      Systems), and Module 6 (Architecture and Capstone). The sidebar
+      and this chapter map are connected to the same course data. See
+      <a href="https://github.com/TechNaom/agentic-ai-for-everyone/blob/main/PROJECT_STATE.md">PROJECT_STATE.md</a>
+      for build history and status.
+    </p>
+    <div id="chapter-map" class="module-list" aria-live="polite"></div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+    <span><a href="https://github.com/TechNaom/agentic-ai-for-everyone">github.com/TechNaom/agentic-ai-for-everyone</a></span>
+  </div>
+</footer>
+
+<script src="assets/chapters-data.js"></script>
+<script src="assets/progress.js"></script>
+<script src="assets/sidebar.js"></script>
+<script src="assets/home.js"></script>
+</body>
+</html>

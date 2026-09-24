@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 1 Project: SlipBot — Agentic AI for Everyone</title>
+<meta name="description" content="L1 Guided project: build and trace a minimal agent loop for Wavecrest Marina's SlipBot.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-01">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../interview-questions.html">&larr; Back to interview questions</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 1 Project &middot; L1 Guided</span>
+    <span class="reading-time">~45 min</span>
+  </div>
+  <h1>Project: Build and Trace a Minimal Agent Loop</h1>
+  <p>
+    <strong>Wavecrest Marina</strong> wants <strong>SlipBot</strong>, an
+    agent that answers boat-slip availability questions using one tool,
+    <code>check_slip_availability(slip_id)</code>. Complete the
+    three-<code>TODO</code> <code>run_agent()</code> scaffold in
+    <code>starter.py</code> so it correctly runs the perception,
+    reasoning, action, observation loop from the lesson &mdash; including
+    surviving a model that never stops requesting a tool.
+  </p>
+
+  <div class="what-is">
+    <span class="label">Why a fake model, not live Ollama</span>
+    This project is gradable the same way everywhere, including CI with
+    no Ollama server running. A deterministic <code>FakeModel</code>
+    plays both the happy path and the runaway-loop failure mode from
+    Section 10 of the lesson. Once your self-check passes,
+    <code>README.md</code> shows how to swap in the real
+    <code>openai</code>-against-Ollama client for the full live
+    experience.
+  </div>
+
+  <h2>The three TODOs</h2>
+  <ol>
+    <li><strong>TODO 1</strong> &mdash; recognize a final answer (no <code>tool_calls</code>) and return it.</li>
+    <li><strong>TODO 2</strong> &mdash; execute every requested tool call, trace it, and feed the observation back in.</li>
+    <li><strong>TODO 3</strong> &mdash; the guard: halt cleanly at <code>max_iterations</code>.</li>
+  </ol>
+
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+
+  <p>Full instructions in <code>README.md</code>, self-grading criteria in <code>RUBRIC.md</code>, and the fully filled-in reference in <code>solution.py</code> (passes all 4 self-checks).</p>
+
+  <div class="chapter-nav">
+    <a href="ai-paired.html">Now Pair With an AI &rarr;</a>
+    <a href="../../../docs/curriculum/index.html">Back to Roadmap &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

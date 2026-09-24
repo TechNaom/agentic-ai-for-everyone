@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Agent Loop Exercises — Agentic AI for Everyone</title>
+<meta name="description" content="Hands-on exercises for The Agent Loop: Building Your First Autonomous Agent.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-01">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../quiz.html">&larr; Back to the quiz</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 1 Exercises</span>
+    <span class="reading-time">~40 min, hands-on</span>
+  </div>
+  <h1>Exercises: The Agent Loop</h1>
+  <p>
+    These exercises use a second scenario, deliberately different from
+    the lesson's Northbeam Outdoors/TrailBot hook:
+    <strong>Summit Gear Co-op</strong>, a fictional camping-gear rental
+    shop. Its agent, <strong>GearBot</strong>, answers questions using
+    two tools: <code>check_availability</code> (is an item in stock)
+    and <code>get_rental_price</code> (its daily rental price). Applying
+    this chapter's concepts to a fresh scenario is the point.
+  </p>
+
+  <div class="what-is">
+    <span class="label">Exercise standard</span>
+    Eight tasks total, worth 17 points. Five are marked production-gear
+    — writing a real tool schema, fixing a real wrong-argument bug,
+    implementing a real iteration guard, diagnosing a real failure
+    trace, and adding a real timeout budget, not just concept recall.
+  </div>
+
+  <h2>Tasks</h2>
+  <ol>
+    <li><strong>Map failures to loop concepts</strong> — assign perception, reasoning, action, observation, or guard to five GearBot failures.</li>
+    <li><strong>Loop-dependency reasoning</strong> — does a missing observation make a runaway loop more or less likely?</li>
+    <li><strong>(Production-gear) Tool schema</strong> — describe <code>get_return_date</code> as a real JSON schema.</li>
+    <li><strong>(Production-gear) Normalize fix</strong> — tolerate a realistic wrong-argument variation.</li>
+    <li><strong>(Production-gear) Iteration guard</strong> — make a loop halt on a model that never stops.</li>
+    <li><strong>(Production-gear) Failure diagnosis</strong> — correctly name a hallucination-despite-observation failure.</li>
+    <li><strong>(Production-gear) Timeout budget</strong> — raise <code>TimeoutError</code> past a budget.</li>
+    <li><strong>Completeness check</strong> — confirm all five loop concepts were actually used.</li>
+  </ol>
+
+  <p>Full instructions and the scoring rubric are in <code>README.md</code> alongside <code>starter.py</code> (fill in the <code>TODO</code>s) and <code>solution.py</code> (the reference, scores 17/17).</p>
+
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+
+  <div class="chapter-nav">
+    <a href="ai-paired.html">Now Pair With an AI &rarr;</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

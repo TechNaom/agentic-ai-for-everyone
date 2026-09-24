@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 1 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose a ninth scenario yourself, then critique an AI's plausible-but-flawed answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-01">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 1 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, not in the eight above: <strong>"ConciergeBot"</strong> at a fictional apartment complex answers maintenance questions using one tool, <code>get_ticket_status(ticket_id)</code>. A resident asks "what's the status of my maintenance request," and ConciergeBot calls <code>get_ticket_status({"ticket_id": "my request"})</code> — a string that was never a real ticket ID, just the resident's own phrasing carried through. The lookup returns <code>{"error": "not found"}</code>, and ConciergeBot tells the resident "your request is being processed," inventing a status it never actually retrieved.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>Before reading further: is this a wrong-tool-choice failure, a wrong-argument failure, or a hallucinated-result failure — and is it possibly more than one at once? Write your own answer before moving on.</p>
+
+  <h2>Step 2: Ask an AI assistant</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> this scenario has two layered problems (a bad argument AND a fabricated final answer), so the prompt needs to ask the AI to identify both, not just one — a shallow prompt like "what's wrong with this agent" invites a single, incomplete answer.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here's a trace from my agent ConciergeBot... identify every distinct failure in this single exchange, not just one..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice and compare its answer against the critique below.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Here's one exchange from my agent ConciergeBot, which has one tool, get_ticket_status(ticket_id): [paste the scenario above]. Identify EVERY distinct failure in this single exchange, not just the first one you notice -- there may be more than one -- and name each using this chapter's vocabulary (wrong tool choice, wrong argument, or hallucinated result despite/without a real observation). Propose a concrete fix for each failure you find.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <div class="what-is">
+    <span class="label">What a complete diagnosis catches</span>
+    <ul>
+      <li><strong>Failure 1 (wrong argument):</strong> <code>"my request"</code> was never a real ticket ID — the tool needed the resident's actual ticket number, and nothing in the conversation extracted or asked for one before calling the tool.</li>
+      <li><strong>Failure 2 (hallucinated result):</strong> the tool came back with an explicit <code>{"error": "not found"}</code> — a real, honest observation — and ConciergeBot's final answer ignored it entirely, inventing "being processed" instead of relaying the actual error or asking the resident for a valid ticket ID.</li>
+      <li>A shallow AI answer often catches only Failure 2 (the more visible, more dramatic-sounding one) and misses that Failure 1 is the reason Failure 2's observation was an error in the first place — they're connected, not independent.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's answer against your own Step 1 notes and the two-failure breakdown above. Did it catch both? Did it connect them, or treat them as unrelated?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice Bank</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

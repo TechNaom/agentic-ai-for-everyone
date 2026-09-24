@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 1: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose Fernbrook Ski Patrol's LiftBot agent-loop bugs yourself, then critique an AI's plausible-but-flawed diagnosis of the same scenario.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-01">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the exercises</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 1 &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked the exercises yourself on Summit Gear Co-op's GearBot. Now a third scenario, <strong>Fernbrook Ski Patrol</strong> (a fictional resort operations team) and its lift-status agent <strong>LiftBot</strong>, gets diagnosed a second way: by prompting an AI assistant, and reviewing what it hands back with the same skepticism you'd bring to a coworker's write-up before it ships to the lift operations lead.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>LiftBot has two tools, <code>get_lift_status(lift_name)</code> and <code>get_wait_time(lift_name)</code>. Fernbrook's ops lead reports three real, observed problems:</p>
+  <ol>
+    <li>LiftBot answered "Is the Summit Express lift running?" by calling <code>get_lift_status({"lift_name": "Summit Express lift"})</code> against data keyed as <code>"summit express"</code>, and got back <code>{"error": "not found"}</code> &mdash; then told the guest "I don't have current lift data" instead of retrying with a cleaned-up name.</li>
+    <li>During a stress test, a developer disconnected the tool's backing database mid-call. LiftBot's loop had no <code>max_iterations</code>, and it re-requested <code>get_lift_status</code> forever, since a connection error isn't a "final answer with no tool_calls."</li>
+    <li>LiftBot's system prompt says "Answer skiing questions helpfully," with no mention of the two tools' names or what they check — and it frequently answers "is the gondola open" by guessing from general skiing knowledge instead of calling <code>get_lift_status</code> at all.</li>
+  </ol>
+  <p>Before reading further, write your own diagnosis: for each of the three problems, name the concept it's really about (wrong-argument failure, missing guard, or a tool-description/reasoning gap) and propose one concrete fix. Use a notes app or scratch file — there's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant the same question</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to hand over all three problems with their real, specific evidence — not a vague "why is my agent broken" — or the AI has nothing concrete to diagnose and will produce generic advice instead of a checkable answer.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here are three observed bugs in my agent's tool-calling loop... diagnose each one and propose a fix..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into Claude, ChatGPT, Copilot, or whatever assistant you use, and compare what it builds against this page's own critique in Step 3.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>I have an agent called LiftBot with two tools, get_lift_status(lift_name) and get_wait_time(lift_name). Here are three real, observed problems: [paste the three numbered problems above verbatim]. For each problem, name which agent-loop concept it's really about (wrong-argument failure, missing iteration guard, or a tool-description/reasoning gap) and propose one concrete, specific code-level fix for each -- not a general "be more careful" suggestion.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <p>A plausible-but-flawed AI answer to this exact prompt tends to make three specific mistakes worth watching for:</p>
+  <div class="what-is">
+    <span class="label">Common AI diagnosis mistakes on this scenario</span>
+    <ul>
+      <li><strong>Mislabeling Problem 1 as a "wrong tool choice."</strong> LiftBot picked the <em>correct</em> tool (<code>get_lift_status</code>) — the argument value just didn't match the data's exact key. A generic-sounding answer often says "the model should have picked a different tool," which is wrong; the real fix (a normalize step in the tool, per Section 9 of the lesson) never gets proposed if the diagnosis itself is wrong.</li>
+      <li><strong>Proposing "add a retry" for Problem 2 without also proposing a hard cap.</strong> A retry on a connection error is reasonable, but without <code>max_iterations</code> as well, a persistent connection failure still loops forever — a subtler version of exactly the same guard-missing bug.</li>
+      <li><strong>Treating Problem 3 as a prompting issue only.</strong> A vague system prompt is part of it, but the real, specific fix from this chapter is a better <em>tool description</em> (Section 4) — the field the model actually uses to decide whether a tool applies — not just a longer system message.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's actual answer against your own Step 1 notes and the three watch-outs above. Which one(s) did it get right? Which, if any, did it get wrong the way described here? That comparison — not the AI's fluency — is the real test.</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Exercises</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

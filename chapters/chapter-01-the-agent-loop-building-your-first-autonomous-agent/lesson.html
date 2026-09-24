@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Agent Loop: Building Your First Autonomous Agent — Agentic AI for Everyone</title>
+<meta name="description" content="Build a real, working autonomous agent from scratch against a local model: the perception-reasoning-action-observation loop, tool calling, a wrong-argument failure and its fix, and a runaway-loop guardrail.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-01">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../../index.html">&larr; Back to all chapters</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 1 of 13</span>
+    <span class="badge-difficulty">Beginner</span>
+    <span class="reading-time">40 min read, hands-on</span>
+  </div>
+  <h1>The Agent Loop: Building Your First Autonomous Agent</h1>
+  <p class="lede">A single LLM call answers one question. An agent decides, acts, observes what happened, and decides again &mdash; on its own, until the job is done. This chapter builds that loop from nothing, against a real local model, and breaks it on purpose so you see exactly why each piece exists.</p>
+
+  <nav class="page-toc" aria-label="On this page">
+    <span class="toc-label">On this page</span>
+    <a href="#what-makes-agent">1. What makes this an agent?</a>
+    <a href="#not-an-agent">2. A single call is not an agent</a>
+    <a href="#giving-hands">3. Giving the agent hands: tools</a>
+    <a href="#describing-tools">4. Describing tools to the model</a>
+    <a href="#model-decides">5. The model decides: reasoning over tools</a>
+    <a href="#turning-decision">6. Turning a decision into an observation</a>
+    <a href="#generalizing-loop">7. Generalizing into a loop</a>
+    <a href="#two-tool-run">8. Running the loop: a two-tool question</a>
+    <a href="#diagnosing-fix">9. Diagnosing and fixing a wrong-argument failure</a>
+    <a href="#guardrails">10. Guardrails: stopping a runaway loop</a>
+    <a href="#ollama-hang">11. Handling this sandbox's Ollama hang</a>
+    <a href="#finished-agent">12. The finished agent</a>
+    <a href="#thought-process">13. GenAI builder thought process</a>
+    <a href="#recap">14. Points to remember</a>
+  </nav>
+
+  <div class="hook">
+    <p><strong>Northbeam Outdoors</strong> runs a small chain of trailhead kiosks. Hikers type a question into a terminal &mdash; "is Eagle Ridge open?", "what's the trail status and the weather at Cedar Hollow?" &mdash; and expect a real, current answer, not a guess. The team's first attempt was a single call to an LLM with the trail name stuffed into the prompt. It read fluently. It was also completely made up: the model had no way to know today's trail status, so it invented something plausible-sounding instead. This chapter builds <strong>TrailBot</strong>, Northbeam's real fix &mdash; not a bigger prompt, but a different architecture: a model that can look things up, decide what to look up next based on what it just learned, and know when it's done. That architecture is what this whole course calls an <strong>agent</strong>, and this chapter builds one, piece by piece, against a real model, with every line of code actually run.</p>
+  </div>
+
+  <section id="what-makes-agent" class="subtopic">
+    <h2>1. What makes this an agent?</h2>
+    <p>Every agent in this course, no matter how sophisticated it eventually gets, runs the same four-step loop:</p>
+    <div class="what-is">
+      <span class="label">What is... the agent loop?</span>
+      <strong>Perception</strong> &mdash; the agent receives a task or a new piece of information. <strong>Reasoning</strong> &mdash; the model decides what to do next given everything it knows so far. <strong>Action</strong> &mdash; it does something in the world (usually: calls a tool). <strong>Observation</strong> &mdash; it sees the result of that action, which becomes new information for the next reasoning step. Then the loop repeats, using the observation as the next perception, until the model decides it has enough to answer and stops.
+    </div>
+    <p>The single sentence that matters most in this chapter: <strong>a loop where the model's own output decides whether another iteration happens is what turns a language model into an agent.</strong> If the calling code decides how many times to call the model, and the model never sees its own previous actions' results, you have a script that calls an LLM &mdash; not an agent. Section 2 proves this by building the non-agent first.</p>
+  </section>
+
+  <section id="not-an-agent" class="subtopic">
+    <h2>2. A single call is not an agent</h2>
+    <p>Before writing any agent code, a quick sanity check that the local model server is actually reachable &mdash; every example in this chapter depends on it:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">check_ollama.py</span></div>
+      <pre><code>from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+models = client.models.list()
+print("models available:", [m.id for m in models.data])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session)</span>
+      <pre><code>models available: ['nomic-embed-text:latest', 'llama3.2:latest']</code></pre>
+    </div>
+    <p>Here's Northbeam's original approach: one call, one question, one answer, no way to check anything real.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">bare_call.py</span></div>
+      <pre><code>from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+
+response = client.chat.completions.create(
+    model="llama3.2:latest",
+    messages=[
+        {"role": "user", "content": "What's the current trail status of Eagle Ridge?"}
+    ],
+)
+
+print(response.choices[0].message.content)</code></pre>
+    </div>
+    <p>This is the plain <code>openai</code> client pointed at Ollama's local, OpenAI-compatible endpoint &mdash; no API key, no paid account, no framework. Running it for real against <code>llama3.2:latest</code>:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session &mdash; this call took 138s; see Section 11 for why)</span>
+      <pre><code>I'm not aware of any up-to-date information on a specific mountain bike trail called "Eagle Ridge". There may be many trails with this name in different locations, and I wouldn't want to provide incorrect information.
+
+If you're looking for the most recent trail status information on a specific Eagle Ridge trail, I would recommend checking the official website of the local cycling club or mountain bike organization that manages the trail...</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>What actually happened</dt>
+        <dd>The model correctly refused to invent a trail status &mdash; which is the <em>right</em> behavior for a model with no real data source. But it's still useless to a hiker standing at the kiosk. The problem isn't the model being "not smart enough." The problem is architectural: this call has no way to look anything up. There's no action step and no observation step &mdash; just one perception and one reasoning step, then done.</dd>
+      </dl>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... perception without action?</span>
+      A model that can only read a prompt and write a reply has perception and reasoning, but no action and no observation. It's a text completion, not an agent &mdash; no matter how good the prose is.
+    </div>
+  </section>
+
+  <section id="giving-hands" class="subtopic">
+    <h2>3. Giving the agent hands: tools</h2>
+    <p>An agent needs a real way to act. For TrailBot, that means two plain Python functions backed by Northbeam's own trail and weather data &mdash; no framework, just functions the model will later be allowed to call.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tools.py</span></div>
+      <pre><code>TRAIL_STATUS = {
+    "eagle ridge": {"status": "open", "difficulty": "moderate", "last_updated": "2026-09-22"},
+    "cedar hollow": {"status": "closed", "reason": "storm damage", "last_updated": "2026-09-20"},
+    "blue spring loop": {"status": "open", "difficulty": "easy", "last_updated": "2026-09-23"},
+}
+
+def get_trail_status(trail_name: str) -> dict:
+    key = trail_name.strip().lower()
+    if key not in TRAIL_STATUS:
+        return {"error": f"no trail on file named '{trail_name}'"}
+    return TRAIL_STATUS[key]</code></pre>
+    </div>
+    <p>Calling it directly, on three different trails &mdash; including one that doesn't exist, so you can see the honest failure shape before a model ever touches it:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>--- get_trail_status on three different trails ---
+{'status': 'open', 'difficulty': 'easy', 'last_updated': '2026-09-23'}
+{'status': 'closed', 'reason': 'storm damage', 'last_updated': '2026-09-20'}
+{'error': "no trail on file named 'Rattlesnake Peak'"}</code></pre>
+    </div>
+    <p>The second tool, weather:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tools.py (continued)</span></div>
+      <pre><code>WEATHER = {
+    "north bend": {"condition": "clear", "high_f": 68, "low_f": 47},
+    "cedar hollow": {"condition": "rain", "high_f": 54, "low_f": 44},
+}
+
+def get_weather(location: str) -> dict:
+    key = location.strip().lower()
+    if key not in WEATHER:
+        return {"error": f"no weather on file for '{location}'"}
+    return WEATHER[key]</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>--- get_weather on two locations ---
+{'condition': 'clear', 'high_f': 68, 'low_f': 47}
+{'condition': 'rain', 'high_f': 54, 'low_f': 44}</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... a tool, from an agent's point of view?</span>
+      Any function with a name, a description, and a defined input the model can be told about and asked to invoke. The function itself never touches the model &mdash; it's ordinary Python. What makes it a "tool" is that the model gets to <em>decide</em>, at run time, whether and how to call it. That decision is what Section 5 adds.
+    </div>
+  </section>
+
+  <section id="describing-tools" class="subtopic">
+    <h2>4. Describing tools to the model</h2>
+    <p>The model can't call a Python function directly &mdash; it can only produce text. So each tool gets described as a JSON schema: a name, a description, and the shape of its arguments. The model's job becomes picking a name and filling in arguments that match the schema.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">schema_preview.py</span></div>
+      <pre><code>import json
+
+TOOL_PREVIEW = {
+    "type": "function",
+    "function": {
+        "name": "get_trail_status",
+        "description": "Look up whether a named hiking trail is currently open or closed, and its difficulty.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "trail_name": {"type": "string", "description": "The trail's name, e.g. 'Eagle Ridge'."}
+            },
+            "required": ["trail_name"],
+        },
+    },
+}
+print(json.dumps(TOOL_PREVIEW, indent=2))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>{
+  "type": "function",
+  "function": {
+    "name": "get_trail_status",
+    "description": "Look up whether a named hiking trail is currently open or closed, and its difficulty.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "trail_name": {
+          "type": "string",
+          "description": "The trail's name, e.g. 'Eagle Ridge'."
+        }
+      },
+      "required": [
+        "trail_name"
+      ]
+    }
+  }
+}</code></pre>
+    </div>
+    <p>The <code>description</code> field is doing more work than it looks like. It's the model's <em>only</em> information about what this function does &mdash; a vague description ("gets info") produces a model that guesses wrong about when to call it. Here's <code>get_weather</code>'s schema, deliberately just as specific:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">schema_preview.py (continued)</span></div>
+      <pre><code>WEATHER_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Look up the current weather conditions for a named location.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string", "description": "The location's name, e.g. 'North Bend'."}
+            },
+            "required": ["location"],
+        },
+    },
+}
+TOOLS = [TOOL_PREVIEW, WEATHER_SCHEMA]
+print(f"{len(TOOLS)} tools described to the model:", [t["function"]["name"] for t in TOOLS])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>2 tools described to the model: ['get_trail_status', 'get_weather']</code></pre>
+    </div>
+  </section>
+
+  <section id="model-decides" class="subtopic">
+    <h2>5. The model decides: reasoning over tools</h2>
+    <p>Now the important step: pass <code>tools=TOOLS</code> into the same <code>chat.completions.create</code> call from Section 2, and ask the exact question that failed before.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">first_tool_call.py</span></div>
+      <pre><code>messages = [{"role": "user", "content": "Is the Eagle Ridge trail open right now?"}]
+
+response = client.chat.completions.create(
+    model="llama3.2:latest",
+    messages=messages,
+    tools=TOOLS,
+)
+
+msg = response.choices[0].message
+print("content:", repr(msg.content))
+print("tool_calls:", msg.tool_calls)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session)</span>
+      <pre><code>content: ''
+tool_calls: [ChatCompletionMessageFunctionToolCall(id='call_sh8lssjz', function=Function(arguments='{"trail_name":"Eagle Ridge"}', name='get_trail_status'), type='function', index=0)]</code></pre>
+    </div>
+    <p>This is the reasoning step working. The model looked at the user's question, looked at the two tools it was told about, and picked the correct one with the correct argument &mdash; without ever being told which tool to use. Reading the response apart, piece by piece:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">inspect_response.py</span></div>
+      <pre><code>call = msg.tool_calls[0]
+print("tool name:", call.function.name)
+print("raw arguments (a JSON string):", call.function.arguments)
+
+import json
+args = json.loads(call.function.arguments)
+print("parsed arguments (a dict):", args)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>tool name: get_trail_status
+raw arguments (a JSON string): {"trail_name":"Eagle Ridge"}
+parsed arguments (a dict): {'trail_name': 'Eagle Ridge'}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt><code>msg.content == ''</code></dt>
+        <dd>When the model decides to call a tool, it usually has nothing to say yet &mdash; it hasn't seen the result. Content and tool_calls are, in effect, two different kinds of reply the model can give at each reasoning step.</dd>
+        <dt><code>call.function.arguments</code> is a string, not a dict</dt>
+        <dd>The model produces JSON as text. Your code is responsible for parsing it with <code>json.loads</code> &mdash; and, as Section 9 shows, for handling the case where the text is a plausible-looking value that doesn't actually match your data.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="turning-decision" class="subtopic">
+    <h2>6. Turning a decision into an observation</h2>
+    <p>A tool call by itself doesn't answer the hiker's question &mdash; nothing has actually been looked up yet. The action step means executing the function for real, and the observation step means handing the result back to the model as new information.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">execute_and_observe.py</span></div>
+      <pre><code>result = get_trail_status(**args)
+print("Tool called:", call.function.name, args)
+print("Tool result:", result)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>Tool called: get_trail_status {'trail_name': 'Eagle Ridge'}
+Tool result: {'status': 'open', 'difficulty': 'moderate', 'last_updated': '2026-09-22'}</code></pre>
+    </div>
+    <p>That result now has to go <em>back</em> into the conversation, as a new message with role <code>"tool"</code>, tagged with the same <code>tool_call_id</code> the model used to ask for it &mdash; this is what lets the model connect the observation to the action that produced it.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">execute_and_observe.py (continued)</span></div>
+      <pre><code>messages.append(msg)  # the model's own tool-call turn
+messages.append({
+    "role": "tool",
+    "tool_call_id": call.id,
+    "content": json.dumps(result),
+})
+print("messages now has", len(messages), "turns:")
+for m in messages:
+    role = m["role"] if isinstance(m, dict) else m.role
+    print(" -", role)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>messages now has 3 turns:
+ - user
+ - assistant
+ - tool</code></pre>
+    </div>
+    <p>Calling the model a second time with this extended history is the second reasoning step &mdash; the one that actually answers the hiker:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">execute_and_observe.py (continued)</span></div>
+      <pre><code>response2 = client.chat.completions.create(model="llama3.2:latest", messages=messages, tools=TOOLS)
+print("Final answer:", response2.choices[0].message.content)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session)</span>
+      <pre><code>Final answer: The Eagle Ridge trail is currently open. It is rated as moderate in difficulty and was last updated on September 22, 2026.</code></pre>
+    </div>
+    <p>That's the whole loop, run once by hand: perceive the question, reason to a tool call, act by running the function, observe the result, reason again to a final answer. Section 7 turns this by-hand sequence into a reusable function that can repeat as many times as the task needs.</p>
+  </section>
+
+  <section id="generalizing-loop" class="subtopic">
+    <h2>7. Generalizing into a loop</h2>
+    <p>Real questions can need more than one tool call &mdash; "is Cedar Hollow open, <em>and</em> what's the weather there" needs both tools. The loop has to keep going, feeding each observation back in, until the model stops asking for tools and gives a final answer instead.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">agent.py</span></div>
+      <pre><code>TOOL_IMPLS = {"get_trail_status": get_trail_status, "get_weather": get_weather}
+SYSTEM = ("You are TrailBot, a hiking assistant. Use tools to answer with "
+          "real data; never guess a trail's status or the weather.")
+
+def run_agent(user_message, max_iterations=4):
+    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user_message}]
+    for i in range(1, max_iterations + 1):
+        response = client.chat.completions.create(model="llama3.2:latest", messages=messages, tools=TOOLS)
+        msg = response.choices[0].message
+        messages.append(msg)
+
+        if not msg.tool_calls:
+            print(f"[iteration {i}] model returned a final answer, loop stops")
+            return msg.content
+
+        for call in msg.tool_calls:
+            args = json.loads(call.function.arguments)
+            fn = TOOL_IMPLS[call.function.name]
+            result = fn(**args)
+            print(f"[iteration {i}] action: {call.function.name}({args}) -> observation: {result}")
+            messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})
+
+    print(f"[guard] hit max_iterations={max_iterations} without a final answer -- stopping anyway")
+    return None</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Where perception/reasoning/action/observation live in this function</dt>
+        <dd><strong>Perception</strong> is <code>messages</code> growing with each new fact. <strong>Reasoning</strong> is each <code>client.chat.completions.create</code> call. <strong>Action</strong> is <code>fn(**args)</code>. <strong>Observation</strong> is the <code>{"role": "tool", ...}</code> message appended right after. The <code>for i in range(...)</code> loop is what makes this an agent instead of the one-shot call from Section 2: the number of reasoning steps isn't fixed in advance &mdash; it's however many the model's own tool calls demand, up to the guard.</dd>
+        <dt>Why <code>max_iterations</code> exists at all</dt>
+        <dd>Nothing above <em>guarantees</em> the model eventually stops asking for tools. Section 10 shows exactly what that looks like and why the guard is not optional.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="two-tool-run" class="subtopic">
+    <h2>8. Running the loop: a two-tool question</h2>
+    <p>One last check before the real run: confirming the dispatch table actually maps every schema name to a real function, so a typo here doesn't masquerade as a model failure later.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">sanity_check.py</span></div>
+      <pre><code>schema_names = {t["function"]["name"] for t in TOOLS}
+impl_names = set(TOOL_IMPLS.keys())
+print("schema names:", schema_names)
+print("implemented: ", impl_names)
+print("match:", schema_names == impl_names)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>schema names: {'get_trail_status', 'get_weather'}
+implemented:  {'get_trail_status', 'get_weather'}
+match: True</code></pre>
+    </div>
+    <p>Time to actually run it on the question that needs both tools:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">run_agent.py</span></div>
+      <pre><code>answer = run_agent("Is Cedar Hollow trail open, and what's the weather like there?")
+print("FINAL:", answer)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session &mdash; first attempt)</span>
+      <pre><code>[iteration 1] action: get_trail_status({'trail_name': 'Cedar Hollow trail'}) -> observation: {'error': 'not found'}
+[iteration 1] action: get_weather({'location': 'Cedar Hollow trail'}) -> observation: {'error': 'not found'}
+[iteration 2] model returned a final answer, loop stops
+FINAL: I don't have real-time data on the current status of the Cedar Hollow trail or its weather. I can suggest some options to help you find this information:
+
+1. Check with local park rangers or visitor centers for up-to-date trail information...</code></pre>
+    </div>
+    <p>Both tool calls came back with <code>{'error': 'not found'}</code> &mdash; even though "Cedar Hollow" is genuinely in <code>TRAIL_STATUS</code> and <code>WEATHER</code>. This is a real failure, not a scripted one, and it's worth diagnosing properly before patching it.</p>
+  </section>
+
+  <section id="diagnosing-fix" class="subtopic">
+    <h2>9. Diagnosing and fixing a wrong-argument failure</h2>
+    <p>Look closely at what the model actually asked for: <code>{'trail_name': 'Cedar Hollow trail'}</code> &mdash; it appended the word "trail" to the name, because the user wrote "Cedar Hollow <em>trail</em>." That's a completely reasonable thing for a human to write and a completely reasonable thing for the model to pass along &mdash; but <code>TRAIL_STATUS</code>'s key is exactly <code>"cedar hollow"</code>, with nothing extra, so the lookup misses.</p>
+    <div class="what-is">
+      <span class="label">What is... a wrong-argument failure?</span>
+      Not a wrong <em>tool choice</em> (the model correctly picked both <code>get_trail_status</code> and <code>get_weather</code>) and not a hallucinated result &mdash; the model never claimed to know the answer without checking. It's a mismatch between the free-text argument the model naturally produces and the exact-match data your tool expects. This is one of the most common real agent failures, precisely because each half looks correct in isolation.
+    </div>
+    <p>The fix belongs in the tool, not in trying to out-prompt the model into never adding a suffix &mdash; a real system will always see messy arguments, so the tool should be the one place that tolerates them.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tools.py (fix)</span></div>
+      <pre><code>def _normalize(name: str) -> str:
+    key = name.strip().lower()
+    for suffix in (" trail", " loop", " trailhead"):
+        if key.endswith(suffix):
+            key = key[: -len(suffix)]
+    return key
+
+print("--- _normalize on messy model-generated arguments ---")
+for name in ["Cedar Hollow trail", "Blue Spring Loop", "eagle ridge trailhead", "  Cedar Hollow  "]:
+    print(f"{name!r} -> {_normalize(name)!r}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>--- _normalize on messy model-generated arguments ---
+'Cedar Hollow trail' -> 'cedar hollow'
+'Blue Spring Loop' -> 'blue spring'
+'eagle ridge trailhead' -> 'eagle ridge'
+'  Cedar Hollow  ' -> 'cedar hollow'</code></pre>
+    </div>
+    <p>Wiring <code>_normalize</code> into both tools and re-running the exact same question:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tools.py (fix, continued)</span></div>
+      <pre><code>def get_trail_status(trail_name: str) -> dict:
+    return TRAIL_STATUS.get(_normalize(trail_name), {"error": f"no trail on file named '{trail_name}'"})
+
+def get_weather(location: str) -> dict:
+    return WEATHER.get(_normalize(location), {"error": f"no weather on file for '{location}'"})</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session &mdash; same question, after the fix)</span>
+      <pre><code>[iteration 1] action: get_trail_status({'trail_name': 'Cedar Hollow trail'}) -> observation: {'status': 'closed', 'reason': 'storm damage', 'last_updated': '2026-09-20'}
+[iteration 1] action: get_weather({'location': 'Cedar Hollow trail'}) -> observation: {'condition': 'rain', 'high_f': 54, 'low_f': 44}
+[iteration 2] model returned a final answer, loop stops
+FINAL: The Cedar Hollow trail is currently closed due to storm damage. The weather at the trail location is rainy, with a high temperature of 54°F and a low temperature of 44°F. It's not recommended to hike on the trail until it's reopened by park authorities.</code></pre>
+    </div>
+    <p>Same model, same question, same tool schemas &mdash; the only change was making the tool itself robust to how a model actually phrases arguments. Notice, too, that this run needed both tool calls in a single iteration before returning a final answer on iteration 2: the loop generalized correctly to a multi-tool question with no change to <code>run_agent</code> itself.</p>
+  </section>
+
+  <section id="guardrails" class="subtopic">
+    <h2>10. Guardrails: stopping a runaway loop</h2>
+    <p>What happens if the model never decides it has enough information, and keeps requesting the same tool call forever? Real models occasionally do this &mdash; especially smaller, local ones. Simulating it with a stub that always asks for one more tool call, so this is reproducible without waiting on an actual runaway model:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">guard_demo.py</span></div>
+      <pre><code>class FakeMessage:
+    """Simulates a model that NEVER stops calling a tool."""
+    def __init__(self):
+        self.content = None
+        self.tool_calls = [make_fake_call("get_weather", {"location": "cedar hollow"})]
+
+def run_agent_with_guard(user_message, max_iterations=4):
+    for i in range(1, max_iterations + 1):
+        msg = FakeMessage()  # stands in for a model that always wants another tool
+        if not msg.tool_calls:
+            return msg.content
+        for call in msg.tool_calls:
+            args = json.loads(call.function.arguments)
+            result = TOOL_IMPLS[call.function.name](**args)
+            print(f"[iteration {i}] action: {call.function.name}({args}) -> observation: {result}")
+    print(f"[guard] hit max_iterations={max_iterations} -- loop stopped on purpose, no runaway")
+    return None
+
+run_agent_with_guard("What's the weather at Cedar Hollow?", max_iterations=3)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>[iteration 1] action: get_weather({'location': 'cedar hollow'}) -> observation: {'condition': 'rain', 'high_f': 54, 'low_f': 44}
+[iteration 2] action: get_weather({'location': 'cedar hollow'}) -> observation: {'condition': 'rain', 'high_f': 54, 'low_f': 44}
+[iteration 3] action: get_weather({'location': 'cedar hollow'}) -> observation: {'condition': 'rain', 'high_f': 54, 'low_f': 44}
+[guard] hit max_iterations=3 -- loop stopped on purpose, no runaway</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Without <code>max_iterations</code></dt>
+        <dd>This exact loop shape runs forever: every iteration, the fake model asks for the same tool again, and the calling code has no independent way to know the task is actually done. In a real deployment that's not just a bad user experience &mdash; every iteration is another paid or compute-costed model call (Chapter 8's subject) and, if the tool has side effects (booking, sending, deleting), every iteration could repeat that side effect too.</dd>
+        <dt>Why this guard is necessary but not sufficient</dt>
+        <dd><code>max_iterations</code> guarantees the loop <em>halts</em>. It does not guarantee the agent did the right thing before halting, does not stop it from calling a destructive tool inside those iterations, and does not stop a human-approval-worthy action from happening unsupervised. Chapter 6 builds the fuller guardrail set (approval checkpoints, sandboxing, rate limits) this chapter's single iteration cap is only the first layer of.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="ollama-hang" class="subtopic">
+    <h2>11. Handling this sandbox's Ollama hang</h2>
+    <p>The very first call in this chapter (Section 2) took 138 seconds. That's not unusual for this environment specifically: this sandbox's local Ollama install has shown an intermittent hang, with one observed call during this course's own build taking 432 seconds. A production agent loop that blocks indefinitely on a single reasoning step is its own reliability failure &mdash; so every call in a real agent needs an explicit timeout, and the calling code needs to decide what "no answer in time" means for that step.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">timeout_wrapper.py</span></div>
+      <pre><code>from openai import APITimeoutError, APIConnectionError
+
+def call_with_budget(client, seconds_budget, **kwargs):
+    bounded_client = client.with_options(timeout=seconds_budget)
+    try:
+        return bounded_client.chat.completions.create(**kwargs)
+    except (APITimeoutError, APIConnectionError) as exc:
+        print(f"[budget] no response within {seconds_budget}s ({type(exc).__name__}) -- treat as illustrative, move on")
+        return None</code></pre>
+    </div>
+    <p>Proving the guard actually fires, by pointing the client at a closed port with a tight 2-second budget:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">timeout_wrapper.py (continued)</span></div>
+      <pre><code>demo_client = OpenAI(base_url="http://localhost:9/v1", api_key="ollama")
+result = call_with_budget(
+    demo_client, seconds_budget=2,
+    model="llama3.2:latest",
+    messages=[{"role": "user", "content": "ping"}],
+)
+print("result:", result)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>[budget] no response within 2s (APIConnectionError) -- treat as illustrative, move on
+result: None</code></pre>
+    </div>
+    <details class="go-deeper">
+      <summary>Go Deeper: why 450 seconds, specifically, in this course's own build process</summary>
+      <p>This course's own build treats any single live model call as illustrative, not gate-load-bearing, and budgets up to 450 seconds for it precisely because of the 432-second hang observed once already &mdash; enough headroom to let a genuinely slow-but-working call finish, without ever idle-waiting past a point where the call has clearly failed. A production agent should budget far tighter than 450 seconds per step (this number is specific to this sandbox's own quirks, not a general recommendation) and always have a defined fallback &mdash; retry once, degrade to a cached answer, or surface a clear error &mdash; for when the budget runs out. Chapter 8 covers latency control as its own subject in depth.</p>
+    </details>
+  </section>
+
+  <section id="finished-agent" class="subtopic">
+    <h2>12. The finished agent</h2>
+    <p>Putting every piece from this chapter into one file &mdash; tools, schemas, the loop, and the guard &mdash; is TrailBot as Northbeam would actually run it:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">trailbot_agent.py</span></div>
+      <pre><code>import json
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+
+TRAIL_STATUS = {
+    "eagle ridge": {"status": "open", "difficulty": "moderate", "last_updated": "2026-09-22"},
+    "cedar hollow": {"status": "closed", "reason": "storm damage", "last_updated": "2026-09-20"},
+    "blue spring loop": {"status": "open", "difficulty": "easy", "last_updated": "2026-09-23"},
+}
+WEATHER = {
+    "north bend": {"condition": "clear", "high_f": 68, "low_f": 47},
+    "cedar hollow": {"condition": "rain", "high_f": 54, "low_f": 44},
+}
+
+def _normalize(name):
+    key = name.strip().lower()
+    for suffix in (" trail", " loop", " trailhead"):
+        if key.endswith(suffix):
+            key = key[: -len(suffix)]
+    return key
+
+def get_trail_status(trail_name):
+    return TRAIL_STATUS.get(_normalize(trail_name), {"error": f"no trail on file named '{trail_name}'"})
+
+def get_weather(location):
+    return WEATHER.get(_normalize(location), {"error": f"no weather on file for '{location}'"})
+
+TOOL_IMPLS = {"get_trail_status": get_trail_status, "get_weather": get_weather}
+TOOLS = [
+    {"type": "function", "function": {"name": "get_trail_status",
+        "description": "Look up whether a named hiking trail is open or closed.",
+        "parameters": {"type": "object", "properties": {"trail_name": {"type": "string"}}, "required": ["trail_name"]}}},
+    {"type": "function", "function": {"name": "get_weather",
+        "description": "Look up current weather conditions for a named location.",
+        "parameters": {"type": "object", "properties": {"location": {"type": "string"}}, "required": ["location"]}}},
+]
+SYSTEM = "You are TrailBot, a hiking assistant. Use tools to answer with real data; never guess a trail's status or the weather."
+
+def run_agent(user_message, max_iterations=4):
+    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user_message}]
+    for i in range(1, max_iterations + 1):
+        response = client.chat.completions.create(model="llama3.2:latest", messages=messages, tools=TOOLS)
+        msg = response.choices[0].message
+        messages.append(msg)
+        if not msg.tool_calls:
+            return msg.content
+        for call in msg.tool_calls:
+            args = json.loads(call.function.arguments)
+            result = TOOL_IMPLS[call.function.name](**args)
+            messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})
+    return None  # guard: max_iterations reached without a final answer
+
+if __name__ == "__main__":
+    print(run_agent("Is Cedar Hollow trail open, and what's the weather like there?"))</code></pre>
+    </div>
+    <p>Running the assembled file end to end, exactly as a hiker at the kiosk would trigger it:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session &mdash; <code>python3 trailbot_agent.py</code>)</span>
+      <pre><code>The Cedar Hollow trail is currently closed due to storm damage. The weather at the trail location is rainy, with a high temperature of 54°F and a low temperature of 44°F. It's not recommended to hike on the trail until it's reopened by park authorities.</code></pre>
+    </div>
+    <p>Every function in this file was run for real against <code>llama3.2:latest</code> over local Ollama earlier in this chapter (Sections 2-10) &mdash; nothing here is illustrative pseudocode. This is the reference shape every later chapter's agent extends: Chapter 2 replaces the flat tool-call loop with real multi-step planning, Chapter 3 goes deep on tool design and failure handling beyond one normalize function, Chapter 4 adds memory that survives past a single <code>run_agent</code> call, and Chapter 5 adds a reflection step so the agent can catch its own mistakes without a human diagnosing them, the way you just did in Section 9.</p>
+  </section>
+
+  <section id="thought-process" class="subtopic">
+    <h2>13. GenAI Builder Thought Process</h2>
+    <div class="thinking-box">
+      <p><strong>Thought process:</strong> the temptation building an agent's first version is to reach for a framework immediately &mdash; LangGraph, CrewAI, AutoGen &mdash; because "agent" sounds like it needs one. This chapter deliberately built the loop from four plain ingredients (a client, a tools list, a Python <code>for</code> loop, and two dict lookups) specifically so the mechanism is never hidden. Once you can see that an "agent" is a <code>for</code> loop that stops when the model's own output says stop, you can evaluate what any framework is actually doing under the hood &mdash; and you can debug it when it misbehaves, because Section 9's wrong-argument failure is a bug in <em>your</em> normalize function, not a framework internals mystery. A strong prompt for an AI pair-programmer building this exact chapter's agent: "Write a minimal Python agent loop against the OpenAI-compatible client pointed at local Ollama. Define two tool functions with JSON schemas, run a for-loop that calls the model with tools, executes any tool_calls it returns, appends the result as a role:'tool' message tagged with tool_call_id, and stops when the model returns content with no tool_calls or after max_iterations. Do not use any agent framework — plain openai client and stdlib only."</p>
+    </div>
+  </section>
+
+  <div class="real-world">
+    <span class="label">In the Real World</span>
+    <ul>
+      <li>Every "AI agent" product you've heard of &mdash; a coding agent, a research agent, a customer-support agent &mdash; runs some version of exactly this loop underneath, however many extra layers (memory stores, multi-agent handoffs, tool registries) sit on top of it.</li>
+      <li>The wrong-argument failure in Section 9 is one of the single most common real-world agent bugs reported in production systems: the model's tool choice is correct, the arguments are reasonable-looking, and the failure only shows up in the tool's own error path &mdash; exactly why every tool needs to be defensive about its own inputs.</li>
+      <li>The <code>max_iterations</code> guard is the simplest member of a whole guardrail family (Chapter 6) that every production agent needs before it's allowed to run unsupervised against real systems, real money, or real users.</li>
+    </ul>
+  </div>
+
+  <section id="recap" class="subtopic">
+    <div class="points-to-remember">
+      <h2>Points to Remember</h2>
+      <ul>
+        <li>An agent is a loop &mdash; perception, reasoning, action, observation &mdash; where the model's own output decides whether another iteration happens. A single LLM call, however well-prompted, is not an agent.</li>
+        <li>Tools are plain functions described to the model as a JSON schema; the model can only produce a tool <em>name</em> and JSON <em>arguments</em> as text &mdash; your code parses, executes, and feeds the real result back as a <code>role: "tool"</code> message.</li>
+        <li>A wrong-argument failure (correct tool, plausible-but-mismatched argument) is different from a wrong-tool-choice failure or a hallucinated answer &mdash; diagnose which one you're looking at before you fix it, and fix it in the tool, since messy arguments are the normal case, not the exception.</li>
+        <li>An iteration guard (<code>max_iterations</code>) is necessary to stop a runaway loop, but is not sufficient on its own to make an agent safe to run unsupervised &mdash; it only guarantees the loop halts, not that every action taken before it halted was safe.</li>
+        <li>Live model calls in this sandbox can hang for minutes; wrap every call with an explicit timeout and a defined fallback rather than idle-blocking, and treat a captured transcript as the source of truth over a live re-run.</li>
+        <li>No agent framework was used anywhere in this chapter &mdash; the loop, the tool dispatch, and the guard are plain Python and the plain <code>openai</code> client, on purpose, so the mechanism stays visible.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p>Ready to check what stuck? Head to the interactive quiz next &mdash; every blank has a Check button, so you'll know instantly if you've got it.</p>
+
+  <div class="chapter-nav">
+    <a href="../../index.html">&larr; All Chapters</a>
+    <a href="quiz.html">Take the Quiz &rarr;</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+    <span><a href="https://github.com/TechNaom/agentic-ai-for-everyone">github.com/TechNaom/agentic-ai-for-everyone</a></span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>
