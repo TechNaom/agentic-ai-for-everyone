@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planning and Task Decomposition Interview Questions — Agentic AI for Everyone</title>
+<meta name="description" content="Interview questions for Planning and Task Decomposition.">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-02">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="practice/index.html">&larr; Back to practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 2 Interview Questions</span>
+    <span class="reading-time">~20 min</span>
+  </div>
+  <h1>Interview Questions: Planning and Task Decomposition</h1>
+  <p>Grouped by level — beginner, intermediate, senior, architect. Each includes a strong answer, a red flag, a follow-up, and what the question actually proves.</p>
+
+  <div class="lesson-card">
+    <h2>1. (Beginner) What's the difference between a fixed, up-front plan and emergent planning?</h2>
+    <p><strong>Strong answer:</strong> A fixed plan is a complete ordered list of steps decided in a single reasoning call, before any tool has executed. Emergent planning decides only the single next step, over and over, after seeing each new observation — it never commits to more than one step ahead. Chapter 1's <code>run_agent()</code> already did emergent planning implicitly; this chapter makes the choice between the two explicit.</p>
+    <p><strong>Red flag:</strong> Says one is "smarter" or "more advanced" than the other in general, rather than describing them as suited to different task shapes.</p>
+    <p><strong>Follow-up:</strong> "Which one did Chapter 1's agent use, even though the chapter never called it that?"</p>
+    <p><strong>What this proves:</strong> Understands these as two named strategies, not a single evolving "better" technique.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>2. (Beginner) In the lesson, why was a fixed plan the right choice for the company-snapshot task?</h2>
+    <p><strong>Strong answer:</strong> Every section (profile, financials, news, competitors) was needed regardless of what any other section returned — nothing about the profile changes whether the financials are worth fetching. Since the full step order could be written correctly without running anything first, planning it up front cost one reasoning call instead of one per step, with an identical result.</p>
+    <p><strong>Red flag:</strong> Says "because there were only four tools" — the tool count isn't the reason; the lack of dependency between the steps is.</p>
+    <p><strong>Follow-up:</strong> "What would have to be true about the four tools for an emergent plan to actually be necessary here?"</p>
+    <p><strong>What this proves:</strong> Locates the real reason for the design choice, not a surface-level correlation.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>3. (Beginner) What is a "wrong-plan failure," and how is it different from a wrong-argument failure?</h2>
+    <p><strong>Strong answer:</strong> A wrong-argument failure (Chapter 1) is a correct tool called with a mismatched argument. A wrong-plan failure is when every tool call in a fixed plan succeeds — real data comes back for each one — but the plan itself locked in the wrong <em>step</em> before an earlier step's result was actually known, so the sequence as a whole doesn't answer the question. Nothing errors; the final answer is just built from the wrong evidence.</p>
+    <p><strong>Red flag:</strong> Conflates it with a tool-execution failure, since no error message ever appears in this failure mode.</p>
+    <p><strong>Follow-up:</strong> "How would you even notice a wrong-plan failure in a production log, if nothing threw an error?"</p>
+    <p><strong>What this proves:</strong> Recognizes that a "successful" trace can still represent a wrong plan.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>4. (Intermediate) Walk through the lesson's investigation example and explain why a fixed plan would have failed it.</h2>
+    <p><strong>Strong answer:</strong> The task was "why did the stock drop." Step 1 (check the news) revealed a CEO resignation. The correct step 2 (check the company profile) was only knowable after reading that headline — a fixed plan built before step 1 ran would have had to guess step 2, and the lesson's own pre-committed guess (check financials) turned out wrong, since the real story was leadership, not earnings.</p>
+    <p><strong>Red flag:</strong> Describes the failure as "the tool didn't work" rather than "the plan committed to the wrong step before it had the information to make that choice."</p>
+    <p><strong>Follow-up:</strong> "Could re-planning after step 2 have caught this? What would it need to notice?"</p>
+    <p><strong>What this proves:</strong> Can trace a plan-level failure back to <em>when</em> the information that would have prevented it became available.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>5. (Intermediate) What does <code>max_replans</code> guard against, and how is it different from <code>max_iterations</code>?</h2>
+    <p><strong>Strong answer:</strong> <code>max_iterations</code> (Chapter 1) bounds how many times a loop can call a tool and reason again before giving up. <code>max_replans</code> bounds how many times a <em>fixed plan</em> can be thrown out wholesale and rebuilt from scratch after a step fails — a different unit of retry (whole plans, not individual steps), but the same discipline: without it, a persistent failure with an available-looking correction could retry indefinitely.</p>
+    <p><strong>Red flag:</strong> Treats them as interchangeable or redundant.</p>
+    <p><strong>Follow-up:</strong> "Could a system need both guards active in the same run? Sketch when."</p>
+    <p><strong>What this proves:</strong> Distinguishes guard scope (step-level vs. plan-level) rather than treating "guardrail" as one undifferentiated concept.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>6. (Intermediate) The lesson measured 5 reasoning calls for an emergent-style snapshot versus 1 for a fixed plan. Is that gap always this large?</h2>
+    <p><strong>Strong answer:</strong> No — it scales with the number of steps in the task. A fixed plan always costs one reasoning call regardless of step count; an emergent loop costs roughly one call per step (plus one to recognize it's done). A two-step task would show a much smaller gap than the four-step snapshot did; a twenty-step task would show a much larger one. The lesson's 5-to-1 ratio is this specific task's number, not a universal constant.</p>
+    <p><strong>Red flag:</strong> Quotes "5x cheaper" as if it were a fixed, general property of fixed planning.</p>
+    <p><strong>Follow-up:</strong> "At what step count would the emergent version's reasoning-call cost roughly equal the fixed plan's savings from avoiding one wrong-plan failure?"</p>
+    <p><strong>What this proves:</strong> Reasons about the cost trade-off quantitatively instead of repeating a memorized number.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>7. (Senior) A team wants one universal planning strategy for their whole agent platform, to keep the codebase simple. How do you respond?</h2>
+    <p><strong>Strong answer:</strong> That trades correctness or cost for uniformity in whichever direction is wrong for at least some of their tasks — this chapter showed both failure directions concretely: forcing an emergent task into a fixed plan produces wrong-plan failures (Section 11), and forcing a fixed-shaped task through emergent planning burns reasoning calls for no behavioral benefit (Section 9). The right invariant isn't "one strategy" — it's a shared <em>interface</em> (both strategies use the same tools and the same result shape) with the strategy itself chosen per task type, ideally by the heuristic in Section 12.</p>
+    <p><strong>Red flag:</strong> Picks a single "safe default" strategy for everything without acknowledging the cost on the other task type.</p>
+    <p><strong>Follow-up:</strong> "Could the same agent switch strategies mid-task? What would trigger that?"</p>
+    <p><strong>What this proves:</strong> Pushes back on false simplicity when it costs real correctness or real money.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>8. (Senior) How would you detect a wrong-plan failure in production, given that no tool call errors?</h2>
+    <p><strong>Strong answer:</strong> Since nothing throws, detection has to happen at the outcome level, not the execution level: does the final answer actually address what was asked, evaluated either by a held-out rubric, a reflection/self-check step (Chapter 5's subject), or human spot review of a sample of traces. Logging the plan itself as a first-class, inspectable object (this chapter's whole point in Section 1) is a precondition for this — you can't review a plan for correctness if it was never written down anywhere.</p>
+    <p><strong>Red flag:</strong> Assumes tool-level success monitoring alone would catch this class of failure.</p>
+    <p><strong>Follow-up:</strong> "What would you log about a fixed plan, specifically, to make a wrong-plan failure reviewable after the fact?"</p>
+    <p><strong>What this proves:</strong> Understands that observability for planning failures needs a different signal than observability for execution failures.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>9. (Senior) When is re-planning (Section 6) the right fix, versus switching the whole task to emergent planning?</h2>
+    <p><strong>Strong answer:</strong> Re-planning is the right fix when the plan's <em>shape</em> was right and only an input was wrong — the Section 6 example, where correcting one argument and re-running the same four steps fixed it completely. Switching to emergent planning is the right fix when the plan's shape itself was wrong — when a genuinely different step, not just a corrected argument, was needed, which is what Section 11's example showed. Diagnosing which one you're looking at (bad input vs. bad plan) determines which fix actually applies.</p>
+    <p><strong>Red flag:</strong> Treats re-planning as a general-purpose fix for any planning failure.</p>
+    <p><strong>Follow-up:</strong> "Could a single system implement <code>max_replans</code> retries that fall back to emergent planning once the limit is hit?"</p>
+    <p><strong>What this proves:</strong> Diagnoses precisely enough to choose between two genuinely different remedies, not just "try again."</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>10. (Architect) Design a rule your team could use, before writing any agent code, to decide whether a new task needs fixed or emergent planning.</h2>
+    <p><strong>Strong answer:</strong> Ask one question up front: can the full, correct step sequence be written down without executing anything first, and would executing it not change what you'd have written? If yes, plan it fixed — the cost savings (Section 9) are real and the risk of a wrong-plan failure (Section 11) is near zero, since nothing about the sequence depends on unknown results. If no — if any later step's correct identity depends on an earlier step's actual result — plan it emergently, since a fixed plan there is structurally exposed to wrong-plan failures no amount of re-planning after the fact fully prevents. This should be a one-time design decision per task <em>category</em>, not a per-run coin flip, since a task category's shape (dependent or not) doesn't usually change run to run.</p>
+    <p><strong>Red flag:</strong> Proposes a rule based on task complexity, tool count, or "how important" the task is, rather than the actual dependency structure between steps.</p>
+    <p><strong>Follow-up:</strong> "How would you handle a task category that's usually fixed-shaped but occasionally needs one adaptive step in the middle?"</p>
+    <p><strong>What this proves:</strong> Can generalize this chapter's two worked examples into a reusable design principle, not just recall the two examples themselves.</p>
+  </div>
+
+  <div class="chapter-nav">
+    <a href="practice/index.html">&larr; Practice Bank</a>
+    <a href="project/index.html">Project &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

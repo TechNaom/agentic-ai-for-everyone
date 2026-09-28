@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planning and Task Decomposition Exercises — Agentic AI for Everyone</title>
+<meta name="description" content="Hands-on exercises for Planning and Task Decomposition.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-02">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../quiz.html">&larr; Back to the quiz</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 2 Exercises</span>
+    <span class="reading-time">~40 min, hands-on</span>
+  </div>
+  <h1>Exercises: Planning and Task Decomposition</h1>
+  <p>
+    These exercises use a second scenario, deliberately different from
+    the lesson's Alderleaf Research Group/ScoutBot hook:
+    <strong>Pinehurst Realty Group</strong>, a fictional residential
+    brokerage. Its agent, <strong>ListBot</strong>, handles two kinds
+    of task: listing a new property (a fixed, up-front plan) and
+    diagnosing why a showing fell through (an emergent,
+    one-step-at-a-time investigation). Applying this chapter's
+    concepts to a fresh scenario is the point.
+  </p>
+
+  <div class="what-is">
+    <span class="label">Exercise standard</span>
+    Eight tasks total, worth 16 points. Five are marked production-gear
+    — writing a real fixed plan, fixing a real wrong-argument bug,
+    implementing a real emergent decision function, diagnosing a real
+    wrong-plan failure trace, and implementing a real re-plan guard,
+    not just concept recall.
+  </div>
+
+  <h2>Tasks</h2>
+  <ol>
+    <li><strong>Map facts to planning concepts</strong> — assign fixed plan, emergent plan, re-planning, wrong-plan failure, or planning guard to five ListBot facts.</li>
+    <li><strong>Dependency reasoning</strong> — does pre-committing a step before an earlier result is known make a wrong-plan failure more or less likely?</li>
+    <li><strong>(Production-gear) Fixed plan</strong> — write the ordered 3-step listing plan as real data.</li>
+    <li><strong>(Production-gear) Normalize fix</strong> — tolerate a realistic wrong-argument variation.</li>
+    <li><strong>(Production-gear) Emergent decision function</strong> — the right follow-up check depends on what the showing log says.</li>
+    <li><strong>(Production-gear) Failure diagnosis</strong> — correctly name a wrong-plan failure.</li>
+    <li><strong>(Production-gear) Re-plan guard</strong> — bound retries with <code>max_replans</code>.</li>
+    <li><strong>Completeness check</strong> — confirm all five planning concepts were actually used.</li>
+  </ol>
+
+  <p>Full instructions and the scoring rubric are in <code>README.md</code> alongside <code>starter.py</code> (fill in the <code>TODO</code>s) and <code>solution.py</code> (the reference, scores 16/16).</p>
+
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+
+  <div class="chapter-nav">
+    <a href="ai-paired.html">Now Pair With an AI &rarr;</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

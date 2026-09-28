@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 2 Project: RouteBot — Agentic AI for Everyone</title>
+<meta name="description" content="Chapter mini-project: build a fixed-plan executor with re-planning and an emergent decision function for Cobblestone Courier Co.'s RouteBot.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-02">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../interview-questions.html">&larr; Back to interview questions</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 2 Project &middot; Chapter Mini-Project</span>
+    <span class="reading-time">~45 min</span>
+  </div>
+  <h1>Project: Dual-Mode Planning for RouteBot</h1>
+  <p>
+    <strong>Cobblestone Courier Co.</strong> wants <strong>RouteBot</strong>
+    to handle two kinds of task with two different planning strategies.
+    <strong>Task A</strong> (processing a new delivery order &mdash;
+    verify address, calculate route, dispatch driver) needs a
+    <strong>fixed, up-front plan</strong>, since no step's result
+    changes whether a later step is worth running. <strong>Task
+    B</strong> (diagnosing a delayed delivery) needs
+    <strong>emergent, one-step-at-a-time planning</strong>, since the
+    right follow-up check &mdash; traffic, weather, or a driver
+    check-in &mdash; depends entirely on what the delay status notes
+    actually say. Complete the three-<code>TODO</code> scaffold in
+    <code>starter.py</code> so both strategies work correctly,
+    including a fixed plan that can re-plan on failure.
+  </p>
+
+  <div class="what-is">
+    <span class="label">Not one of this course's numbered projects</span>
+    This is a chapter mini-project, not the L1/L2/L3/L4 ladder from
+    <code>docs/curriculum/CURRICULUM_MAP.md</code> (Chapter 2's own
+    material folds into the L2 Assisted project that ships after
+    Chapter 4). It exists so both of this chapter's planning
+    strategies get one combined, hands-on build before that larger
+    project arrives.
+  </div>
+
+  <h2>The three TODOs</h2>
+  <ol>
+    <li><strong>TODO 1</strong> &mdash; <code>run_fixed_dispatch()</code>: the fixed-plan executor, with a re-planning guard built in.</li>
+    <li><strong>TODO 2</strong> &mdash; <code>decide_next_delay_check()</code>: the emergent decision function, branching on the delay notes.</li>
+    <li><strong>TODO 3</strong> &mdash; <code>classify_task_planning_mode()</code>: the fixed-vs-emergent decision heuristic itself.</li>
+  </ol>
+
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+
+  <p>Full instructions in <code>README.md</code>, self-grading criteria in <code>RUBRIC.md</code>, and the fully filled-in reference in <code>solution.py</code> (passes all 7 self-checks).</p>
+
+  <div class="chapter-nav">
+    <a href="ai-paired.html">Now Pair With an AI &rarr;</a>
+    <a href="../../../docs/curriculum/index.html">Back to Roadmap &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

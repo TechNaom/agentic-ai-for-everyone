@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planning and Task Decomposition — Agentic AI for Everyone</title>
+<meta name="description" content="Make planning a visible, inspectable step: a fixed up-front plan vs. emergent, ReAct-style one-step-at-a-time planning, re-planning on failure, and a real case where each wins.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-02">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../../index.html">&larr; Back to all chapters</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 2 of 13</span>
+    <span class="badge-difficulty">Intermediate</span>
+    <span class="reading-time">45 min read, hands-on</span>
+  </div>
+  <h1>Planning and Task Decomposition</h1>
+  <p class="lede">Chapter 1's agent already planned &mdash; one step at a time, invisibly, buried inside each reasoning call. This chapter pulls planning out into its own visible, inspectable step, and shows two genuinely different ways to do it: decide the whole sequence up front, or decide only the next step and let each observation reshape what comes after. Neither is "better" in general. This chapter builds both, runs both against the same fictional firm, and shows a real case where each wins.</p>
+
+  <nav class="page-toc" aria-label="On this page">
+    <span class="toc-label">On this page</span>
+    <a href="#why-visible">1. Why planning needs to become visible</a>
+    <a href="#two-shapes">2. Two requests, two shapes of task</a>
+    <a href="#describing-again">3. Describing the tools (briefly)</a>
+    <a href="#fixed-plan">4. A fixed, up-front plan</a>
+    <a href="#executing-fixed">5. Executing a fixed plan</a>
+    <a href="#replanning">6. When a fixed-plan step fails: re-planning</a>
+    <a href="#emergent">7. Emergent planning: one step at a time</a>
+    <a href="#running-emergent">8. Running the emergent loop on a real investigation</a>
+    <a href="#head-to-head">9. Head to head: call counts and adaptability</a>
+    <a href="#fixed-wins">10. A case where fixed planning wins</a>
+    <a href="#emergent-wins">11. A case where emergent planning wins</a>
+    <a href="#heuristic">12. A decision heuristic: fixed vs. emergent</a>
+    <a href="#replan-guard">13. Guardrails for re-planning</a>
+    <a href="#finished-planbot">14. The finished dual-mode PlanBot</a>
+    <a href="#thought-process">15. GenAI builder thought process</a>
+    <a href="#recap">16. Points to remember</a>
+  </nav>
+
+  <div class="hook">
+    <p><strong>Alderleaf Research Group</strong> is a boutique market-research firm. Its analysts ask its agent, <strong>ScoutBot</strong>, two very different kinds of question. The first: "build a company snapshot for Brightwave Robotics" &mdash; profile, financials, news, competitors, always the same four sections, always in the same order. The second: "why did Brightwave Robotics' stock drop this week?" &mdash; a question where the right thing to check <em>second</em> depends entirely on what the news headlines say in step one. Chapter 1's <code>run_agent()</code> would handle both requests the same way: one tool-call decision per model turn, never looking further than one step ahead. That works, but it hides something worth seeing directly &mdash; that these two tasks have fundamentally different shapes, and a builder who can tell the difference writes a cheaper, more predictable agent for the first kind and a more adaptive one for the second.</p>
+  </div>
+
+  <section id="why-visible" class="subtopic">
+    <h2>1. Why planning needs to become visible</h2>
+    <p>Chapter 1's loop never asked "what's the plan?" as its own question. Every iteration, the model looked at the conversation so far and picked the single next tool call &mdash; correct behavior, but the "plan" (such as it was) only ever existed one step at a time, invisible until you'd already run the whole loop and looked back at the trace. That's <strong>emergent planning</strong>, and it's exactly what this chapter's Section 7 names and keeps, because it's often the right choice. What Chapter 1 never built is the other option: asking the model to commit to a <em>complete</em> ordered sequence of steps <em>before</em> any of them run, so the plan is a real, inspectable object &mdash; a list you can print, log, review, and hand to a colleague before a single tool executes.</p>
+    <div class="what-is">
+      <span class="label">What is... a plan, as a first-class object?</span>
+      A list of steps &mdash; each naming a tool and its arguments &mdash; produced by one reasoning step, before execution starts, and (unlike Chapter 1's implicit per-turn choice) inspectable on its own, separately from the loop that will eventually run it.
+    </div>
+    <p>This chapter does not re-teach the perception/reasoning/action/observation mechanics from Chapter 1 &mdash; the tools, the loop shape, the guard, the timeout wrapper all carry forward unchanged. What's new is the planning step itself: making it explicit, choosing between two real strategies for it, and knowing which strategy a given task actually calls for.</p>
+  </section>
+
+  <section id="two-shapes" class="subtopic">
+    <h2>2. Two requests, two shapes of task</h2>
+    <p>Before writing any planning code, the tools ScoutBot needs &mdash; plain functions again, no framework, matching Chapter 1's pattern exactly:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tools.py</span></div>
+      <pre><code>COMPANY_PROFILES = {
+    "brightwave robotics": {"sector": "industrial automation", "hq": "Portland, OR", "founded": 2014},
+    "cinderline foods": {"sector": "packaged food", "hq": "Columbus, OH", "founded": 1998},
+    "vertex rail systems": {"sector": "rail infrastructure", "hq": "Denver, CO", "founded": 2003},
+}
+
+def get_company_profile(company_name):
+    key = company_name.strip().lower()
+    if key not in COMPANY_PROFILES:
+        return {"error": f"no profile on file for '{company_name}'"}
+    return COMPANY_PROFILES[key]</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>>>> get_company_profile("Brightwave Robotics")
+{'sector': 'industrial automation', 'hq': 'Portland, OR', 'founded': 2014}</code></pre>
+    </div>
+    <p>Three more, following the exact same shape:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tools.py (continued)</span></div>
+      <pre><code>FINANCIALS = {
+    "brightwave robotics": {"stock_price": 41.20, "weekly_change_pct": -12.4, "revenue_m": 340},
+    "cinderline foods": {"stock_price": 18.05, "weekly_change_pct": 0.3, "revenue_m": 890},
+    "vertex rail systems": {"stock_price": 76.90, "weekly_change_pct": -1.1, "revenue_m": 1200},
+}
+def get_financial_snapshot(company_name):
+    key = company_name.strip().lower()
+    if key not in FINANCIALS:
+        return {"error": f"no financial data on file for '{company_name}'"}
+    return FINANCIALS[key]
+
+NEWS = {
+    "brightwave robotics": ["CEO Dana Ferris resigns effective immediately", "Q2 earnings beat expectations"],
+    "cinderline foods": ["New plant opens in Ohio", "Quarterly dividend unchanged"],
+    "vertex rail systems": ["Wins $200M transit contract", "Minor service delay reported in Denver"],
+}
+def get_recent_news(company_name):
+    key = company_name.strip().lower()
+    if key not in NEWS:
+        return {"error": f"no news on file for '{company_name}'"}
+    return {"headlines": NEWS[key]}
+
+COMPETITORS = {
+    "brightwave robotics": ["Meridian Automation", "Coreflow Systems"],
+    "cinderline foods": ["Hearthstone Snacks", "Golden Acre Foods"],
+    "vertex rail systems": ["Ironline Transit", "Summit Rail Corp"],
+}
+def get_competitor_list(company_name):
+    key = company_name.strip().lower()
+    if key not in COMPETITORS:
+        return {"error": f"no competitor data on file for '{company_name}'"}
+    return {"competitors": COMPETITORS[key]}</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, all four tools on Brightwave Robotics)</span>
+      <pre><code>{'sector': 'industrial automation', 'hq': 'Portland, OR', 'founded': 2014}
+{'stock_price': 41.2, 'weekly_change_pct': -12.4, 'revenue_m': 340}
+{'headlines': ['CEO Dana Ferris resigns effective immediately', 'Q2 earnings beat expectations']}
+{'competitors': ['Meridian Automation', 'Coreflow Systems']}</code></pre>
+    </div>
+    <p>A quick sanity check before anything else, exactly like Chapter 1's Section 2 &mdash; this session's Ollama install is the same sandbox with the same documented intermittent hang:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">check_ollama.py</span></div>
+      <pre><code>t0 = time.monotonic()
+r = client.chat.completions.create(model="llama3.2:latest", messages=[{"role": "user", "content": "Say OK"}])
+print("elapsed:", time.monotonic() - t0)
+print(r.choices[0].message.content)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session)</span>
+      <pre><code>elapsed: 204.25144113303395
+OK</code></pre>
+    </div>
+    <p>204 seconds for a two-word reply, followed later in this chapter (Section 4) by a 41-second tool-calling call &mdash; the same non-uniform latency Chapter 1 disclosed, not something specific to planning. Every live call in this chapter was budgeted up to 450s and treated as illustrative if it didn't return, per this course's own reliability policy.</p>
+    <p>Same four tools, two very different requests. Request A: "build a full snapshot" &mdash; every section is needed, order genuinely doesn't matter to the outcome, and nothing about section 1's result changes whether section 2 is worth fetching. Request B: "why did the stock drop" &mdash; only some of these four tools are worth calling at all, and <em>which</em> ones depends entirely on what the first one finds. Sections 4-6 build the first request's agent; Sections 7-8 build the second's.</p>
+  </section>
+
+  <section id="describing-again" class="subtopic">
+    <h2>3. Describing the tools (briefly)</h2>
+    <p>Chapter 1 covered JSON tool schemas in depth &mdash; this is only a reminder of the shape, since the planning step in Section 4 needs it:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">schemas.py</span></div>
+      <pre><code>TOOLS = [
+    {"type": "function", "function": {"name": "get_company_profile",
+        "description": "Look up a company's sector, headquarters, and founding year.",
+        "parameters": {"type": "object", "properties": {"company_name": {"type": "string"}}, "required": ["company_name"]}}},
+    {"type": "function", "function": {"name": "get_financial_snapshot",
+        "description": "Look up a company's current stock price, weekly change percent, and revenue.",
+        "parameters": {"type": "object", "properties": {"company_name": {"type": "string"}}, "required": ["company_name"]}}},
+    {"type": "function", "function": {"name": "get_recent_news",
+        "description": "Look up a company's recent news headlines.",
+        "parameters": {"type": "object", "properties": {"company_name": {"type": "string"}}, "required": ["company_name"]}}},
+    {"type": "function", "function": {"name": "get_competitor_list",
+        "description": "Look up a company's named competitors.",
+        "parameters": {"type": "object", "properties": {"company_name": {"type": "string"}}, "required": ["company_name"]}}},
+]
+print(len(TOOLS), "tools:", [t["function"]["name"] for t in TOOLS])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>4 tools: ['get_company_profile', 'get_financial_snapshot', 'get_recent_news', 'get_competitor_list']</code></pre>
+    </div>
+  </section>
+
+  <section id="fixed-plan" class="subtopic">
+    <h2>4. A fixed, up-front plan</h2>
+    <p>For the snapshot request, the full plan can be written down as data &mdash; a Python list &mdash; before any tool runs:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">fixed_plan.py</span></div>
+      <pre><code>SNAPSHOT_PLAN = [
+    {"step": 1, "tool": "get_company_profile", "args": {"company_name": "Brightwave Robotics"}},
+    {"step": 2, "tool": "get_financial_snapshot", "args": {"company_name": "Brightwave Robotics"}},
+    {"step": 3, "tool": "get_recent_news", "args": {"company_name": "Brightwave Robotics"}},
+    {"step": 4, "tool": "get_competitor_list", "args": {"company_name": "Brightwave Robotics"}},
+]
+for item in SNAPSHOT_PLAN:
+    print(item)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>{'step': 1, 'tool': 'get_company_profile', 'args': {'company_name': 'Brightwave Robotics'}}
+{'step': 2, 'tool': 'get_financial_snapshot', 'args': {'company_name': 'Brightwave Robotics'}}
+{'step': 3, 'tool': 'get_recent_news', 'args': {'company_name': 'Brightwave Robotics'}}
+{'step': 4, 'tool': 'get_competitor_list', 'args': {'company_name': 'Brightwave Robotics'}}</code></pre>
+    </div>
+    <p>The first, tempting way to produce this list in production is a system prompt that just asks the model to describe the whole sequence as free-text JSON. Tested for real this session, that approach failed outright &mdash; asked to plan without the real <code>tools=</code> schema attached, the model invented plausible-sounding tool names (<code>"CAD"</code>, <code>"Materials Database"</code>, <code>"Bill of Materials (BOM)"</code>) that don't exist anywhere in ScoutBot's actual four tools. Free text has nothing grounding it to what's real.</p>
+    <div class="what-is">
+      <span class="label">What is... the actual fix for this?</span>
+      Ground the plan in the same <code>tools=TOOLS</code> mechanism Chapter 1 already used for single-step tool calls. A model can return <em>more than one</em> tool call in a single turn's <code>tool_calls</code> list &mdash; that list, all decided in one reasoning call before any of them execute, <strong>is</strong> the fixed plan, and every entry is guaranteed to name a real tool because the API constrains it to the schema, not free text.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">make_plan.py</span></div>
+      <pre><code>response = client.chat.completions.create(
+    model="llama3.2:latest",
+    messages=[
+        {"role": "system", "content": "You are ScoutBot's planner. Call every tool exactly once to build a full company snapshot."},
+        {"role": "user", "content": "Build a full company snapshot for Brightwave Robotics."},
+    ],
+    tools=TOOLS,
+)
+msg = response.choices[0].message
+print("content:", repr(msg.content))
+print("tool_calls:", msg.tool_calls)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session &mdash; this call took 41s)</span>
+      <pre><code>content: ''
+tool_calls: [ChatCompletionMessageFunctionToolCall(id='call_ynoov07g', function=Function(arguments='{"company_name":"Brightwave Robotics"}', name='get_company_profile'), type='function', index=0),
+             ChatCompletionMessageFunctionToolCall(id='call_asknrcs4', function=Function(arguments='{"company_name":"Brightwave Robotics"}', name='get_financial_snapshot'), type='function', index=1),
+             ChatCompletionMessageFunctionToolCall(id='call_3257va2o', function=Function(arguments='{"company_name":"Brightwave Robotics"}', name='get_recent_news'), type='function', index=2),
+             ChatCompletionMessageFunctionToolCall(id='call_e1rmzdra', function=Function(arguments='{"company_name":"Brightwave Robotics"}', name='get_competitor_list'), type='function', index=3)]</code></pre>
+    </div>
+    <p>Four real tool calls, all four correct tool names, all in one reasoning turn &mdash; the plan the rest of this section builds toward, converted into the same shape as <code>SNAPSHOT_PLAN</code>:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">make_plan.py (continued)</span></div>
+      <pre><code>plan_from_model = [
+    {"step": i + 1, "tool": call.function.name, "args": json.loads(call.function.arguments)}
+    for i, call in enumerate(msg.tool_calls)
+]
+for item in plan_from_model:
+    print(item)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, derived from the live response above)</span>
+      <pre><code>{'step': 1, 'tool': 'get_company_profile', 'args': {'company_name': 'Brightwave Robotics'}}
+{'step': 2, 'tool': 'get_financial_snapshot', 'args': {'company_name': 'Brightwave Robotics'}}
+{'step': 3, 'tool': 'get_recent_news', 'args': {'company_name': 'Brightwave Robotics'}}
+{'step': 4, 'tool': 'get_competitor_list', 'args': {'company_name': 'Brightwave Robotics'}}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>What's actually new here vs. Chapter 1</dt>
+        <dd>Chapter 1's model only ever returned <em>one</em> tool call per turn, because nothing asked it for more. Here, the same <code>tools=TOOLS</code> mechanism returns <em>four</em> tool calls in a single turn's <code>tool_calls</code> list &mdash; that whole list, decided before any of them execute, is the fixed plan. One reasoning call replaces what would otherwise be one call per step, the cost trade-off Section 9 measures directly.</dd>
+        <dt>The free-text failure was worth keeping, not hiding</dt>
+        <dd>The invented tool names above are a genuine, unscripted result from this session, not a manufactured cautionary tale &mdash; and they make the point sharper than a clean first-try success would have: a well-worded planning prompt is not enough on its own. What actually grounds a plan in reality is the same tool-calling API contract from Chapter 1, applied to get several calls back at once instead of one.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="executing-fixed" class="subtopic">
+    <h2>5. Executing a fixed plan</h2>
+    <p>Once the plan exists as data, running it needs no further reasoning calls at all &mdash; just a loop over the list, executing each step and collecting results:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">fixed_plan.py (continued)</span></div>
+      <pre><code>TOOL_IMPLS = {
+    "get_company_profile": get_company_profile,
+    "get_financial_snapshot": get_financial_snapshot,
+    "get_recent_news": get_recent_news,
+    "get_competitor_list": get_competitor_list,
+}
+
+def assemble_report(company_name, sections):
+    lines = [f"Company Snapshot: {company_name}", "=" * 40]
+    for name, result in sections.items():
+        lines.append(f"[{name}] {result}")
+    return "\n".join(lines)
+
+def run_fixed_plan(company_name, plan):
+    sections = {}
+    trace = []
+    for item in plan:
+        fn = TOOL_IMPLS[item["tool"]]
+        result = fn(**item["args"])
+        trace.append((item["step"], item["tool"], result))
+        if "error" in result:
+            print(f"[step {item['step']}] FAILED: {item['tool']} -> {result} -- re-planning needed")
+            return None, trace
+        sections[item["tool"]] = result
+        print(f"[step {item['step']}] {item['tool']}({item['args']}) -> {result}")
+    return assemble_report(company_name, sections), trace</code></pre>
+    </div>
+    <p>One last check before running it, confirming every plan step's <code>tool</code> name actually resolves to a real function &mdash; the same dispatch-table sanity check Chapter 1's Section 8 ran, worth repeating here since a plan built from a live model call could in principle name a tool that doesn't exist:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">sanity_check.py</span></div>
+      <pre><code>plan_tool_names = {item["tool"] for item in SNAPSHOT_PLAN}
+impl_names = set(TOOL_IMPLS.keys())
+print("plan names:", plan_tool_names)
+print("implemented:", impl_names)
+print("every planned tool is real:", plan_tool_names.issubset(impl_names))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>plan names: {'get_company_profile', 'get_financial_snapshot', 'get_recent_news', 'get_competitor_list'}
+implemented: {'get_company_profile', 'get_financial_snapshot', 'get_recent_news', 'get_competitor_list'}
+every planned tool is real: True</code></pre>
+    </div>
+    <p>Running it on the plan from Section 4:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">run_fixed.py</span></div>
+      <pre><code>report, trace = run_fixed_plan("Brightwave Robotics", SNAPSHOT_PLAN)
+print()
+print(report)
+print()
+print(f"Total tool calls: {len(trace)} -- zero model calls needed between steps.")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>[step 1] get_company_profile({'company_name': 'Brightwave Robotics'}) -> {'sector': 'industrial automation', 'hq': 'Portland, OR', 'founded': 2014}
+[step 2] get_financial_snapshot({'company_name': 'Brightwave Robotics'}) -> {'stock_price': 41.2, 'weekly_change_pct': -12.4, 'revenue_m': 340}
+[step 3] get_recent_news({'company_name': 'Brightwave Robotics'}) -> {'headlines': ['CEO Dana Ferris resigns effective immediately', 'Q2 earnings beat expectations']}
+[step 4] get_competitor_list({'company_name': 'Brightwave Robotics'}) -> {'competitors': ['Meridian Automation', 'Coreflow Systems']}
+
+Company Snapshot: Brightwave Robotics
+========================================
+[get_company_profile] {'sector': 'industrial automation', 'hq': 'Portland, OR', 'founded': 2014}
+[get_financial_snapshot] {'stock_price': 41.2, 'weekly_change_pct': -12.4, 'revenue_m': 340}
+[get_recent_news] {'headlines': ['CEO Dana Ferris resigns effective immediately', 'Q2 earnings beat expectations']}
+[get_competitor_list] {'competitors': ['Meridian Automation', 'Coreflow Systems']}
+
+Total tool calls: 4 -- zero model calls needed between steps.</code></pre>
+    </div>
+    <p>The same fixed executor, unchanged, on a second company &mdash; the whole point of separating the plan from its execution is that <code>run_fixed_plan</code> itself never needs to know which company it's running for:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">run_fixed.py (second company)</span></div>
+      <pre><code>CINDERLINE_PLAN = [dict(item, args={"company_name": "Cinderline Foods"}) for item in SNAPSHOT_PLAN]
+report3, trace3 = run_fixed_plan("Cinderline Foods", CINDERLINE_PLAN)
+print(f"Tool calls: {len(trace3)}, all succeeded: {report3 is not None}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>Tool calls: 4, all succeeded: True</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... the actual saving from a fixed plan?</span>
+      Not fewer tool calls &mdash; both strategies call every tool once here. The saving is <em>reasoning calls</em>: one call produces the whole plan, versus one call per step for the emergent version built in Section 7. Section 9 measures this precisely.
+    </div>
+  </section>
+
+  <section id="replanning" class="subtopic">
+    <h2>6. When a fixed-plan step fails: re-planning</h2>
+    <p>A fixed plan isn't fragile by nature, but it does need an explicit answer for "what if step 1 fails?" &mdash; a realistic typo in the company name, checked against real code, not a scripted example:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">replan.py</span></div>
+      <pre><code>BAD_PLAN = [
+    {"step": 1, "tool": "get_company_profile", "args": {"company_name": "Brightwve Robotics"}},
+    {"step": 2, "tool": "get_financial_snapshot", "args": {"company_name": "Brightwve Robotics"}},
+    {"step": 3, "tool": "get_recent_news", "args": {"company_name": "Brightwve Robotics"}},
+    {"step": 4, "tool": "get_competitor_list", "args": {"company_name": "Brightwve Robotics"}},
+]
+report, trace = run_fixed_plan("Brightwve Robotics", BAD_PLAN)
+print("report:", report)
+print("trace length:", len(trace))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>[step 1] FAILED: get_company_profile -> {'error': "no profile on file for 'Brightwve Robotics'"} -- re-planning needed
+report: None
+trace length: 1</code></pre>
+    </div>
+    <p>Exactly like Chapter 1's Cedar Hollow bug, the fix belongs where the mismatch is diagnosed, not in a hopeful prompt tweak. Here, the whole remaining plan gets substituted with a corrected argument and re-run:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">replan.py (continued)</span></div>
+      <pre><code>def replan_with_correction(company_name, corrected_name, original_plan):
+    print(f"[re-plan] step 1 failed -- substituting corrected name '{corrected_name}' and restarting the plan")
+    fixed = [dict(item, args={"company_name": corrected_name}) for item in original_plan]
+    return run_fixed_plan(corrected_name, fixed)
+
+report2, trace2 = replan_with_correction("Brightwve Robotics", "Brightwave Robotics", BAD_PLAN)
+print()
+print(report2)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>[re-plan] step 1 failed -- substituting corrected name 'Brightwave Robotics' and restarting the plan
+[step 1] get_company_profile({'company_name': 'Brightwave Robotics'}) -> {'sector': 'industrial automation', 'hq': 'Portland, OR', 'founded': 2014}
+[step 2] get_financial_snapshot({'company_name': 'Brightwave Robotics'}) -> {'stock_price': 41.2, 'weekly_change_pct': -12.4, 'revenue_m': 340}
+[step 3] get_recent_news({'company_name': 'Brightwave Robotics'}) -> {'headlines': ['CEO Dana Ferris resigns effective immediately', 'Q2 earnings beat expectations']}
+[step 4] get_competitor_list({'company_name': 'Brightwave Robotics'}) -> {'competitors': ['Meridian Automation', 'Coreflow Systems']}
+
+Company Snapshot: Brightwave Robotics
+========================================
+[get_company_profile] {'sector': 'industrial automation', 'hq': 'Portland, OR', 'founded': 2014}
+[get_financial_snapshot] {'stock_price': 41.2, 'weekly_change_pct': -12.4, 'revenue_m': 340}
+[get_recent_news] {'headlines': ['CEO Dana Ferris resigns effective immediately', 'Q2 earnings beat expectations']}
+[get_competitor_list] {'competitors': ['Meridian Automation', 'Coreflow Systems']}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Re-planning is not the same as emergent planning</dt>
+        <dd>The whole plan is still decided up front, both times &mdash; the plan just gets thrown out and rebuilt wholesale on failure, rather than adjusted one step at a time. Re-planning is a fixed-plan agent's answer to "the world didn't match my assumptions"; it's still fundamentally different from never having committed to a full plan in the first place, which is Section 7's subject.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="emergent" class="subtopic">
+    <h2>7. Emergent planning: one step at a time</h2>
+    <p>For the investigation request, committing to a full plan up front doesn't make sense &mdash; there's no way to know in advance whether step 2 should check financials, check the company profile, or check competitors, because that depends on what step 1's headlines say. The right shape here is what Chapter 1's loop already did implicitly: decide only the next step, act, observe, then decide the <em>next</em> next step.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">emergent.py</span></div>
+      <pre><code>def decide_next_step(company_name, history):
+    """
+    The reasoning step, made explicit: decide the SINGLE next action
+    based on everything observed so far. Never looks more than one step
+    ahead -- exactly what Chapter 1's run_agent() did inside each model
+    call, written out here so the decision is visible on its own.
+    """
+    if not history:
+        return {"tool": "get_recent_news", "args": {"company_name": company_name}}
+    last_tool, last_args, last_result = history[-1]
+    if last_tool == "get_recent_news":
+        headlines = " ".join(last_result.get("headlines", [])).lower()
+        if "resign" in headlines or "ceo" in headlines:
+            return {"tool": "get_company_profile", "args": {"company_name": company_name}}
+        if "earnings" in headlines:
+            return {"tool": "get_financial_snapshot", "args": {"company_name": company_name}}
+        return {"tool": "get_competitor_list", "args": {"company_name": company_name}}
+    return None  # enough evidence -- stop</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... "reasoning" doing here, deterministically?</span>
+      In a real deployment, <code>decide_next_step</code> is the model itself, called once per turn with the conversation so far &mdash; exactly Chapter 1's <code>chat.completions.create(..., tools=TOOLS)</code> pattern. It's written as a deterministic function here so the specific branch taken (news mentions "resign" &rarr; check the profile next) is guaranteed reproducible for this lesson, the same testability reason Chapter 1's guard demo used a <code>FakeMessage</code> stand-in rather than hoping a live model behaved a certain way on every run.
+    </div>
+    <p>The loop that drives it, structurally identical to Chapter 1's <code>run_agent()</code>, renamed to make the emergent framing explicit:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">emergent.py (continued)</span></div>
+      <pre><code>def run_emergent_investigation(company_name, max_iterations=4):
+    history = []
+    for i in range(1, max_iterations + 1):
+        step = decide_next_step(company_name, history)
+        if step is None:
+            print(f"[iteration {i}] enough evidence gathered -- stopping")
+            break
+        fn = TOOL_IMPLS[step["tool"]]
+        result = fn(**step["args"])
+        print(f"[iteration {i}] reasoned next step: {step['tool']}({step['args']}) -> observation: {result}")
+        history.append((step["tool"], step["args"], result))
+    return history</code></pre>
+    </div>
+  </section>
+
+  <section id="running-emergent" class="subtopic">
+    <h2>8. Running the emergent loop on a real investigation</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">run_emergent.py</span></div>
+      <pre><code>print("--- Investigating: why did Brightwave Robotics stock drop this week? ---")
+history = run_emergent_investigation("Brightwave Robotics")
+print()
+print(f"Total tool calls: {len(history)}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>--- Investigating: why did Brightwave Robotics stock drop this week? ---
+[iteration 1] reasoned next step: get_recent_news({'company_name': 'Brightwave Robotics'}) -> observation: {'headlines': ['CEO Dana Ferris resigns effective immediately', 'Q2 earnings beat expectations']}
+[iteration 2] reasoned next step: get_company_profile({'company_name': 'Brightwave Robotics'}) -> observation: {'sector': 'industrial automation', 'hq': 'Portland, OR', 'founded': 2014}
+[iteration 3] enough evidence gathered -- stopping
+
+Total tool calls: 2</code></pre>
+    </div>
+    <p>Step 2 checked the company profile, not financials &mdash; because step 1's headlines mentioned a CEO resignation. Running the exact same code on a different company, with different headlines, takes a genuinely different path:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">run_emergent.py (continued)</span></div>
+      <pre><code>print("--- Investigating: Vertex Rail Systems ---")
+history2 = run_emergent_investigation("Vertex Rail Systems")
+print(f"Total tool calls: {len(history2)}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>--- Investigating: Vertex Rail Systems ---
+[iteration 1] reasoned next step: get_recent_news({'company_name': 'Vertex Rail Systems'}) -> observation: {'headlines': ['Wins $200M transit contract', 'Minor service delay reported in Denver']}
+[iteration 2] reasoned next step: get_competitor_list({'company_name': 'Vertex Rail Systems'}) -> observation: {'competitors': ['Ironline Transit', 'Summit Rail Corp']}
+[iteration 3] enough evidence gathered -- stopping
+
+Total tool calls: 2</code></pre>
+    </div>
+    <p>A third company, whose headlines mention neither a resignation nor earnings, takes the third branch &mdash; confirming all three of <code>decide_next_step</code>'s outcomes are real, reachable paths, not just the two shown above:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">run_emergent.py (third company)</span></div>
+      <pre><code>print("--- Investigating: Cinderline Foods ---")
+history3 = run_emergent_investigation("Cinderline Foods")
+print(f"Total tool calls: {len(history3)}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>--- Investigating: Cinderline Foods ---
+[iteration 1] reasoned next step: get_recent_news({'company_name': 'Cinderline Foods'}) -> observation: {'headlines': ['New plant opens in Ohio', 'Quarterly dividend unchanged']}
+[iteration 2] reasoned next step: get_competitor_list({'company_name': 'Cinderline Foods'}) -> observation: {'competitors': ['Hearthstone Snacks', 'Golden Acre Foods']}
+[iteration 3] enough evidence gathered -- stopping
+
+Total tool calls: 2</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>No branch was hardcoded per-company</dt>
+        <dd><code>decide_next_step</code> has no special case for "Brightwave" or "Vertex" &mdash; the branch taken depends only on the <em>content</em> of the news headlines just observed. That's the entire point of emergent planning: the plan (such as it is) is a byproduct of what's actually been discovered, not a lookup keyed on the company name.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="head-to-head" class="subtopic">
+    <h2>9. Head to head: call counts and adaptability</h2>
+    <p>Running the <em>snapshot</em> task (Sections 4-5's home turf) the emergent way instead, one reasoning call per step:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">compare.py</span></div>
+      <pre><code>def decide_next_snapshot_step(company_name, history):
+    tools_called = [h[0] for h in history]
+    order = ["get_company_profile", "get_financial_snapshot", "get_recent_news", "get_competitor_list"]
+    for tool in order:
+        if tool not in tools_called:
+            return {"tool": tool, "args": {"company_name": company_name}}
+    return None
+
+def run_emergent_snapshot(company_name, max_iterations=6):
+    history, reasoning_calls = [], 0
+    for i in range(1, max_iterations + 1):
+        reasoning_calls += 1  # every iteration is its own "ask what's next" call
+        step = decide_next_snapshot_step(company_name, history)
+        if step is None:
+            break
+        fn = TOOL_IMPLS[step["tool"]]
+        result = fn(**step["args"])
+        history.append((step["tool"], step["args"], result))
+    return history, reasoning_calls
+
+hist, calls = run_emergent_snapshot("Brightwave Robotics")
+print(f"Emergent-style snapshot: {calls} reasoning calls for a task whose order never varies.")
+print("Fixed-plan snapshot: 1 reasoning call (the plan itself), 0 more between the 4 executions.")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>Emergent-style snapshot: 5 reasoning calls for a task whose order never varies.
+Fixed-plan snapshot: 1 reasoning call (the plan itself), 0 more between the 4 executions.</code></pre>
+    </div>
+    <p>Five model calls versus one, for identical tool executions and an identical final report. That gap is Section 8's subject of Chapter 8 in miniature (cost and latency control) &mdash; and it only shows up because the snapshot task's steps never actually depended on each other, so the extra four reasoning calls bought nothing.</p>
+  </section>
+
+  <section id="fixed-wins" class="subtopic">
+    <h2>10. A case where fixed planning wins</h2>
+    <p>The snapshot task <em>is</em> that case, made precise: every section is needed regardless of what any other section returns, so there is nothing for a per-step reasoning call to adapt <em>to</em>. Four extra reasoning calls (Section 9) with zero behavioral difference in the tool sequence or the output is the signature of a task where fixed planning is strictly better &mdash; same result, a fifth of the reasoning cost, and a plan you can review and log before anything executes.</p>
+    <div class="what-is">
+      <span class="label">What is... the tell that a task wants a fixed plan?</span>
+      If you can write the full step sequence down correctly without running any of it first &mdash; and running it wouldn't change what you'd write &mdash; the task's steps are order-independent-of-outcome. That's a fixed-plan task, whether or not a human or a model produces the list.
+    </div>
+  </section>
+
+  <section id="emergent-wins" class="subtopic">
+    <h2>11. A case where emergent planning wins</h2>
+    <p>Now the reverse: pre-committing a fixed, two-step plan for the investigation task, decided before step 1's result is known:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">wrong_fixed_plan.py</span></div>
+      <pre><code>PRECOMMITTED_INVESTIGATION_PLAN = [
+    {"step": 1, "tool": "get_recent_news", "args": {"company_name": "Brightwave Robotics"}},
+    {"step": 2, "tool": "get_financial_snapshot", "args": {"company_name": "Brightwave Robotics"}},  # guessed
+]
+for item in PRECOMMITTED_INVESTIGATION_PLAN:
+    fn = TOOL_IMPLS[item["tool"]]
+    result = fn(**item["args"])
+    print(f"[fixed step {item['step']}] {item['tool']} -> {result}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>[fixed step 1] get_recent_news -> {'headlines': ['CEO Dana Ferris resigns effective immediately', 'Q2 earnings beat expectations']}
+[fixed step 2] get_financial_snapshot -> {'stock_price': 41.2, 'weekly_change_pct': -12.4, 'revenue_m': 340}</code></pre>
+    </div>
+    <p>Step 2 was locked in before step 1's headlines were known, and it guessed wrong: the headlines named a CEO resignation, not an earnings story, so the financial snapshot doesn't explain the stock drop at all. The correct step 2 (<code>get_company_profile</code>, per Section 8's real emergent run) was only knowable <em>after</em> seeing step 1's result &mdash; which is exactly what a fixed, up-front plan structurally cannot do.</p>
+    <div class="code-breakdown">
+      <dl>
+        <dt>This isn't a wrong-argument or hallucination failure</dt>
+        <dd>Both tool calls succeeded and returned real data &mdash; this is a <strong>wrong-plan failure</strong>, a new failure class this chapter introduces: the right tool to call next was knowable only from information the plan was built without. Re-planning (Section 6) could recover from this <em>after</em> noticing the mismatch, but emergent planning never makes the wrong commitment in the first place.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="heuristic" class="subtopic">
+    <h2>12. A decision heuristic: fixed vs. emergent</h2>
+    <p>Sections 10-11 generalize into two yes/no questions a builder can ask about any task before writing the agent:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">heuristic.py</span></div>
+      <pre><code>def classify_planning_mode(task_description, steps_known_in_advance, later_steps_depend_on_earlier_results):
+    if later_steps_depend_on_earlier_results:
+        return "emergent"
+    if steps_known_in_advance:
+        return "fixed"
+    return "emergent"  # default when steps aren't knowable up front either
+
+cases = [
+    ("Company snapshot report", True, False),
+    ("Stock-drop investigation", False, True),
+    ("New contractor onboarding checklist", True, False),
+    ("Root-cause triage of a customer complaint", False, True),
+]
+for desc, known, depends in cases:
+    print(desc, "->", classify_planning_mode(desc, known, depends))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>Company snapshot report -> fixed
+Stock-drop investigation -> emergent
+New contractor onboarding checklist -> fixed
+Root-cause triage of a customer complaint -> emergent</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... the actual decision rule, in one sentence?</span>
+      If a later step's correct choice can only be known after seeing an earlier step's real result, plan emergently; if the full sequence can be written correctly without running anything first, plan it fixed and save the reasoning calls.
+    </div>
+  </section>
+
+  <section id="replan-guard" class="subtopic">
+    <h2>13. Guardrails for re-planning</h2>
+    <p>Chapter 1's <code>max_iterations</code> guard bounded a loop that might never stop calling tools. A fixed-plan agent that re-plans on every failure (Section 6) has the same unbounded-retry shape if nothing caps how many times it's allowed to throw the plan out and start over &mdash; so it needs its own bound, <code>max_replans</code>, built the same way:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">guard_replan.py</span></div>
+      <pre><code>def run_fixed_plan_with_replan_guard(company_name, plan, correction=None, max_replans=2):
+    attempts = 0
+    current_plan, current_name = plan, company_name
+    while attempts <= max_replans:
+        report, trace = run_fixed_plan(current_name, current_plan)
+        if report is not None:
+            return report, attempts
+        attempts += 1
+        if attempts > max_replans:
+            print(f"[guard] hit max_replans={max_replans} -- giving up, returning to a human")
+            return None, attempts
+        if correction is None:
+            print(f"[guard] no correction available -- stopping after {attempts} attempt(s)")
+            return None, attempts
+        print(f"[re-plan attempt {attempts}] trying corrected name '{correction}'")
+        current_name = correction
+        current_plan = [dict(item, args={"company_name": correction}) for item in plan]
+    return None, attempts</code></pre>
+    </div>
+    <p>Two real runs: one where a correction is available and succeeds, one where it isn't &mdash; proving the guard doesn't retry forever either way:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">guard_replan.py (continued)</span></div>
+      <pre><code>report, attempts = run_fixed_plan_with_replan_guard("Brightwve Robotics", BAD_PLAN, correction="Brightwave Robotics")
+print(f"Succeeded after {attempts} re-plan(s)")
+
+report2, attempts2 = run_fixed_plan_with_replan_guard(
+    "Ghost Corp",
+    [{"step": 1, "tool": "get_company_profile", "args": {"company_name": "Ghost Corp"}}],
+    correction=None, max_replans=2,
+)
+print(f"report: {report2}, attempts used: {attempts2}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>[step 1] FAILED: get_company_profile -> {'error': "no profile on file for 'Brightwve Robotics'"} -- re-planning needed
+[re-plan attempt 1] trying corrected name 'Brightwave Robotics'
+[step 1] get_company_profile({'company_name': 'Brightwave Robotics'}) -> {'sector': 'industrial automation', 'hq': 'Portland, OR', 'founded': 2014}
+[step 2] get_financial_snapshot({'company_name': 'Brightwave Robotics'}) -> {'stock_price': 41.2, 'weekly_change_pct': -12.4, 'revenue_m': 340}
+[step 3] get_recent_news({'company_name': 'Brightwave Robotics'}) -> {'headlines': ['CEO Dana Ferris resigns effective immediately', 'Q2 earnings beat expectations']}
+[step 4] get_competitor_list({'company_name': 'Brightwave Robotics'}) -> {'competitors': ['Meridian Automation', 'Coreflow Systems']}
+Succeeded after 1 re-plan(s)
+[step 1] FAILED: get_company_profile -> {'error': "no profile on file for 'Ghost Corp'"} -- re-planning needed
+[guard] no correction available -- stopping after 1 attempt(s)
+report: None, attempts used: 1</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Same guarantee, same limits, as Chapter 1's guard</dt>
+        <dd><code>max_replans</code> guarantees the re-planning loop halts. It does not decide <em>what</em> correction to try &mdash; that's a separate concern (a real system might call a fuzzy-match lookup, ask a human, or give up immediately). And exactly like <code>max_iterations</code>, it says nothing about whether any side-effecting tool call made during those attempts was safe; Chapter 6 is still where the fuller guardrail set lives.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="finished-planbot" class="subtopic">
+    <h2>14. The finished dual-mode PlanBot</h2>
+    <p>Both strategies, assembled into one file ScoutBot would actually run &mdash; fixed planning for the snapshot report, emergent planning for the investigation, sharing the same four tools:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">planbot_agent.py</span></div>
+      <pre><code>import json
+
+COMPANY_PROFILES = {"brightwave robotics": {"sector": "industrial automation", "hq": "Portland, OR", "founded": 2014}}
+FINANCIALS = {"brightwave robotics": {"stock_price": 41.20, "weekly_change_pct": -12.4, "revenue_m": 340}}
+NEWS = {"brightwave robotics": ["CEO Dana Ferris resigns effective immediately", "Q2 earnings beat expectations"]}
+COMPETITORS = {"brightwave robotics": ["Meridian Automation", "Coreflow Systems"]}
+
+def get_company_profile(name):
+    return COMPANY_PROFILES.get(name.strip().lower(), {"error": f"no profile for '{name}'"})
+def get_financial_snapshot(name):
+    return FINANCIALS.get(name.strip().lower(), {"error": f"no financials for '{name}'"})
+def get_recent_news(name):
+    k = name.strip().lower()
+    return {"headlines": NEWS[k]} if k in NEWS else {"error": f"no news for '{name}'"}
+def get_competitor_list(name):
+    k = name.strip().lower()
+    return {"competitors": COMPETITORS[k]} if k in COMPETITORS else {"error": f"no competitors for '{name}'"}
+
+TOOL_IMPLS = {"get_company_profile": get_company_profile, "get_financial_snapshot": get_financial_snapshot,
+              "get_recent_news": get_recent_news, "get_competitor_list": get_competitor_list}
+FIXED_SNAPSHOT_ORDER = ["get_company_profile", "get_financial_snapshot", "get_recent_news", "get_competitor_list"]
+
+def run_fixed_snapshot(company_name, max_replans=2, correction=None):
+    name = company_name
+    for attempt in range(max_replans + 1):
+        sections, failed = {}, False
+        for tool_name in FIXED_SNAPSHOT_ORDER:
+            result = TOOL_IMPLS[tool_name](name)
+            if "error" in result:
+                failed = True
+                break
+            sections[tool_name] = result
+        if not failed:
+            return sections, attempt
+        if correction is None or attempt >= max_replans:
+            return None, attempt
+        name = correction
+    return None, max_replans
+
+def decide_next_investigation_step(history):
+    if not history:
+        return "get_recent_news"
+    last_tool, last_result = history[-1]
+    if last_tool == "get_recent_news":
+        headlines = " ".join(last_result.get("headlines", [])).lower()
+        if "resign" in headlines or "ceo" in headlines:
+            return "get_company_profile"
+        if "earnings" in headlines:
+            return "get_financial_snapshot"
+        return "get_competitor_list"
+    return None
+
+def run_emergent_investigation(company_name, max_iterations=4):
+    history = []
+    for _ in range(max_iterations):
+        next_tool = decide_next_investigation_step(history)
+        if next_tool is None:
+            break
+        result = TOOL_IMPLS[next_tool](company_name)
+        history.append((next_tool, result))
+    return history
+
+if __name__ == "__main__":
+    sections, replans = run_fixed_snapshot("Brightwave Robotics")
+    print(f"FIXED-PLAN snapshot ({replans} re-plans needed):")
+    for name, result in sections.items():
+        print(f"  {name}: {result}")
+    print()
+    history = run_emergent_investigation("Brightwave Robotics")
+    print(f"EMERGENT investigation ({len(history)} adaptive steps):")
+    for name, result in history:
+        print(f"  {name}: {result}")</code></pre>
+    </div>
+    <p>Running the assembled file end to end:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session &mdash; <code>python3 planbot_agent.py</code>)</span>
+      <pre><code>FIXED-PLAN snapshot (0 re-plans needed):
+  get_company_profile: {'sector': 'industrial automation', 'hq': 'Portland, OR', 'founded': 2014}
+  get_financial_snapshot: {'stock_price': 41.2, 'weekly_change_pct': -12.4, 'revenue_m': 340}
+  get_recent_news: {'headlines': ['CEO Dana Ferris resigns effective immediately', 'Q2 earnings beat expectations']}
+  get_competitor_list: {'competitors': ['Meridian Automation', 'Coreflow Systems']}
+
+EMERGENT investigation (2 adaptive steps):
+  get_recent_news: {'headlines': ['CEO Dana Ferris resigns effective immediately', 'Q2 earnings beat expectations']}
+  get_company_profile: {'sector': 'industrial automation', 'hq': 'Portland, OR', 'founded': 2014}</code></pre>
+    </div>
+    <p>Every function here was run for real earlier in this chapter (Sections 4-9, 11, 13), including the one live model call that produced Section 4's plan JSON. This is the reference shape Chapter 3 builds on: it goes deep on tool design and failure handling itself &mdash; wrong-tool-choice, argument validation, retry policy &mdash; beyond the single normalize-and-guard pattern used here and in Chapter 1. Chapter 4 adds memory so a plan's outcome can be recalled in a later session instead of vanishing when <code>run_fixed_snapshot</code> returns.</p>
+  </section>
+
+  <section id="thought-process" class="subtopic">
+    <h2>15. GenAI Builder Thought Process</h2>
+    <div class="thinking-box">
+      <p><strong>Thought process:</strong> the natural first instinct when a task needs "planning" is to reach for a single, general-purpose planner and use it everywhere &mdash; but Sections 9-11 show that's a real cost, not a neutral default: applying fixed planning to an emergent task locks in wrong steps, and applying emergent planning to a fixed task burns four extra reasoning calls for identical output. The discipline this chapter teaches isn't "always plan up front" or "always plan step by step" &mdash; it's asking Section 12's one question (does a later step's correct choice depend on an earlier step's real result?) before choosing either. A strong prompt for an AI pair-programmer extending this chapter's agent: "I have two tasks against the same four tools: Task A needs every tool called once, in a fixed order that never changes. Task B needs only some tools, and which ones depends on what an earlier tool call returns. Write a fixed-plan executor for Task A that builds the full step list before executing anything, and a separate one-step-at-a-time emergent loop for Task B that decides its next tool call only after seeing the previous result. Do not use an agent framework — plain Python and, where a real reasoning step is needed, the openai client against local Ollama."</p>
+    </div>
+  </section>
+
+  <div class="real-world">
+    <span class="label">In the Real World</span>
+    <ul>
+      <li>Coding agents plan emergently almost by necessity: a fix's next step depends entirely on what the previous edit's test run revealed. A CI/CD deployment agent, by contrast, often plans fixed: build, test, stage, promote &mdash; the same four steps every time, worth writing down once and reusing.</li>
+      <li>The wrong-plan failure in Section 11 (both tool calls succeeded, the plan itself was still wrong) is easy to miss in a production trace precisely because nothing errored &mdash; it only shows up when someone checks whether the final answer actually addressed the question asked.</li>
+      <li><code>max_replans</code> is the planning-layer sibling of Chapter 1's <code>max_iterations</code> &mdash; the same discipline (bound anything that might retry) applied one layer up, at the level of whole plans instead of single tool calls.</li>
+    </ul>
+  </div>
+
+  <section id="recap" class="subtopic">
+    <div class="points-to-remember">
+      <h2>Points to Remember</h2>
+      <ul>
+        <li>A <strong>fixed, up-front plan</strong> is a full ordered list of steps decided in one reasoning call before any tool executes; an <strong>emergent plan</strong> decides only the single next step, repeatedly, after seeing each observation &mdash; exactly what Chapter 1's loop already did implicitly.</li>
+        <li>The decision rule: if a later step's correct choice can only be known after seeing an earlier step's real result, plan emergently; if the full sequence can be written correctly without running anything first, plan it fixed and save the reasoning calls.</li>
+        <li>A fixed plan costs one reasoning call regardless of step count; an emergent loop costs roughly one reasoning call per step. This chapter measured a real 5-to-1 gap on a task where that extra cost bought nothing.</li>
+        <li>A <strong>wrong-plan failure</strong> (every tool call succeeds, but the plan itself locked in the wrong step before an earlier result was known) is a distinct failure class from Chapter 1's wrong-tool-choice or wrong-argument failures &mdash; and it is exactly the failure mode a fixed plan is structurally exposed to that emergent planning avoids.</li>
+        <li>Re-planning (rebuilding a fixed plan wholesale after a step fails) is not the same thing as emergent planning (never committing to a full plan at all) &mdash; both are legitimate, but they solve different problems and need their own guard (<code>max_replans</code>), the same discipline as Chapter 1's <code>max_iterations</code> applied one layer up.</li>
+        <li>No agent framework was used anywhere in this chapter &mdash; both planning strategies are plain Python and, where a live reasoning step is needed, the plain <code>openai</code> client against local Ollama.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p>Ready to check what stuck? Head to the interactive quiz next &mdash; every blank has a Check button, so you'll know instantly if you've got it.</p>
+
+  <div class="chapter-nav">
+    <a href="../../index.html">&larr; All Chapters</a>
+    <a href="quiz.html">Take the Quiz &rarr;</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+    <span><a href="https://github.com/TechNaom/agentic-ai-for-everyone">github.com/TechNaom/agentic-ai-for-everyone</a></span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

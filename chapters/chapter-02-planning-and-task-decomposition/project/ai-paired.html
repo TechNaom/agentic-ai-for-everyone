@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 2 Project: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design RouteBot's re-planning guard yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-02">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the project</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 2 Project &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already built RouteBot's fixed-plan-with-re-planning executor yourself. Now try the reverse: describe the same task to an AI assistant without showing it your own solution, and review what it hands back with the same scrutiny you'd bring to a teammate's pull request before merging it into Cobblestone Courier Co.'s real dispatch system.</p>
+  </div>
+
+  <h2>Step 1: Have the AI build it independently</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to specify the re-planning behavior explicitly and concretely (what triggers a re-plan, what happens when the correction also fails, what the return value should be when nothing recovers it) or the AI is likely to produce a function that "mostly works" on the happy path but handles the exhausted-guard case ambiguously — exactly the class of gap this exercise is designed to surface.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write a Python function run_fixed_dispatch(order_id, max_replans=2, correction=None) that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this project's own solution.py.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write a Python function run_fixed_dispatch(order_id, max_replans=2, correction=None) implementing a fixed-plan executor with a re-planning guard. It runs three steps in order -- verify_delivery_address(order_id), calculate_route(order_id), dispatch_driver(order_id) -- each from a TOOL_IMPLS dict, each returning a dict that may contain an "error" key on failure. If all three succeed, return (a dict of {tool_name: result}, the attempt number used). If any step fails: if `correction` is not None and the attempt count hasn't reached max_replans, rebuild the WHOLE plan using `correction` as the new order_id and retry from step 1. If correction is None, or max_replans is exhausted, return (None, attempt_number) and stop -- do not retry forever. Do not use any agent framework.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 2: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated re-planning loop tends to get wrong</span>
+    <ul>
+      <li><strong>Retrying a partial plan instead of the whole plan.</strong> A common mistake is resuming from the step that failed rather than rebuilding the full three-step sequence from the corrected <code>order_id</code> &mdash; check whether the generated code re-runs <em>all three</em> steps on a re-plan, the same "whole plan gets thrown out and rebuilt" behavior the lesson's Section 6 insists on.</li>
+      <li><strong>Off-by-one on <code>max_replans</code>.</strong> Does exhausting the guard happen after exactly <code>max_replans</code> extra attempts, or one too many/too few? Compare the returned attempt count against the self-check's own Check 2 and Check 3 expectations.</li>
+      <li><strong>Conflating "no correction available" with "correction failed too."</strong> These are different situations — the generated code should give up cleanly and immediately when <code>correction is None</code>, without treating that as just another retry-until-max_replans case.</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against <code>solution.py</code> in this same folder. Where do they differ? Is the AI's version genuinely equivalent, or does it handle one of the three watch-outs above differently — and is that difference actually a bug, or a legitimate different design choice?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Project</a>
+    <a href="../../../docs/curriculum/index.html">Back to Roadmap &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

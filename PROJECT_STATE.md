@@ -1,12 +1,11 @@
 # PROJECT_STATE.md — Agentic AI for Everyone
 
-Last updated: 2026-09-24 (Session 1 — Discovery, the curriculum map,
-the full repository scaffold, and Chapter 1, "The Agent Loop: Building
-Your First Autonomous Agent," complete and live, opening **Module 1 —
-Foundations of the Agent Loop**. Chapters 2-13 are scaffolded
-(`.gitkeep`'d directories), not yet built. Nothing has been pushed to
-GitHub — all work is local-only per this session's explicit
-instructions.)
+Last updated: 2026-09-28 (Session 2 — Chapter 2, "Planning and Task
+Decomposition," complete and live, closing **Module 1 — Foundations of
+the Agent Loop** (now fully complete: Chapters 1 and 2 both live).
+Chapters 3-13 are scaffolded (`.gitkeep`'d directories), not yet built.
+Nothing has been pushed to GitHub — all work is local-only, matching
+Session 1's explicit instructions and this session's own.)
 
 ## Course Objective
 
@@ -228,96 +227,212 @@ infrastructure or account interruption.
   pre-publication convention — this is aspirational text, not a live
   remote.
 
-## Next Recommended Task: Chapter 2 — "Planning and Task Decomposition"
+## Session 2 — Chapter 2, "Planning and Task Decomposition" (2026-09-28)
+
+Picked up a Chapter 2 build left uncommitted by a prior session (cut
+off by a usage limit before it could commit): `lesson.html`,
+`quiz.html`, `interview-questions.md`, the full `exercises/` set, and
+`practice/starter.py`+`solution.py` already existed and were re-
+verified, not rebuilt. This session completed the rest:
+
+1. Re-verified the pre-existing `exercises/` and `practice/` pair
+   (`solution.py` scores perfect, `starter.py` fails cleanly with no
+   crash) before building anything else on top of them.
+2. Built `interview-questions.html` as a static render of the
+   pre-existing `interview-questions.md`, matching Chapter 1's own
+   format (10 questions, 4 levels, `lesson-card` blocks).
+3. Built `practice/README.md`, `practice/index.html`, and
+   `practice/ai-paired.html` (a ninth scenario, `EscalationBot`, an
+   unnamed subscription-service support router with two layered
+   planning problems — wrong planning mode plus a wrong-plan failure —
+   matching Chapter 1's convention of leaving a two-tool scenario's org
+   unnamed).
+4. Built the entire `project/` folder from scratch: `README.md`,
+   `RUBRIC.md`, `index.html`, `ai-paired.html`, `starter.py`,
+   `solution.py` — a **chapter mini-project** (explicitly labeled as
+   such, since Chapter 2 has no dedicated L1/L2 slot on the curriculum
+   map's project ladder; that work is folded into the L2 Assisted
+   project after Chapter 4). Scenario: Cobblestone Courier Co.'s
+   RouteBot, combining a fixed-plan-with-re-planning executor and an
+   emergent delay-diagnosis loop in one 3-`TODO` scaffold, graded by 7
+   deterministic structural self-checks. `solution.py` verified 7/7;
+   `starter.py` verified 1/7 with no crash (the one check that doesn't
+   depend on any `TODO` — giving up cleanly with no correction
+   available — passes even against the unfilled stub).
+5. Wrote `quality-audits/chapter-02-audit.md`, extending (not
+   restarting) `chapter-01-audit.md`'s fictional-org exclusion list.
+   Four new orgs this chapter: **Alderleaf Research Group** (lesson;
+   ScoutBot), **Pinehurst Realty Group** (exercises; ListBot),
+   **Thistlewood Veterinary Group** (exercises `ai-paired.html`;
+   TriageBot), **Cobblestone Courier Co.** (project; RouteBot) — plus
+   EscalationBot's unnamed org (practice `ai-paired.html`). Running
+   exclusion list now: Northbeam Outdoors, Summit Gear Co-op, Fernbrook
+   Ski Patrol, Wavecrest Marina, Alderleaf Research Group, Pinehurst
+   Realty Group, Thistlewood Veterinary Group, Cobblestone Courier Co.
+6. Wired Chapter 2 into `assets/chapters-data.js` (real `path` added),
+   `docs/curriculum/index.html` (Chapter 2 card converted to a live
+   link, Module 1 feature card marked "Complete"), and root
+   `index.html` (`hero-stats` updated to 2/13 chapters, 1/6 modules
+   complete).
+7. Ran `bash scripts/local_check.sh < /dev/null` for the whole repo —
+   all 6 checks passed clean.
+8. Committed Chapter 2 locally (all its files, `chapters-data.js`,
+   `docs/curriculum/index.html`, root `index.html`, this file, and the
+   new audit) — no remote added, nothing pushed, matching Session 1's
+   and this session's own explicit local-only instructions.
+
+## Chapter 2 — COMPLETE
+
+- `lesson.html`: 63 lines match `<pre\|<code` (118 total tag
+  occurrences via `-o`), comfortably above the 60+ block requirement.
+  Built around Alderleaf Research Group's ScoutBot, comparing a fixed,
+  up-front plan (company snapshot — order-independent) against
+  emergent, one-step-at-a-time planning (stock-drop investigation —
+  order-dependent) against the same four tools, including a genuine
+  unscripted free-text-planning failure (invented tool names), a real
+  5-reasoning-calls-vs-1 cost comparison, a real wrong-plan failure
+  demonstration, and a `max_replans` guard mirroring Chapter 1's
+  `max_iterations`.
+- `quiz.html`: 10 fill-in-the-blank questions.
+- `interview-questions.html` + `.md`: 10 questions across
+  beginner/intermediate/senior/architect.
+- `exercises/`: Pinehurst Realty Group/ListBot scenario, 8 tasks (5
+  production-gear), 16 points. `solution.py` verified 16/16;
+  `starter.py` verified 2/16 with no crash. `ai-paired.html` uses a
+  third scenario (Thistlewood Veterinary Group/TriageBot).
+- `practice/`: 8 independent diagnostic scenarios, 8 points.
+  `solution.py` verified 8/8; `starter.py` verified 0/8 with no crash.
+  `ai-paired.html` uses a ninth scenario (EscalationBot, org left
+  unnamed).
+- `project/` (chapter mini-project, not on the numbered L1-L4 ladder):
+  Cobblestone Courier Co./RouteBot, a 3-`TODO` scaffold combining a
+  fixed-plan-with-re-planning executor, an emergent delay-diagnosis
+  loop, and the fixed-vs-emergent heuristic itself, graded by 7
+  deterministic structural self-checks. `solution.py` verified 7/7;
+  `starter.py` verified 1/7 with no crash. `RUBRIC.md` included.
+  `ai-paired.html` has the learner independently prompt an AI for
+  `run_fixed_dispatch()` and review it against a named checklist of
+  common AI-generated re-planning mistakes.
+- Wired into `assets/chapters-data.js` with a real `path`;
+  `docs/curriculum/index.html` and root `index.html` both reflect
+  Chapter 2 live, Module 1 complete.
+
+## Next Recommended Task: Chapter 3 — "Tool Use and Function Calling"
 
 This is written so a fresh Sonnet session, with zero memory of this
 one, can pick it up cold.
 
-**Where it sits:** Module 1 — Foundations of the Agent Loop, closing
-the module (Chapter 1 opened it). Per
+**Where it sits:** Module 2 — Giving Agents Capabilities, opening the
+module (Chapter 4, "Memory and State," closes it). Per
 `docs/curriculum/CURRICULUM_MAP.md`, difficulty: Intermediate.
 
 **What it must teach**, per the curriculum map and discovery notes:
-breaking a high-level goal into a sequence (or graph) of executable
-steps; re-planning when a step fails; the trade-off between a **fixed,
-up-front plan** decided before any action happens and an **emergent,
-interleaved plan** (ReAct-style: reason about the next single step,
-act, observe, reason about the *next* step, never committing to a full
-plan in advance). Chapter 1's `run_agent()` already does emergent,
-one-step-at-a-time planning implicitly (it never plans more than one
-tool call ahead) — Chapter 2's job is to make planning a *visible,
-separate, inspectable step* rather than something implicit in the
-model's per-turn tool choice, and to show a genuine case where a fixed
-up-front plan is the better choice (e.g., a task with known, ordered
-sub-steps where re-planning after every single action wastes calls) vs.
-a genuine case where emergent planning is better (e.g., a task where an
-early step's result changes what later steps should even be).
+Chapters 1-2 both used tool calling already, but only as much
+mechanics as each needed in passing (JSON schemas, one call, then a
+handful of calls in a plan). Chapter 3's job is to go *deep* on the
+tool layer itself, treating it as its own discipline rather than
+something that just works once you've written a schema: choosing the
+*right* tool among several plausible candidates when more than one
+tool could plausibly answer a request; forming *correct* arguments
+reliably, including realistic argument-formatting drift beyond the
+single normalize-and-guard pattern Chapters 1-2 already used; and
+handling *tool failure* as a first-class case — timeouts, malformed
+tool output, a tool that succeeds but returns data that doesn't
+actually answer the question, and retry policy for each failure type
+distinctly (not one undifferentiated "retry on error"). This is
+explicitly flagged in Chapter 2's own `lesson.html` closing section
+("Chapter 3 builds on this... it goes deep on tool design and failure
+handling itself... beyond the single normalize-and-guard pattern used
+here and in Chapter 1") — read that closing paragraph before starting,
+it's the exact hand-off point.
 
 **Directory already scaffolded:**
-`chapters/chapter-02-planning-and-task-decomposition/` with empty
+`chapters/chapter-03-tool-use-and-function-calling/` with empty
 `exercises/`, `practice/`, `project/` subdirs and a `.gitkeep`. No
-`lesson.html` etc. exist yet — Chapter 1's own directory is the
-complete reference for the exact file set to produce.
+`lesson.html` etc. exist yet — Chapter 1's and Chapter 2's own
+directories are the complete reference for the exact file set to
+produce (Chapter 2's is the more recent and closest in shape/density).
 
 **Concrete build steps:**
 
-1. Pick a fresh fictional scenario, distinct from TrailBot/Northbeam
-   Outdoors and from Chapter 1's exercises/practice/project orgs
-   (Summit Gear Co-op, Fernbrook Ski Patrol, Wavecrest Marina — see
-   `quality-audits/chapter-01-audit.md`'s exclusion list, and extend
-   it, don't restart it). A natural fit: a multi-step task that
-   genuinely benefits from decomposition — e.g., an agent that has to
-   research something across multiple sources and assemble a report,
-   or plan and execute a multi-stop errand/logistics task with
-   real ordering constraints (some steps depend on earlier steps'
-   results, some don't).
+1. Pick a fresh fictional scenario, distinct from every org in
+   `quality-audits/chapter-02-audit.md`'s running exclusion list
+   (currently: Northbeam Outdoors, Summit Gear Co-op, Fernbrook Ski
+   Patrol, Wavecrest Marina, Alderleaf Research Group, Pinehurst
+   Realty Group, Thistlewood Veterinary Group, Cobblestone Courier
+   Co.) — extend that list, don't restart it. A natural fit: a system
+   with several tools that plausibly overlap in what they could answer
+   (so wrong-tool-choice is a real, demonstrable failure, not a
+   strawman) and at least one tool whose realistic failure modes go
+   beyond a clean error dict — e.g., a tool that times out, or one that
+   returns a technically well-formed but substantively wrong or
+   incomplete result.
 2. Test every code example for real (local Ollama, `llama3.2:latest`,
    `base_url="http://localhost:11434/v1"`) before writing it into
-   `lesson.html`, exactly like Chapter 1's scratchpad-first discipline
-   — see `CONTRIBUTING.md`'s non-negotiable rule. Budget up to 450s per
-   live call; if a call genuinely can't be captured this session, say
-   so explicitly in the lesson text (don't claim a transcript that
-   wasn't observed).
+   `lesson.html`, exactly like Chapters 1-2's scratchpad-first
+   discipline — see `CONTRIBUTING.md`'s non-negotiable rule. Budget up
+   to 450s per live call, never idle-wait past that; if a call
+   genuinely can't be captured this session, say so explicitly in the
+   lesson text rather than claiming a transcript that wasn't observed.
 3. Build `lesson.html` to the same 60+ `<pre>`/`<code>`-block density
    bar, verified with
-   `grep -c '<pre\|<code' chapters/chapter-02-.../lesson.html` before
-   calling it done — do not skip this check.
-4. Build the full file set matching Chapter 1's exactly: `quiz.html`
+   `grep -c '<pre\|<code' chapters/chapter-03-.../lesson.html` (or the
+   `grep -o ... | wc -l` total-occurrence count, whichever this
+   session uses — be explicit in the audit about which method was
+   used) before calling it done — do not skip this check.
+4. Build the full file set matching Chapter 2's exactly: `quiz.html`
    (10 fill-in-the-blank), `interview-questions.html` + `.md` (10
    questions across 4 levels), `exercises/` (8+ tasks, 5+ production-
    gear, `starter.py`/`solution.py` both run and verified — starter
    fails cleanly, solution scores perfect — `README.md`, `index.html`,
    `ai-paired.html`), `practice/` (8+ scenarios, same file set,
-   `ai-paired.html`), `project/` (this chapter has no dedicated L1/L2
-   project per the curriculum map's project ladder — Chapter 2's own
-   project work is folded into the L2 Assisted project that ships
-   after Chapter 4 — so `project/` may be a thinner deliverable here;
-   check the curriculum map before assuming a full graded project is
-   required).
-5. Wire Chapter 2 into `assets/chapters-data.js` — add its real `path`
+   `ai-paired.html`). Check `docs/curriculum/CURRICULUM_MAP.md`'s
+   project ladder before assuming a full graded project is required —
+   if Chapter 3 has no dedicated L1/L2 slot (Chapter 2 didn't; its
+   project work was a chapter mini-project, not a ladder entry), either
+   follow the same chapter-mini-project pattern Chapter 2 used
+   (`project/README.md`, `RUBRIC.md`, `index.html`, `ai-paired.html`,
+   `starter.py`, `solution.py`, explicitly labeled as not being on the
+   numbered ladder) or confirm the ladder places Chapter 3's graded
+   project work elsewhere before skipping it — don't skip silently.
+5. Wire Chapter 3 into `assets/chapters-data.js` — add its real `path`
    only once `lesson.html` exists; the module's `examPath` stays
-   `null` until a written exam actually exists.
-6. Update `docs/curriculum/index.html`'s Chapter 2 card from a
-   non-linked "Planned" `<div>` to a linked `<a class="chapter-card">`,
-   and update the "Module 1" feature card's status from "In Progress"
-   to "Complete" (Chapter 2 closes Module 1).
-7. Update root `index.html`'s `hero-stats` chapter/module counts (2 of
-   13 chapters, still 1 of 6 modules *complete* — Module 1 completes
-   with Chapter 2, so this becomes "1 of 6 modules complete" once
-   Chapter 2 ships).
-8. Write `quality-audits/chapter-02-audit.md` following
-   `chapter-01-audit.md`'s exact format: honest self-critique, the
+   `null` until a written exam actually exists. Chapters 4-13 stay
+   without a `path`.
+6. Update `docs/curriculum/index.html`'s Chapter 3 card from a
+   non-linked "Planned" `<div>` to a linked `<a class="chapter-card">`.
+   Module 2 ("Giving Agents Capabilities") does *not* go to "Complete"
+   yet — it only completes once Chapter 4 also ships — so leave its
+   feature-card status as "Planned" or introduce an "In Progress"
+   state if the template supports one (check how Module 1 was worded
+   while only Chapter 1 was live, in this file's git history, for the
+   precedent).
+7. Update root `index.html`'s `hero-stats` chapter count (3 of 13
+   chapters live); the module-complete count stays at 1 of 6 until
+   Chapter 4 also ships.
+8. Write `quality-audits/chapter-03-audit.md` following
+   `chapter-02-audit.md`'s exact format: honest self-critique, the
    extended fictional-org exclusion list, source verification (if any
-   external sources are cited), the Ollama check done fresh, and the
-   full code-tested-before-writing disclosure.
+   external sources are cited), the Ollama check done fresh (or an
+   honest disclosure of what wasn't re-run and why, the same way this
+   session disclosed it didn't need a fresh live call for static/
+   deterministic files), and the full code-tested-before-writing
+   disclosure.
 9. Run `bash scripts/local_check.sh < /dev/null` before considering the
    chapter done — fix anything it flags.
-10. Update this file's "Last updated" line, "Session" section, and
-    "Next Recommended Task" (rewritten for Chapter 3) before ending the
-    session, exactly as this section was written for Chapter 2.
+10. Update this file's "Last updated" line, add a new "Session 3"
+    section documenting what was built, move Chapter 3 from "Next
+    Recommended Task" into a "Chapter 3 — COMPLETE" section (matching
+    how this session moved Chapter 2 from planned to complete), and
+    rewrite "Next Recommended Task" for Chapter 4 with the same
+    concrete, cold-pickup detail as this section, before ending the
+    session.
 
-**Do not** re-teach Chapter 1's own agent-loop mechanics from scratch —
-assume the reader just finished Chapter 1 and can already build a
-working tool-calling loop; Chapter 2's job is adding a genuinely new
-capability (visible, inspectable planning) on top of that loop, not
-re-explaining perception/reasoning/action/observation.
+**Do not** re-teach Chapters 1-2's own tool-calling mechanics from
+scratch (the JSON schema shape, `tool_calls`, `tool_call_id`, executing
+a call and feeding back an observation) — assume the reader can already
+build a working tool-calling loop and plan against it; Chapter 3's job
+is adding genuinely new depth (tool selection among overlapping
+candidates, argument-formation robustness beyond one normalize
+pattern, and differentiated failure/retry handling per failure type),
+not re-explaining what a tool call is.

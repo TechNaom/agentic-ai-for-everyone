@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planning and Task Decomposition Quiz — Agentic AI for Everyone</title>
+<meta name="description" content="Interactive quiz for Planning and Task Decomposition.">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-02" data-chapter-id="chapter-02">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="lesson.html">&larr; Back to the lesson</a></p>
+
+  <span class="chapter-badge">Chapter 2 Quiz</span>
+  <h1>Planning and Task Decomposition</h1>
+  <p>Fill in each blank, then check your answers. A perfect score marks this chapter complete.</p>
+
+  <div class="quiz-progress-wrap" aria-hidden="true">
+    <div class="quiz-progress-fill" id="quiz-progress-fill"></div>
+  </div>
+
+  <form onsubmit="return false;">
+
+    <div class="quiz-question">
+      <label for="q1"><span class="q-num">1</span> A ______ plan is a full ordered list of steps decided in one reasoning call, before any tool executes.</label>
+      <div class="fib-row">
+        <input type="text" id="q1" class="fib-blank" data-answers="fixed" aria-label="Answer for question 1">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q2"><span class="q-num">2</span> An ______ plan decides only the single next step, repeatedly, after seeing each observation.</label>
+      <div class="fib-row">
+        <input type="text" id="q2" class="fib-blank" data-answers="emergent" aria-label="Answer for question 2">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q3"><span class="q-num">3</span> The decision rule: if a later step's correct choice can only be known after seeing an earlier step's real ______, plan emergently.</label>
+      <div class="fib-row">
+        <input type="text" id="q3" class="fib-blank" data-answers="result,observation" aria-label="Answer for question 3">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q4"><span class="q-num">4</span> In the lesson's head-to-head, the emergent-style snapshot took 5 reasoning calls versus the fixed plan's ______ reasoning call.</label>
+      <div class="fib-row">
+        <input type="text" id="q4" class="fib-blank" data-answers="1,one" aria-label="Answer for question 4">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q5"><span class="q-num">5</span> In Section 11, both tool calls succeeded, yet the plan itself was wrong -- this new failure class is called a wrong-______ failure.</label>
+      <div class="fib-row">
+        <input type="text" id="q5" class="fib-blank" data-answers="plan" aria-label="Answer for question 5">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q6"><span class="q-num">6</span> ______ (rebuilding a fixed plan wholesale after a step fails) is not the same as emergent planning, which never commits to a full plan at all.</label>
+      <div class="fib-row">
+        <input type="text" id="q6" class="fib-blank" data-answers="re-planning,replanning" aria-label="Answer for question 6">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q7"><span class="q-num">7</span> The guard that bounds how many times a fixed plan can be rebuilt from scratch is called ______, the planning-layer sibling of Chapter 1's max_iterations.</label>
+      <div class="fib-row">
+        <input type="text" id="q7" class="fib-blank" data-answers="max_replans" aria-label="Answer for question 7">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q8"><span class="q-num">8</span> In the lesson's investigation scenario, headlines mentioning a CEO ______ caused the emergent loop to check the company profile next instead of financials.</label>
+      <div class="fib-row">
+        <input type="text" id="q8" class="fib-blank" data-answers="resignation,resign" aria-label="Answer for question 8">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q9"><span class="q-num">9</span> The lesson's live planning call, asked to return free-text JSON without the real tools= parameter, actually hallucinated tool names unrelated to the schema -- showing why grounding a plan in the ______ API matters, not just a well-worded prompt.</label>
+      <div class="fib-row">
+        <input type="text" id="q9" class="fib-blank" data-answers="tool-calling,function-calling,tool calling,function calling" aria-label="Answer for question 9">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q10"><span class="q-num">10</span> This chapter's finished agent is named PlanBot, built for the fictional market-research firm ______ Research Group.</label>
+      <div class="fib-row">
+        <input type="text" id="q10" class="fib-blank" data-answers="alderleaf,Alderleaf" aria-label="Answer for question 10">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div id="check-all-wrap">
+      <button type="button" id="check-all-btn" class="check-btn">Check All Answers</button>
+      <span id="quiz-score"></span>
+    </div>
+
+    <div class="quiz-celebration" id="quiz-celebration" aria-live="polite">
+      Perfect score. Chapter complete.
+    </div>
+  </form>
+
+  <div class="chapter-nav">
+    <a href="lesson.html">&larr; Back to Lesson</a>
+    <a href="exercises/index.html">Exercises &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/quiz-engine.js"></script>
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

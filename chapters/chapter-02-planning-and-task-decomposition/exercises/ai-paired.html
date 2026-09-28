@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 2: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose Thistlewood Veterinary Group's TriageBot planning bugs yourself, then critique an AI's plausible-but-flawed diagnosis of the same scenario.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-02">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the exercises</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 2 &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked the exercises yourself on Pinehurst Realty Group's ListBot. Now a third scenario, <strong>Thistlewood Veterinary Group</strong> (a fictional multi-vet clinic) and its intake agent <strong>TriageBot</strong>, gets diagnosed a second way: by prompting an AI assistant, and reviewing what it hands back with the same skepticism you'd bring to a coworker's write-up before it ships to the clinic's lead vet.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>TriageBot has three tools: <code>get_symptom_report(pet_id)</code>, <code>get_vitals(pet_id)</code>, and <code>check_recent_visits(pet_id)</code>. Thistlewood's lead vet reports three real, observed problems:</p>
+  <ol>
+    <li>For every <strong>routine annual wellness visit</strong> (a task whose steps never depend on each other &mdash; check vitals, check recent visit history, done), TriageBot asks the model to decide the next step fresh, one tool at a time, needing 3 separate reasoning calls for a sequence that's identical every single time.</li>
+    <li>For an <strong>urgent symptom intake</strong> (where the correct second check genuinely depends on the first symptom report &mdash; a limping dog needs a different follow-up than a vomiting cat), TriageBot instead uses a plan decided entirely up front: always check vitals second, regardless of what the symptom report said. For one real case, a "sudden lethargy" report should have led to checking recent visits for a prior diagnosis, but the fixed plan checked vitals instead, and vitals came back normal &mdash; even though the real answer (a missed follow-up from a visit two weeks earlier) was sitting in the visit history the whole time.</li>
+    <li>When a fixed wellness-visit plan hit a pet ID typo, TriageBot retried the corrected ID, then retried again with a second guess, then a third, a fourth &mdash; nothing capped how many times it was willing to rebuild and re-run the plan.</li>
+  </ol>
+  <p>Before reading further, write your own diagnosis: for each of the three problems, name the concept it's really about (using this chapter's vocabulary: wrong planning mode, wrong-plan failure, or a missing planning guard) and propose one concrete fix. Use a notes app or scratch file &mdash; there's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant the same question</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to hand over all three problems with their real, specific evidence &mdash; not a vague "why is my agent's planning bad" &mdash; or the AI has nothing concrete to diagnose and will produce generic advice instead of a checkable answer.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here are three observed problems in my agent's planning strategy... diagnose each one and propose a fix..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into Claude, ChatGPT, Copilot, or whatever assistant you use, and compare what it builds against this page's own critique in Step 3.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>I have an agent called TriageBot with three tools: get_symptom_report(pet_id), get_vitals(pet_id), check_recent_visits(pet_id). Here are three real, observed problems: [paste the three numbered problems above verbatim]. For each problem, name which planning concept it's really about (wrong planning mode for the task's shape, a wrong-plan failure, or a missing planning guard) and propose one concrete, specific code-level fix for each -- not a general "plan better" suggestion.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <p>A plausible-but-flawed AI answer to this exact prompt tends to make three specific mistakes worth watching for:</p>
+  <div class="what-is">
+    <span class="label">Common AI diagnosis mistakes on this scenario</span>
+    <ul>
+      <li><strong>Mislabeling Problem 1 as "the model is being inefficient."</strong> The real issue is a task/strategy mismatch: the wellness-visit steps never depend on each other, so this task should use a fixed plan (Section 4 of the lesson) instead of paying for 3 reasoning calls on a sequence that never varies. A shallow answer says "reduce calls" without naming that the fix is switching planning mode, not tuning the existing one.</li>
+      <li><strong>Treating Problem 2 as a wrong-tool-choice or wrong-argument failure.</strong> Every tool call TriageBot made actually succeeded — vitals came back real data. The real failure is that the <em>plan itself</em> locked in the wrong second step before the symptom report was read, exactly the wrong-plan failure class from Section 11 of the lesson. A generic answer often proposes "improve the vitals tool" instead of the real fix: this task needs emergent planning, since the correct second check genuinely depends on the first result.</li>
+      <li><strong>Proposing unlimited retries for Problem 3, or a very high retry count, instead of a hard <code>max_replans</code> cap.</strong> "Let it keep trying with better guesses" without a hard, small bound is a subtler version of the exact unbounded-loop problem Chapter 1's <code>max_iterations</code> guard exists to prevent — just one layer up, at the plan level instead of the tool-call level.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's actual answer against your own Step 1 notes and the three watch-outs above. Which one(s) did it get right? Which, if any, did it get wrong the way described here? That comparison &mdash; not the AI's fluency &mdash; is the real test.</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Exercises</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

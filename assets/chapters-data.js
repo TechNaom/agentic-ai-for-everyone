@@ -7,8 +7,8 @@
   set it to null until that module's written exam actually exists in
   assessments/written-exams/.
 
-  Chapter 1 (Module 1 started) is live as of this build -- see
-  PROJECT_STATE.md for status. Chapters 2-13 are planned, `.gitkeep`'d,
+  Chapters 1-2 (Module 1 complete) are live as of this build -- see
+  PROJECT_STATE.md for status. Chapters 3-13 are planned, `.gitkeep`'d,
   not yet built.
 */
 
@@ -29,7 +29,8 @@ window.AAFE_MODULES = [
         id: "chapter-02",
         num: 2,
         title: "Planning and Task Decomposition",
-        description: "Breaking a goal into steps, re-planning on failure, fixed plans vs. emergent ReAct-style planning."
+        description: "Breaking a goal into steps, re-planning on failure, fixed plans vs. emergent ReAct-style planning.",
+        path: "chapters/chapter-02-planning-and-task-decomposition/lesson.html"
       }
     ]
   },
