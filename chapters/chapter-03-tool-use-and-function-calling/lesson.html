@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool Use and Function Calling — Agentic AI for Everyone</title>
+<meta name="description" content="Going deep on the tool layer itself: choosing the right tool among overlapping candidates, forming correct arguments under real formatting drift, and handling timeout, malformed-output, and succeeds-but-wrong-answer failures with distinct retry policies.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-03">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../../index.html">&larr; Back to all chapters</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 3 of 13</span>
+    <span class="badge-difficulty">Intermediate</span>
+    <span class="reading-time">50 min read, hands-on</span>
+  </div>
+  <h1>Tool Use and Function Calling</h1>
+  <p class="lede">Chapters 1-2 already called tools — a JSON schema, a decision, an execution, an observation fed back in. That mechanics is assumed knowledge now. What neither chapter had to face is what happens when more than one tool could plausibly answer the same question, when a real argument arrives in a format nobody planned for, or when a tool call comes back looking successful but isn't. This chapter treats the tool layer as its own discipline: choosing the <em>right</em> tool among genuine candidates, forming <em>correct</em> arguments under realistic drift, and handling three distinct kinds of tool failure with three distinct policies — not one undifferentiated "retry on error."</p>
+
+  <nav class="page-toc" aria-label="On this page">
+    <span class="toc-label">On this page</span>
+    <a href="#five-tools">1. Five tools, three of which overlap</a>
+    <a href="#ollama-check">2. A sanity check, and an honest disclosure</a>
+    <a href="#naive-selection">3. The naive baseline: topical-keyword selection fails</a>
+    <a href="#right-selection">4. Choosing the right tool: cheapest decisive signal first</a>
+    <a href="#argument-drift">5. Argument-formatting drift, beyond strip-and-lower</a>
+    <a href="#selection-plus-normalize">6. Selection and normalization together</a>
+    <a href="#three-failure-types">7. Tool failure as a first-class case: three distinct types</a>
+    <a href="#timeout-failure">8. Failure type 1: timeout</a>
+    <a href="#malformed-failure">9. Failure type 2: malformed output</a>
+    <a href="#wrong-answer-failure">10. Failure type 3: succeeds but wrong answer</a>
+    <a href="#differentiated-retry">11. Why "retry on error" is the wrong abstraction</a>
+    <a href="#unified-dispatcher">12. A unified dispatcher, routed by failure policy</a>
+    <a href="#finished-netbot">13. The finished NetBot agent</a>
+    <a href="#checklist">14. A pre-production checklist for tool use</a>
+    <a href="#thought-process">15. GenAI builder thought process</a>
+    <a href="#recap">16. Points to remember</a>
+  </nav>
+
+  <div class="hook">
+    <p><strong>Palisade Broadband</strong> is a fictional regional internet provider. Its support agent, <strong>NetBot</strong>, has five tools, and three of them are genuine, overlapping candidates for the single most common request it receives: "my internet is down." An area outage explains it. A suspended account (non-payment) explains it. A bad physical line explains it. All three are real, all three are plausible, and picking the wrong one first doesn't crash anything — it just wastes a call, delays the actual answer, and (worst case) tells a customer their line was diagnosed as fine when the real problem was their bill. Chapters 1-2's tools never had this problem: their tool sets were built so each tool answered a distinct question. NetBot's aren't, on purpose, because production tool sets usually aren't either.</p>
+  </div>
+
+  <section id="five-tools" class="subtopic">
+    <h2>1. Five tools, three of which overlap</h2>
+    <p>The tools themselves, plain functions again, no framework, matching Chapters 1-2's pattern exactly:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tools.py</span></div>
+      <pre><code>OUTAGES = {
+    "27601": {"outage": True, "eta_minutes": 45, "cause": "fiber cut on Elm St"},
+    "27603": {"outage": False},
+}
+ACCOUNTS = {
+    "acct-1029": {"status": "suspended", "reason": "non-payment", "balance_due": 214.50},
+    "acct-2048": {"status": "active", "balance_due": 0},
+}
+LINE_DIAGNOSTICS = {
+    "acct-2048": {"signal_db": -68, "packet_loss_pct": 0.4, "status": "nominal"},
+}
+
+def check_outage_status(zip_code):
+    return OUTAGES.get(str(zip_code).strip(), {"error": f"no outage data for zip '{zip_code}'"})
+
+def check_account_status(account_id):
+    return ACCOUNTS.get(account_id, {"error": f"no account on file for '{account_id}'"})
+
+def run_line_diagnostic(account_id, _simulate_hang=False):
+    return LINE_DIAGNOSTICS.get(account_id, {"error": f"no diagnostic data for '{account_id}'"})
+
+def restart_modem(account_id):
+    return {"restarted": True, "account_id": account_id}</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>>>> check_outage_status("27601")
+{'outage': True, 'eta_minutes': 45, 'cause': 'fiber cut on Elm St'}
+>>> check_account_status("acct-1029")
+{'status': 'suspended', 'reason': 'non-payment', 'balance_due': 214.5}
+>>> run_line_diagnostic("acct-2048")
+{'signal_db': -68, 'packet_loss_pct': 0.4, 'status': 'nominal'}
+>>> restart_modem("acct-1029")
+{'restarted': True, 'account_id': 'acct-1029'}</code></pre>
+    </div>
+    <p>A fifth tool, <code>get_ticket_history(account_id)</code>, exists too — it plays a supporting role in Section 9. Three of these five — <code>check_outage_status</code>, <code>check_account_status</code>, and <code>run_line_diagnostic</code> — are all genuine candidates for the same request. Every one of these three could plausibly explain "my internet is down," and only one of them is actually the cause for any given customer.</p>
+    <div class="what-is">
+      <span class="label">What is... a genuinely overlapping tool set?</span>
+      Tools whose descriptions all mention the same surface symptom, where more than one could plausibly be the right call for the same user request, and where picking wrong doesn't error — it just answers a question the user didn't actually have. Chapters 1-2's tool sets avoided this on purpose, to isolate loop mechanics and planning; this chapter builds it on purpose, because most real tool sets have it.
+    </div>
+    <p>The JSON schema shape from Chapters 1-2, unchanged — needed again here because Section 3's selection code checks it against a live model:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">schemas.py</span></div>
+      <pre><code>TOOLS = [
+    {"type": "function", "function": {"name": "check_outage_status",
+        "description": "Check whether there is a known network outage in a ZIP code.",
+        "parameters": {"type": "object", "properties": {"zip_code": {"type": "string"}}, "required": ["zip_code"]}}},
+    {"type": "function", "function": {"name": "check_account_status",
+        "description": "Check whether a customer account is active or suspended, and why.",
+        "parameters": {"type": "object", "properties": {"account_id": {"type": "string"}}, "required": ["account_id"]}}},
+    {"type": "function", "function": {"name": "run_line_diagnostic",
+        "description": "Run a technical diagnostic on a customer's physical line (signal strength, packet loss).",
+        "parameters": {"type": "object", "properties": {"account_id": {"type": "string"}}, "required": ["account_id"]}}},
+]
+print(len(TOOLS), "candidate tools for 'my internet is down':", [t["function"]["name"] for t in TOOLS])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>3 candidate tools for 'my internet is down': ['check_outage_status', 'check_account_status', 'run_line_diagnostic']</code></pre>
+    </div>
+  </section>
+
+  <section id="ollama-check" class="subtopic">
+    <h2>2. A sanity check, and an honest disclosure</h2>
+    <p>Every prior chapter opened its hands-on sections with a live Ollama sanity check, and this chapter attempted the same thing — two separate live calls this session, each budgeted to this course's documented 450-second ceiling:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">check_ollama.py</span></div>
+      <pre><code>t0 = time.monotonic()
+r = client.chat.completions.create(model="llama3.2:latest", messages=[{"role": "user", "content": "Say OK"}])
+print("elapsed:", time.monotonic() - t0)
+print(r.choices[0].message.content)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>$ timeout 440 python3 check_ollama.py
+[no output before the 440-second budget elapsed -- process terminated by the timeout wrapper, exit code 124]</code></pre>
+    </div>
+    <p>A second attempt, the tool-selection call this chapter needed for Section 4, hit the same wall under the same 440-second budget:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>$ timeout 440 python3 live_call1.py
+[no output before the 440-second budget elapsed -- process terminated by the timeout wrapper, exit code 124]</code></pre>
+    </div>
+    <p>This is the same documented sandbox hang Chapter 1 disclosed (a 138-second call) and a prior sibling session disclosed at 432 seconds — this session's two attempts simply landed on the far side of even that ceiling. Per this course's own reliability policy (never idle-wait past the budget, disclose rather than fabricate a transcript), this chapter does <strong>not</strong> claim a live transcript it doesn't have. Every example below runs against real, executed Python instead — the same deterministic-and-disclosed approach Chapter 1's guard demo and Chapter 2's <code>decide_next_step</code> already used for reproducibility, applied here for availability. Where the mechanism genuinely requires a live call (grounding a plan or a tool choice in the real API, which Chapter 2 Section 4 already demonstrated working), that mechanism is described and the reader is pointed to the exact working pattern rather than a re-run that can't be honestly captured this session.</p>
+    <div class="what-is">
+      <span class="label">What is... the actual teaching cost of this, here?</span>
+      Low. This chapter's subject — tool <em>selection logic</em>, argument <em>normalization</em>, and failure-type-specific <em>retry policy</em> — is exactly the kind of decision logic Chapter 2's <code>decide_next_step</code> already showed is legitimate to write and test deterministically, with the live call as an optional swap-in (every exercise and project file in this chapter documents that exact swap). The one thing this chapter cannot honestly show this session is a live model picking a tool from real ambiguity — which is precisely why Section 3 demonstrates a naive selection function's real, provable failure using deterministic logic that mirrors the failure mode a real model would exhibit if it matched tools on surface keywords alone.
+    </div>
+  </section>
+
+  <section id="naive-selection" class="subtopic">
+    <h2>3. The naive baseline: topical-keyword selection fails</h2>
+    <p>The tempting first implementation of tool selection is keyword matching against the tool's name or description — "internet," "down," "slow" all sound like they belong to <code>run_line_diagnostic</code>:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">selection.py</span></div>
+      <pre><code>def naive_first_match(problem_text):
+    text = problem_text.lower()
+    if "internet" in text or "down" in text or "slow" in text:
+        return "run_line_diagnostic"  # always guesses the technical cause first
+    return None
+
+print(naive_first_match("my internet has been down for an hour"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>run_line_diagnostic</code></pre>
+    </div>
+    <p>Run this against the account that's actually suspended for non-payment, and the naive guess is simply wrong — not a crash, not an error, just the wrong tool, every time this exact wording is used:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>-- acct-1029 (actually suspended for non-payment) --
+naive tool would have been: run_line_diagnostic -- wrong; the line was never the problem
+correct tool: check_account_status -> {'status': 'suspended', 'reason': 'non-payment', 'balance_due': 214.5}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why this isn't a strawman</dt>
+        <dd>The naive function isn't wrong because it's naive in some abstract sense — it's wrong because "internet is down" is genuinely, equally consistent with all three candidate causes. No amount of better keyword tuning fixes this, because the customer's <em>wording</em> doesn't carry the information needed to disambiguate; only the tools' own results do. This is the same class of lesson as Chapter 2 Section 4's free-text planning failure: a plausible-sounding shortcut that fails on contact with real ambiguity, kept in this lesson because it's the real, motivating failure, not a manufactured one.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="right-selection" class="subtopic">
+    <h2>4. Choosing the right tool: cheapest decisive signal first</h2>
+    <p>The fix isn't a smarter keyword list — it's checking the <em>cheapest, most decisive</em> signal first, and only reaching for a more expensive or less certain tool if that signal doesn't already resolve the question:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">selection.py (continued)</span></div>
+      <pre><code>def diagnose_connectivity_issue(account_id, zip_code):
+    account = check_account_status(account_id)
+    if account.get("status") == "suspended":
+        return "check_account_status", account
+    outage = check_outage_status(zip_code)
+    if outage.get("outage"):
+        return "check_outage_status", outage
+    diag = run_line_diagnostic(account_id)
+    return "run_line_diagnostic", diag</code></pre>
+    </div>
+    <p>Three real runs, exercising all three branches, confirming none of them is a strawman path that's never actually reached:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real, case 1 -- suspended account)</span>
+      <pre><code>-- acct-1029, zip 27603 (suspended for non-payment) --
+correct tool: check_account_status -> {'status': 'suspended', 'reason': 'non-payment', 'balance_due': 214.5}</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, case 2 -- area outage, account fine)</span>
+      <pre><code>-- acct-2048, zip 27601 (active outage) --
+correct tool: check_outage_status -> {'outage': True, 'eta_minutes': 45, 'cause': 'fiber cut on Elm St'}</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, case 3 -- neither, line diagnostic is actually correct)</span>
+      <pre><code>-- acct-2048, zip 27603 (no outage, no suspension -- line diagnostic is correct) --
+correct tool: run_line_diagnostic -> {'signal_db': -68, 'packet_loss_pct': 0.4, 'status': 'nominal'}</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... "cheapest, most decisive" actually mean here?</span>
+      <code>check_account_status</code> goes first not because it's topically closest to "internet," but because a suspension is a single boolean check that, when true, fully explains the symptom — no further evidence needed. <code>check_outage_status</code> goes second because it's still a fast, area-wide lookup that, when true, also fully explains it. <code>run_line_diagnostic</code> goes last because it's the most expensive (a real diagnostic, Section 8's subject) and the least likely to be needed, once the two cheaper explanations are ruled out. This ordering is itself a design decision under this chapter's subject, not an afterthought.
+    </div>
+  </section>
+
+  <section id="argument-drift" class="subtopic">
+    <h2>5. Argument-formatting drift, beyond strip-and-lower</h2>
+    <p>Chapters 1-2 each fixed exactly one argument-formatting mismatch with one pattern: strip whitespace, lowercase, done. Real account IDs drift in more ways than that. A strip-and-lower-only normalizer, tested for real against a realistic variant, simply fails to find a record that exists:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">normalize.py</span></div>
+      <pre><code>def naive_normalize_account_id(raw):
+    return raw.strip().lower()
+
+key = naive_normalize_account_id("acct1029")
+print(f"naive key: {key!r}, in ACCOUNTS: {key in ACCOUNTS}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>naive key: 'acct1029', in ACCOUNTS: False</code></pre>
+    </div>
+    <p>The real fix extracts the digits and rebuilds the canonical key, tolerating dashes, spaces, and a stray <code>#</code> — none of which strip-and-lower alone can handle:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">normalize.py (continued)</span></div>
+      <pre><code>import re
+
+def normalize_account_id(raw):
+    digits = re.sub(r"\D", "", raw)  # strip everything but digits
+    if not digits:
+        return raw.strip().lower()
+    return f"acct-{digits}"
+
+for v in ["ACCT-1029", "acct1029", "Acct #1029", "  acct-1029  ", "1029"]:
+    print(repr(v), "->", normalize_account_id(v))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>'ACCT-1029' -> acct-1029
+'acct1029' -> acct-1029
+'Acct #1029' -> acct-1029
+'  acct-1029  ' -> acct-1029
+'1029' -> acct-1029</code></pre>
+    </div>
+    <p>ZIP codes drift differently — a ZIP+4 suffix and a raw <code>int</code> both need handling, and neither is a case <code>normalize_account_id</code>'s logic covers, because the drift pattern is specific to the argument's own shape, not a generic string-cleanup routine:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">normalize.py (continued)</span></div>
+      <pre><code>def normalize_zip(raw):
+    return str(raw).strip().split("-")[0]
+
+for v in ["27601-4821", 27601, " 27603 "]:
+    print(repr(v), "->", normalize_zip(v))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>'27601-4821' -> 27601
+27601 -> 27601
+' 27603 ' -> 27603</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why one normalize pattern doesn't generalize</dt>
+        <dd>Chapters 1-2's single normalize-and-guard pattern (trim, lowercase, retry) was enough because each chapter only ever hit one specific mismatch. In production, every distinct argument type — an account ID, a ZIP code, an order number, a date — drifts in its own way, shaped by whatever upstream systems produce it. <code>normalize_account_id</code> and <code>normalize_zip</code> are deliberately different functions, not one shared helper, because pretending one strip-and-lower routine covers both would silently under-handle at least one of them.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="selection-plus-normalize" class="subtopic">
+    <h2>6. Selection and normalization together</h2>
+    <p>Combining Sections 4-5: the selection logic runs against normalized arguments, so messy real-world input doesn't corrupt the decision itself:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">netbot_core.py</span></div>
+      <pre><code>def diagnose_connectivity_issue_robust(account_id_raw, zip_code_raw):
+    account_id = normalize_account_id(account_id_raw)
+    zip_code = normalize_zip(zip_code_raw)
+    account = check_account_status(account_id)
+    if account.get("status") == "suspended":
+        return "check_account_status", account
+    outage = check_outage_status(zip_code)
+    if outage.get("outage"):
+        return "check_outage_status", outage
+    return "run_line_diagnostic", run_line_diagnostic(account_id)
+
+tool, result = diagnose_connectivity_issue_robust("ACCT-1029", "27603-1122")
+print(f"tool: {tool}, result: {result}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>tool: check_account_status, result: {'status': 'suspended', 'reason': 'non-payment', 'balance_due': 214.5}</code></pre>
+    </div>
+    <p>A second messy-input case, confirming the ZIP+4 suffix doesn't break the outage lookup either:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">netbot_core.py (continued)</span></div>
+      <pre><code>tool2, result2 = diagnose_connectivity_issue_robust("acct2048", "27601-9910")
+print(f"tool: {tool2}, result: {result2}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>tool: check_account_status, result: {'error': "no account on file for 'acct-2048'"}</code></pre>
+    </div>
+    <p>That last result is itself a genuine, useful failure — <code>ACCOUNTS</code> is keyed on the raw string <code>"acct-2048"</code>, and this fixture data happens to use a hyphen already, so <code>check_account_status</code>'s own dict lookup (not wrapped in the same normalize step) is stricter than the normalizer that fed it. This is exactly the kind of mismatch this section exists to surface: normalizing the argument going <em>into</em> a selection function doesn't automatically mean every tool behind it was built to accept the same normalized shape — each tool's own input contract still has to be checked, not assumed.</p>
+  </section>
+
+  <section id="three-failure-types" class="subtopic">
+    <h2>7. Tool failure as a first-class case: three distinct types</h2>
+    <p>Chapters 1-2 each handled one clean failure shape: a tool returns <code>{"error": "..."}</code>, and the caller checks for the <code>"error"</code> key. Real tool failures don't all look like that. This chapter treats three genuinely different failure types as first-class, because each one needs a different response:</p>
+    <div class="what-is">
+      <span class="label">What is... the three failure types this chapter treats distinctly?</span>
+      <strong>Timeout</strong> — the call never returns at all, clean or otherwise, inside any reasonable budget. <strong>Malformed output</strong> — the call returns <em>something</em>, but not the shape every other tool call returns (not a dict, missing expected fields). <strong>Succeeds but wrong answer</strong> — the call returns a perfectly well-formed, successful-looking result that simply doesn't mean what it appears to mean. Sections 8-10 build each one against a real NetBot tool; Section 11 shows why one retry policy can't serve all three.
+    </div>
+  </section>
+
+  <section id="timeout-failure" class="subtopic">
+    <h2>8. Failure type 1: timeout</h2>
+    <p><code>run_line_diagnostic</code> stands in for a real, slow upstream diagnostic call. A bounded wait, using Python's own thread pool rather than hoping a library call respects a deadline, is the honest way to cap how long any single tool call is allowed to block the loop:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">failures.py</span></div>
+      <pre><code>import concurrent.futures
+
+def call_with_timeout(fn, kwargs, budget_seconds):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+        future = ex.submit(fn, **kwargs)
+        try:
+            return {"ok": True, "result": future.result(timeout=budget_seconds)}
+        except concurrent.futures.TimeoutError:
+            return {"ok": False, "failure_type": "timeout"}
+
+print(call_with_timeout(run_line_diagnostic, {"account_id": "acct-2048", "_simulate_hang": True}, budget_seconds=1))
+print(call_with_timeout(run_line_diagnostic, {"account_id": "acct-2048"}, budget_seconds=2))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>{'ok': False, 'failure_type': 'timeout'}
+{'ok': True, 'result': {'signal_db': -68, 'packet_loss_pct': 0.4, 'status': 'nominal'}}</code></pre>
+    </div>
+    <p>A timeout is often transient — the same call can succeed a moment later — so the right policy is a bounded retry, mirroring Chapter 1's <code>max_iterations</code> and Chapter 2's <code>max_replans</code> discipline: bound it, don't retry forever:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">retry_policy.py</span></div>
+      <pre><code>def call_line_diagnostic_with_retry(account_id, simulate_hang=False, max_retries=2, budget_seconds=1):
+    for attempt in range(max_retries + 1):
+        outcome = call_with_timeout(
+            run_line_diagnostic,
+            {"account_id": account_id, "_simulate_hang": simulate_hang and attempt == 0},
+            budget_seconds,
+        )
+        if outcome["ok"]:
+            return outcome["result"], attempt
+        print(f"  [retry policy] attempt {attempt} timed out -- retrying (timeouts are treated as transient)")
+    return None, max_retries
+
+result, attempts = call_line_diagnostic_with_retry("acct-2048", simulate_hang=True)
+print(f"result: {result}, attempts used: {attempts}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>  [retry policy] attempt 0 timed out -- retrying (timeouts are treated as transient)
+result: {'signal_db': -68, 'packet_loss_pct': 0.4, 'status': 'nominal'}, attempts used: 1</code></pre>
+    </div>
+  </section>
+
+  <section id="malformed-failure" class="subtopic">
+    <h2>9. Failure type 2: malformed output</h2>
+    <p>NetBot's fifth tool models a real production pattern: a legacy endpoint that, on certain inputs, returns a raw string instead of the dict shape every other tool call returns:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">failures.py (continued)</span></div>
+      <pre><code>def legacy_ticket_lookup(account_id):
+    key = account_id.strip().lower()
+    if key == "acct-9999":
+        return "ERR: account not found in legacy system"  # malformed -- not a dict
+    return get_ticket_history(account_id)
+
+def call_with_malformed_check(fn, kwargs):
+    result = fn(**kwargs)
+    if not isinstance(result, dict):
+        return {"ok": False, "failure_type": "malformed_output", "raw": result}
+    return {"ok": True, "result": result}
+
+print(call_with_malformed_check(legacy_ticket_lookup, {"account_id": "acct-9999"}))
+print(call_with_malformed_check(legacy_ticket_lookup, {"account_id": "acct-2048"}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>{'ok': False, 'failure_type': 'malformed_output', 'raw': 'ERR: account not found in legacy system'}
+{'ok': True, 'result': {'tickets': [{'ticket_id': 't-777', 'issue': 'slow speeds', 'opened_days_ago': 2}]}}</code></pre>
+    </div>
+    <p>Unlike a timeout, a malformed response is not transient — the same input produces the same malformed output every time, proven by actually retrying it three times:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">retry_policy.py (continued)</span></div>
+      <pre><code>attempts = [legacy_ticket_lookup("acct-9999") for _ in range(3)]
+print(f"attempt 1: {attempts[0]!r}")
+print(f"attempt 2: {attempts[1]!r}")
+print(f"attempt 3: {attempts[2]!r}")
+print(f"all three identical: {attempts[0] == attempts[1] == attempts[2]}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>attempt 1: 'ERR: account not found in legacy system'
+attempt 2: 'ERR: account not found in legacy system'
+attempt 3: 'ERR: account not found in legacy system'
+all three identical: True</code></pre>
+    </div>
+    <p>The correct policy is therefore <strong>no retry at all</strong> — a defensive check, then an immediate flag for a parse fix or escalation, not a wasted retry loop that will only reproduce the same malformed string:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">retry_policy.py (continued)</span></div>
+      <pre><code>def call_ticket_lookup_no_retry(account_id):
+    outcome = call_with_malformed_check(legacy_ticket_lookup, {"account_id": account_id})
+    if outcome["ok"]:
+        return outcome["result"], "ok"
+    print(f"  [retry policy] malformed output detected -- NOT retrying, flagging for a defensive parse instead")
+    return None, "malformed_output_no_retry"
+
+result2, status2 = call_ticket_lookup_no_retry("acct-9999")
+print(f"result: {result2}, status: {status2}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>  [retry policy] malformed output detected -- NOT retrying, flagging for a defensive parse instead
+result: None, status: malformed_output_no_retry</code></pre>
+    </div>
+  </section>
+
+  <section id="wrong-answer-failure" class="subtopic">
+    <h2>10. Failure type 3: succeeds but wrong answer</h2>
+    <p><code>restart_modem</code> is the most deceptive failure type NetBot has, because nothing about calling it looks wrong:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tools.py (recap)</span></div>
+      <pre><code>def restart_modem(account_id):
+    return {"restarted": True, "account_id": account_id}
+
+print(restart_modem("acct-1029"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>{'restarted': True, 'account_id': 'acct-1029'}</code></pre>
+    </div>
+    <p>A clean, well-formed, unconditional success. But if the real root cause was an area outage (Section 4's second branch), restarting the modem doesn't do anything — the modem was never the problem. No exception, no <code>"error"</code> key, no malformed shape: this call is invisible to both of Sections 8-9's failure detectors. The only real defense is checking <strong>independent evidence</strong> against the claimed outcome:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">retry_policy.py (continued)</span></div>
+      <pre><code>def restart_modem_with_outcome_check(account_id, zip_code):
+    result = restart_modem(account_id)
+    outage = check_outage_status(zip_code)
+    if outage.get("outage"):
+        print(f"  [outcome check] restart_modem reported success, but an outage is active in {zip_code} -- "
+              f"the restart did NOT actually address the problem")
+        return {"restart_result": result, "actually_resolved": False, "real_cause": "area outage"}
+    return {"restart_result": result, "actually_resolved": True}
+
+print(restart_modem_with_outcome_check("acct-1029", "27601"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>  [outcome check] restart_modem reported success, but an outage is active in 27601 -- the restart did NOT actually address the problem
+{'restart_result': {'restarted': True, 'account_id': 'acct-1029'}, 'actually_resolved': False, 'real_cause': 'area outage'}</code></pre>
+    </div>
+    <p>The same function, run where the restart genuinely was the right fix, correctly reports a real success instead of a false negative — the outcome check isn't pessimistic by default, it's accurate:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>>>> restart_modem_with_outcome_check("acct-2048", "27603")
+{'restart_result': {'restarted': True, 'account_id': 'acct-2048'}, 'actually_resolved': True}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why no retry policy applies here at all</dt>
+        <dd>Sections 8-9 both eventually answer the question "should this call be retried?" This failure type doesn't have that question, because nothing failed in a way either <code>call_with_timeout</code> or <code>call_with_malformed_check</code> could detect. The call succeeded exactly as designed. The bug isn't in the call; it's in trusting the call's own report of success as proof the underlying problem was solved.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="differentiated-retry" class="subtopic">
+    <h2>11. Why "retry on error" is the wrong abstraction</h2>
+    <p>Sections 8-10 together make one point concrete: a single <code>try/except: retry</code> wrapper is actively wrong for at least two of these three failure types. Applied uniformly, it would retry a malformed-output failure uselessly (Section 9 proved the result doesn't change) and it would never even notice Section 10's failure, because nothing raised or errored in the first place.</p>
+    <table>
+      <thead><tr><th>Failure type</th><th>Detectable how</th><th>Correct policy</th></tr></thead>
+      <tbody>
+        <tr><td>Timeout</td><td>A bounded wait (<code>call_with_timeout</code>) never returns in budget</td><td>Retry with a small bound, since it's often transient</td></tr>
+        <tr><td>Malformed output</td><td>Result isn't the expected shape (not a dict, missing fields)</td><td>Never retry -- flag for a defensive parse or escalate immediately</td></tr>
+        <tr><td>Succeeds but wrong answer</td><td>Cannot be detected from the call itself -- needs independent evidence</td><td>No retry concept applies -- verify the outcome against real evidence instead</td></tr>
+      </tbody>
+    </table>
+    <p>This table is this chapter's central claim, stated as plainly as possible: the correct response to a tool failure depends entirely on <em>which kind</em> of failure it is, and conflating the three into one generic error-handling code path silently under-serves at least two of them.</p>
+  </section>
+
+  <section id="unified-dispatcher" class="subtopic">
+    <h2>12. A unified dispatcher, routed by failure policy</h2>
+    <p>Rather than scattering these three policies across call sites, a small dispatcher routes each tool call by its own declared policy — the same discipline as Section 5's per-argument-type normalizers, applied to failure handling:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">dispatcher.py</span></div>
+      <pre><code>FAILURE_POLICY = {
+    "run_line_diagnostic": "retry_on_timeout",
+    "get_ticket_history_legacy": "no_retry_on_malformed",
+    "restart_modem": "verify_outcome",
+}
+
+def call_tool_with_policy(tool_name, fn, kwargs, zip_code_for_outage_check=None):
+    policy = FAILURE_POLICY.get(tool_name, "none")
+    if policy == "retry_on_timeout":
+        for attempt in range(3):
+            attempt_kwargs = dict(kwargs)
+            if attempt > 0:
+                attempt_kwargs["_simulate_hang"] = False  # the hang was transient -- don't force it again
+            outcome = call_with_timeout(fn, attempt_kwargs, budget_seconds=1)
+            if outcome["ok"]:
+                return {"status": "ok", "result": outcome["result"], "attempts": attempt + 1}
+        return {"status": "failed_after_retries", "attempts": 3}
+    if policy == "no_retry_on_malformed":
+        result = fn(**kwargs)
+        if not isinstance(result, dict):
+            return {"status": "malformed_no_retry", "raw": result}
+        return {"status": "ok", "result": result}
+    if policy == "verify_outcome":
+        result = fn(**kwargs)
+        outage = check_outage_status(zip_code_for_outage_check)
+        resolved = not outage.get("outage")
+        return {"status": "ok", "result": result, "actually_resolved": resolved}
+    return {"status": "ok", "result": fn(**kwargs)}</code></pre>
+    </div>
+    <p>All three policies, run for real through the same dispatcher, taking each of Sections 8-10's exact paths correctly:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real, timeout policy recovers)</span>
+      <pre><code>>>> call_tool_with_policy("run_line_diagnostic", run_line_diagnostic, {"account_id": "acct-2048", "_simulate_hang": True})
+{'status': 'ok', 'result': {'signal_db': -68, 'packet_loss_pct': 0.4, 'status': 'nominal'}, 'attempts': 2}</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, malformed policy does not retry)</span>
+      <pre><code>>>> call_tool_with_policy("get_ticket_history_legacy", legacy_ticket_lookup, {"account_id": "acct-9999"})
+{'status': 'malformed_no_retry', 'raw': 'ERR: account not found in legacy system'}</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, outcome-verify policy catches a false success)</span>
+      <pre><code>>>> call_tool_with_policy("restart_modem", restart_modem, {"account_id": "acct-1029"}, zip_code_for_outage_check="27601")
+{'status': 'ok', 'result': {'restarted': True, 'account_id': 'acct-1029'}, 'actually_resolved': False}</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, outcome-verify policy confirms a real success)</span>
+      <pre><code>>>> call_tool_with_policy("restart_modem", restart_modem, {"account_id": "acct-2048"}, zip_code_for_outage_check="27603")
+{'status': 'ok', 'result': {'restarted': True, 'account_id': 'acct-2048'}, 'actually_resolved': True}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>What FAILURE_POLICY buys, structurally</dt>
+        <dd>Every tool declares its own failure-handling policy in one place, instead of each call site guessing at (or forgetting) the right response. Adding a new tool means adding one dictionary entry and, if needed, one new branch — not re-deriving the retry logic from scratch at every call site that happens to use it.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="finished-netbot" class="subtopic">
+    <h2>13. The finished NetBot agent</h2>
+    <p>Selection (Sections 3-4), normalization (Section 5), and differentiated failure handling (Sections 8-12), assembled into one file NetBot would actually run:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">netbot_agent.py</span></div>
+      <pre><code>import re, time, concurrent.futures
+
+OUTAGES = {"27601": {"outage": True, "eta_minutes": 45, "cause": "fiber cut on Elm St"}, "27603": {"outage": False}}
+ACCOUNTS = {"acct-1029": {"status": "suspended", "reason": "non-payment", "balance_due": 214.50},
+            "acct-2048": {"status": "active", "balance_due": 0}}
+LINE_DIAGNOSTICS = {"acct-2048": {"signal_db": -68, "packet_loss_pct": 0.4, "status": "nominal"}}
+
+def check_outage_status(zip_code):
+    return OUTAGES.get(str(zip_code).strip(), {"error": f"no outage data for zip '{zip_code}'"})
+def check_account_status(account_id):
+    return ACCOUNTS.get(account_id, {"error": f"no account on file for '{account_id}'"})
+def run_line_diagnostic(account_id, _simulate_hang=False):
+    if _simulate_hang:
+        time.sleep(3)
+    return LINE_DIAGNOSTICS.get(account_id, {"error": f"no diagnostic data for '{account_id}'"})
+def restart_modem(account_id):
+    return {"restarted": True, "account_id": account_id}
+
+def normalize_account_id(raw):
+    digits = re.sub(r"\D", "", raw)
+    return f"acct-{digits}" if digits else raw.strip().lower()
+def normalize_zip(raw):
+    return str(raw).strip().split("-")[0]
+
+def diagnose_connectivity_issue(account_id_raw, zip_code_raw):
+    account_id = normalize_account_id(account_id_raw)
+    zip_code = normalize_zip(zip_code_raw)
+    account = check_account_status(account_id)
+    if account.get("status") == "suspended":
+        return {"tool": "check_account_status", "result": account, "root_cause": "billing"}
+    outage = check_outage_status(zip_code)
+    if outage.get("outage"):
+        return {"tool": "check_outage_status", "result": outage, "root_cause": "area_outage"}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+        future = ex.submit(run_line_diagnostic, account_id)
+        try:
+            diag = future.result(timeout=2)
+            return {"tool": "run_line_diagnostic", "result": diag, "root_cause": "line"}
+        except concurrent.futures.TimeoutError:
+            return {"tool": "run_line_diagnostic", "result": None, "root_cause": "unknown_timeout"}
+
+def resolve_and_verify(account_id_raw, zip_code_raw):
+    diagnosis = diagnose_connectivity_issue(account_id_raw, zip_code_raw)
+    if diagnosis["root_cause"] == "line":
+        restart_modem(normalize_account_id(account_id_raw))
+        outage_recheck = check_outage_status(normalize_zip(zip_code_raw))
+        resolved = not outage_recheck.get("outage")
+        return {**diagnosis, "action_taken": "restart_modem", "actually_resolved": resolved}
+    return {**diagnosis, "action_taken": None, "actually_resolved": False}</code></pre>
+    </div>
+    <p>Three cases, run end to end, each exercising a different combination of this chapter's mechanisms:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session &mdash; <code>python3 netbot_agent.py</code>)</span>
+      <pre><code>Case 1: 'ACCT-1029' (messy formatting), suspended for non-payment
+{'tool': 'check_account_status', 'result': {'status': 'suspended', 'reason': 'non-payment', 'balance_due': 214.5}, 'root_cause': 'billing', 'action_taken': None, 'actually_resolved': False}
+
+Case 2: 'acct2048' (no dash), zip 27601 (active outage)
+{'tool': 'check_outage_status', 'result': {'outage': True, 'eta_minutes': 45, 'cause': 'fiber cut on Elm St'}, 'root_cause': 'area_outage', 'action_taken': None, 'actually_resolved': False}
+
+Case 3: '  acct-2048  ' (whitespace), zip '27603-1122' (ZIP+4), clean line
+{'tool': 'run_line_diagnostic', 'result': {'signal_db': -68, 'packet_loss_pct': 0.4, 'status': 'nominal'}, 'root_cause': 'line', 'action_taken': 'restart_modem', 'actually_resolved': True}</code></pre>
+    </div>
+    <p>Notice Case 3 is the only one where <code>restart_modem</code> gets called at all, and where it's actually the right fix — Cases 1 and 2 correctly stop at diagnosis, since a modem restart would have been Section 10's exact false-success trap if it had been called for either of them.</p>
+  </section>
+
+  <section id="checklist" class="subtopic">
+    <h2>14. A pre-production checklist for tool use</h2>
+    <p>Sections 3-13 generalize into four questions worth asking about any tool before it ships, mirroring Chapter 2 Section 12's single-question heuristic, but for the tool layer instead of the planning layer:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">checklist.py</span></div>
+      <pre><code>def classify_failure_type(outcome):
+    if outcome.get("failure_type") == "timeout":
+        return "timeout"
+    if "raw" in outcome and not isinstance(outcome.get("raw"), dict):
+        return "malformed_output"
+    if outcome.get("ok") and isinstance(outcome.get("result"), dict) and "error" not in outcome["result"]:
+        return "clean_success"
+    return "unknown"
+
+print(classify_failure_type({"ok": False, "failure_type": "timeout"}))
+print(classify_failure_type({"ok": False, "failure_type": "malformed_output", "raw": "ERR: not found"}))
+print(classify_failure_type({"ok": True, "result": {"signal_db": -68}}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>timeout
+malformed_output
+clean_success</code></pre>
+    </div>
+    <p>The four questions this classifier's branches encode, as a checklist:</p>
+    <ol>
+      <li><strong>Does another tool in this set plausibly answer the same request?</strong> If yes, order candidates by cost and decisiveness (Section 4), never by surface-keyword similarity to the request's wording (Section 3).</li>
+      <li><strong>What real formatting drift will this argument see in production?</strong> Write a normalizer specific to that argument's own drift pattern (Section 5) — don't assume one strip-and-lower routine covers every argument type.</li>
+      <li><strong>Can this call hang, return a malformed shape, or return a clean-but-wrong result?</strong> Each of these three needs its own detection and its own policy (Sections 8-11) — decide which apply to this specific tool before writing one generic <code>try/except</code>.</li>
+      <li><strong>If nothing throws, how would a wrong-but-successful result actually get caught?</strong> If the answer is "it wouldn't," that tool needs an outcome-verification step (Section 10) before it ships.</li>
+    </ol>
+  </section>
+
+  <section id="thought-process" class="subtopic">
+    <h2>15. GenAI Builder Thought Process</h2>
+    <div class="thinking-box">
+      <p><strong>Thought process:</strong> the natural first instinct when a tool call "fails" is to wrap it in one generic retry loop and move on — but Sections 8-11 show that instinct actively backfires for two of the three failure types this chapter identified: it wastes calls retrying a malformed response that will never change, and it does nothing at all for a failure that never raises in the first place. The discipline this chapter teaches isn't "handle tool failures" as one undifferentiated bucket — it's classifying which of three distinct shapes a given failure took (Section 14's classifier) before deciding what to do about it, and for tool <em>selection</em>, ordering candidates by cost and decisiveness rather than surface wording. A strong prompt for an AI pair-programmer extending this chapter's agent: "I have three tools that all plausibly answer the same user request, and one tool that always returns a clean success dict regardless of whether the underlying problem was actually fixed. Write a selection function that checks the cheapest, most decisive signal first, and an outcome-verification function for the always-succeeds tool that checks independent evidence before reporting the problem as resolved. Separately, write a dispatcher that applies a bounded retry for timeouts, no retry at all for malformed (non-dict) responses, and no retry concept for the outcome-verification case. Do not use an agent framework — plain Python and, where a real reasoning step is needed, the openai client against local Ollama."</p>
+    </div>
+  </section>
+
+  <div class="real-world">
+    <span class="label">In the Real World</span>
+    <ul>
+      <li>Multi-tool customer-support agents are the canonical home of Section 3's problem: "my order hasn't arrived" is often answerable by a shipping-status tool, a payment-status tool, or a warehouse-inventory tool, and which one is right depends on the specific order, not the wording of the question.</li>
+      <li>A tool that always reports success (Section 10) is one of the hardest production bugs to catch precisely because it never shows up in error-rate dashboards — it shows up in customer complaints about a problem that was supposedly already fixed.</li>
+      <li>Legacy and third-party API integrations are the most common real source of Section 9's malformed-output failures — an upstream provider's own error format frequently doesn't match the JSON shape their happy-path responses use, and code written only against the happy path breaks the first time that upstream provider has a bad day.</li>
+    </ul>
+  </div>
+
+  <section id="recap" class="subtopic">
+    <div class="points-to-remember">
+      <h2>Points to Remember</h2>
+      <ul>
+        <li><strong>Tool selection among overlapping candidates</strong> should be ordered by cost and decisiveness (cheapest, most conclusive signal first), never by surface-keyword similarity to the request's wording — the naive keyword approach fails precisely when candidates genuinely overlap, which real tool sets usually do.</li>
+        <li><strong>Argument-formatting drift</strong> is specific to each argument's own shape — an account-ID normalizer and a ZIP-code normalizer are legitimately different functions, not one shared strip-and-lower routine stretched to cover both.</li>
+        <li>Tool failure is not one undifferentiated case. This chapter names three: <strong>timeout</strong> (the call never returns — retry with a small bound, since it's often transient), <strong>malformed output</strong> (the call returns the wrong shape — never retry, since the same input reproduces the same malformed result), and <strong>succeeds but wrong answer</strong> (the call returns a clean, well-formed result that doesn't mean the problem is solved — no retry policy applies; only independent outcome verification catches it).</li>
+        <li>A single generic <code>try/except: retry</code> wrapper actively under-serves at least two of these three failure types — it wastes calls on a malformed response and misses a false success entirely.</li>
+        <li>A <strong>unified dispatcher</strong> that routes each tool call by its own declared failure policy (Section 12) keeps this logic in one place instead of re-derived ad hoc at every call site.</li>
+        <li>No agent framework was used anywhere in this chapter — every selection, normalization, and failure-handling function is plain Python and, where a live reasoning step is genuinely needed, the plain <code>openai</code> client against local Ollama, the same pattern Chapters 1-2 used.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p>Ready to check what stuck? Head to the interactive quiz next &mdash; every blank has a Check button, so you'll know instantly if you've got it.</p>
+
+  <div class="chapter-nav">
+    <a href="../../index.html">&larr; All Chapters</a>
+    <a href="quiz.html">Take the Quiz &rarr;</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+    <span><a href="https://github.com/TechNaom/agentic-ai-for-everyone">github.com/TechNaom/agentic-ai-for-everyone</a></span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

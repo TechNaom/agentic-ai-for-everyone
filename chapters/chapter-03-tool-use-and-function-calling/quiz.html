@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool Use and Function Calling Quiz — Agentic AI for Everyone</title>
+<meta name="description" content="Interactive quiz for Tool Use and Function Calling.">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-03" data-chapter-id="chapter-03">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="lesson.html">&larr; Back to the lesson</a></p>
+
+  <span class="chapter-badge">Chapter 3 Quiz</span>
+  <h1>Tool Use and Function Calling</h1>
+  <p>Fill in each blank, then check your answers. A perfect score marks this chapter complete.</p>
+
+  <div class="quiz-progress-wrap" aria-hidden="true">
+    <div class="quiz-progress-fill" id="quiz-progress-fill"></div>
+  </div>
+
+  <form onsubmit="return false;">
+
+    <div class="quiz-question">
+      <label for="q1"><span class="q-num">1</span> When several tools genuinely overlap in what they could answer, the correct selection order checks the ______ and most decisive signal first, not the topically-closest-sounding tool.</label>
+      <div class="fib-row">
+        <input type="text" id="q1" class="fib-blank" data-answers="cheapest" aria-label="Answer for question 1">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q2"><span class="q-num">2</span> The lesson's naive_first_match function failed because it matched on surface ______ in the customer's wording, not on which cause was actually true.</label>
+      <div class="fib-row">
+        <input type="text" id="q2" class="fib-blank" data-answers="keywords,keyword" aria-label="Answer for question 2">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q3"><span class="q-num">3</span> A strip-and-lower-only normalizer failed on "acct1029" because it lacked a dash -- the real fix extracts only the ______ and rebuilds the canonical key.</label>
+      <div class="fib-row">
+        <input type="text" id="q3" class="fib-blank" data-answers="digits" aria-label="Answer for question 3">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q4"><span class="q-num">4</span> This chapter names three distinct tool-failure types: timeout, malformed output, and succeeds but wrong ______.</label>
+      <div class="fib-row">
+        <input type="text" id="q4" class="fib-blank" data-answers="answer" aria-label="Answer for question 4">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q5"><span class="q-num">5</span> A timeout failure is often ______, so the correct policy is a bounded retry -- unlike a malformed-output failure, which the lesson proved returns the identical result on every retry.</label>
+      <div class="fib-row">
+        <input type="text" id="q5" class="fib-blank" data-answers="transient" aria-label="Answer for question 5">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q6"><span class="q-num">6</span> The correct policy for a malformed-output failure is ______ retry at all -- a defensive check and an immediate flag instead.</label>
+      <div class="fib-row">
+        <input type="text" id="q6" class="fib-blank" data-answers="no,never" aria-label="Answer for question 6">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q7"><span class="q-num">7</span> restart_modem's succeeds-but-wrong-answer failure is invisible to both the timeout and malformed-output detectors because it never ______ or returns the wrong shape.</label>
+      <div class="fib-row">
+        <input type="text" id="q7" class="fib-blank" data-answers="errors,raises,throws" aria-label="Answer for question 7">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q8"><span class="q-num">8</span> The only real defense against a succeeds-but-wrong-answer failure is checking independent ______ against the claimed outcome, not trusting the tool's own report.</label>
+      <div class="fib-row">
+        <input type="text" id="q8" class="fib-blank" data-answers="evidence" aria-label="Answer for question 8">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q9"><span class="q-num">9</span> This chapter's unified dispatcher routes each tool call by a per-tool FAILURE_______ dictionary, instead of re-deriving retry logic at every call site.</label>
+      <div class="fib-row">
+        <input type="text" id="q9" class="fib-blank" data-answers="POLICY,policy" aria-label="Answer for question 9">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q10"><span class="q-num">10</span> This chapter's NetBot agent was built for the fictional regional internet provider ______ Broadband.</label>
+      <div class="fib-row">
+        <input type="text" id="q10" class="fib-blank" data-answers="palisade,Palisade" aria-label="Answer for question 10">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div id="check-all-wrap">
+      <button type="button" id="check-all-btn" class="check-btn">Check All Answers</button>
+      <span id="quiz-score"></span>
+    </div>
+
+    <div class="quiz-celebration" id="quiz-celebration" aria-live="polite">
+      Perfect score. Chapter complete.
+    </div>
+  </form>
+
+  <div class="chapter-nav">
+    <a href="lesson.html">&larr; Back to Lesson</a>
+    <a href="exercises/index.html">Exercises &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/quiz-engine.js"></script>
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

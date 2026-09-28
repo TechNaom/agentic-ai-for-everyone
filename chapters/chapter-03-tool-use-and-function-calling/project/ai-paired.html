@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 3 Project: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design RepairBot's outcome-verification function yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-03">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the project</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 3 Project &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already built RepairBot's outcome-verification function yourself. Now try the reverse: describe the same task to an AI assistant without showing it your own solution, and review what it hands back with the same scrutiny you'd bring to a teammate's pull request before merging it into Kestrel Appliance Service's real dispatch system.</p>
+  </div>
+
+  <h2>Step 1: Have the AI build it independently</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to make explicit that <code>schedule_repair_visit</code> always returns a clean success — otherwise the AI has no reason to add an independent outcome check at all, and will likely just return whatever <code>schedule_repair_visit</code> reported, which is exactly the bug this exercise is designed to surface.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write a Python function verify_repair_outcome(ticket_id) that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this project's own solution.py.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write a Python function verify_repair_outcome(ticket_id) for an appliance-repair agent. It has access to two tools from a TOOL_IMPLS-style dict: schedule_repair_visit(ticket_id), which ALWAYS returns {"scheduled": True, "ticket_id": ticket_id} regardless of whether the repair actually happens -- and get_repair_ticket_status(ticket_id), which returns real ticket data like {"status": "completed"} or {"status": "scheduled"} (or an error dict if the ticket doesn't exist). verify_repair_outcome should call schedule_repair_visit, then independently check get_repair_ticket_status, and only report the repair as resolved if the real ticket status is exactly "completed" -- NOT just because schedule_repair_visit reported success. Return {"schedule_result": ..., "resolved": bool}. Do not use any agent framework.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 2: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated outcome-check tends to get wrong</span>
+    <ul>
+      <li><strong>Trusting <code>schedule_repair_visit</code>'s own success flag as proof of resolution.</strong> The whole point of this function is that a tool's own reported "success" is not evidence the underlying problem is solved — check whether the generated code actually calls <code>get_repair_ticket_status</code> at all, or just returns <code>schedule_result["scheduled"]</code> renamed to <code>resolved</code>.</li>
+      <li><strong>Treating any non-error status as resolved.</strong> A ticket with <code>{"status": "scheduled"}</code> is not an error, but it's also not <code>"completed"</code> — does the generated code correctly distinguish "no error" from "actually done," or does it collapse the two?</li>
+      <li><strong>Not handling a ticket that doesn't exist.</strong> What does the generated code do if <code>get_repair_ticket_status</code> returns an error dict with no <code>"status"</code> key at all — does it crash with a <code>KeyError</code>, or does it degrade to <code>resolved: False</code> the way a missing/unknown ticket should?</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against <code>solution.py</code> in this same folder. Where do they differ? Is the AI's version genuinely equivalent, or does it handle one of the three watch-outs above differently — and is that difference actually a bug, or a legitimate different design choice?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Project</a>
+    <a href="../../../docs/curriculum/index.html">Back to Roadmap &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

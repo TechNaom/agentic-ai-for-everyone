@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tool Use and Function Calling Exercises — Agentic AI for Everyone</title>
+<meta name="description" content="Hands-on exercises for Tool Use and Function Calling.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-03">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../quiz.html">&larr; Back to the quiz</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 3 Exercises</span>
+    <span class="reading-time">~40 min, hands-on</span>
+  </div>
+  <h1>Exercises: Tool Use and Function Calling</h1>
+  <p>
+    These exercises use a second scenario, deliberately different from
+    the lesson's Palisade Broadband/NetBot hook:
+    <strong>Thornbury Insurance Group</strong>, a fictional auto
+    insurer. Its agent, <strong>ClaimBot</strong>, has four tools that
+    plausibly overlap in what they could explain about a slow claim,
+    and one tool that always "succeeds" without that meaning the claim
+    is actually resolved. Applying this chapter's concepts to a fresh
+    scenario is the point.
+  </p>
+
+  <div class="what-is">
+    <span class="label">Exercise standard</span>
+    Eight tasks total, worth 16 points. Five are marked production-gear
+    — normalizing a real argument-format drift, implementing a real
+    tool-selection function, a real timeout-retry policy, diagnosing a
+    real malformed-output trace, and a real outcome-check function, not
+    just concept recall.
+  </div>
+
+  <h2>Tasks</h2>
+  <ol>
+    <li><strong>Map facts to tool-failure concepts</strong> — assign wrong-tool-choice, argument-formatting drift, timeout failure, malformed-output failure, or succeeds-but-wrong-answer failure to five ClaimBot facts.</li>
+    <li><strong>Dependency reasoning</strong> — does always picking the topically-closest tool over the cheapest decisive signal make a wrong-tool-choice failure more or less likely?</li>
+    <li><strong>(Production-gear) Normalize a policy ID</strong> — tolerate four real argument-formatting variations.</li>
+    <li><strong>(Production-gear) Tool-selection function</strong> — check the cheapest, most decisive signal first.</li>
+    <li><strong>(Production-gear) Timeout-retry policy</strong> — recover from a transient hang without retrying forever.</li>
+    <li><strong>(Production-gear) Failure diagnosis</strong> — correctly name a malformed-output failure.</li>
+    <li><strong>(Production-gear) Outcome-check function</strong> — catch a tool that always "succeeds" but doesn't solve the problem.</li>
+    <li><strong>Completeness check</strong> — confirm all five tool-failure concepts were actually used.</li>
+  </ol>
+
+  <p>Full instructions and the scoring rubric are in <code>README.md</code> alongside <code>starter.py</code> (fill in the <code>TODO</code>s) and <code>solution.py</code> (the reference, scores 16/16).</p>
+
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+
+  <div class="chapter-nav">
+    <a href="ai-paired.html">Now Pair With an AI &rarr;</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

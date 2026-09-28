@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 3 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose HandoffBot's layered tool-use bug yourself, then critique an AI's plausible-but-flawed answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-03">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 3 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, not in the eight above: <strong>"HandoffBot"</strong>, a shipment-tracking agent at a fictional logistics service (left unnamed on purpose, the same way Chapter 2's EscalationBot scenario did — a small scenario doesn't need an invented company). HandoffBot has three tools: <code>track_shipment(tracking_id)</code> (a fast, local lookup against the last known scan), <code>check_customs_hold(tracking_id)</code>, and <code>request_carrier_update(tracking_id)</code> (an expensive, rate-limited call to the carrier's own system). Asked "where's my package?", HandoffBot calls <code>request_carrier_update</code> first, every time, because it "sounds most authoritative" — even though <code>track_shipment</code>'s already-cached answer would resolve most questions immediately and for free. Separately: <code>request_carrier_update</code> returns <code>{"requested": True}</code> the instant it's called, but the carrier's real answer only arrives asynchronously, minutes later, through a separate webhook — and HandoffBot has been treating <code>{"requested": True}</code> as if it were the answer itself, telling customers their tracking info is "up to date" when nothing new has actually been learned yet.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>Before reading further: name the two distinct problems here using this chapter's vocabulary (one is about picking among several plausible tools; the other is a specific failure class from Sections 10-13 of the lesson) and write your own fix for each. There's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> this scenario has two layered problems (a wrong-tool-choice AND a succeeds-but-wrong-answer failure), so the prompt needs to ask the AI to identify both, not just one — a shallow prompt like "what's wrong with this agent's tool use" invites a single, incomplete answer, usually just the more expensive-sounding API call.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here's how my agent HandoffBot handles tracking requests... identify every distinct tool-use problem in this description, not just one..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice and compare its answer against the critique below.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Here's my agent HandoffBot, which has three tools: track_shipment(tracking_id), check_customs_hold(tracking_id), request_carrier_update(tracking_id): [paste the scenario above]. Identify EVERY distinct tool-use problem in this description, not just the first one you notice -- there are two -- and name each using this chapter's vocabulary (wrong-tool-choice among plausible candidates, or a succeeds-but-wrong-answer failure). Propose a concrete, specific fix for each.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <div class="what-is">
+    <span class="label">What a complete diagnosis catches</span>
+    <ul>
+      <li><strong>Problem 1 (wrong-tool-choice):</strong> <code>track_shipment</code> is cheap, fast, and already has the answer most of the time — calling the expensive, rate-limited <code>request_carrier_update</code> first, based on which tool "sounds" most authoritative rather than which one is cheapest and most likely to already answer the question, is exactly the ordering mistake this chapter's Section 6 fixes.</li>
+      <li><strong>Problem 2 (succeeds-but-wrong-answer):</strong> <code>{"requested": True}</code> means the request was accepted, not that an answer arrived — treating a tool's own "success" as proof the underlying question was answered, without checking whether the real data (the webhook's eventual payload) actually showed up, is exactly Section 11's failure class.</li>
+      <li>A shallow AI answer often catches only Problem 1 (the more visible cost/ordering issue) and misses that Problem 2 is a separate, independent issue — reordering the tool calls alone doesn't fix the false "up to date" claim, and vice versa.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's answer against your own Step 1 notes and the two-problem breakdown above. Did it catch both? Did it propose the right fix for each — reordering by cost and decisiveness, and checking for the webhook's real payload before claiming the tracking info is current — or did it conflate the two into one vague "improve the tool logic" suggestion?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice Bank</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

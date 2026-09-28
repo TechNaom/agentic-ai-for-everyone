@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 3: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose Wrenhollow Auto Rentals's FleetBot tool-use bugs yourself, then critique an AI's plausible-but-flawed diagnosis of the same scenario.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-03">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the exercises</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 3 &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked the exercises yourself on Thornbury Insurance Group's ClaimBot. Now a third scenario, <strong>Wrenhollow Auto Rentals</strong> (a fictional car rental chain) and its dispatch agent <strong>FleetBot</strong>, gets diagnosed a second way: by prompting an AI assistant, and reviewing what it hands back with the same skepticism you'd bring to a coworker's write-up before it ships to Wrenhollow's real dispatch desk.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>FleetBot has three tools: <code>get_vehicle_location(vehicle_id)</code>, <code>check_maintenance_flag(vehicle_id)</code>, and <code>extend_reservation(reservation_id)</code>. Wrenhollow's ops lead reports three real, observed problems:</p>
+  <ol>
+    <li>A customer asked "why is my rental late for pickup?" FleetBot called <code>check_maintenance_flag</code> first, because the word "rental" felt closer to "car" than to "location" in the prompt &mdash; but the real, cheaper-to-check answer was sitting in <code>get_vehicle_location</code>: the car was simply stuck in traffic ten minutes out, nothing was wrong with it mechanically.</li>
+    <li><code>get_vehicle_location</code> talks to a known-flaky third-party GPS provider that occasionally hangs for 20+ seconds with no response at all. Instead of a bounded timeout-and-retry, FleetBot's code path assumed any bad outcome from this tool meant a malformed response to parse &mdash; so on a real hang, it tried to parse a response that had never arrived, and the whole request handler crashed instead of giving up cleanly.</li>
+    <li><code>extend_reservation(reservation_id)</code> always returns <code>{"extended": True}</code> &mdash; even for a vehicle that already has a scheduled next renter, which makes the extension actually impossible to honor. Customers only discovered the truth when they showed up for their extended day and the car was already gone.</li>
+  </ol>
+  <p>Before reading further, write your own diagnosis: for each of the three problems, name the concept it's really about (using this chapter's vocabulary: wrong-tool-choice, a missing timeout/malformed-output distinction, or a succeeds-but-wrong-answer failure) and propose one concrete fix. Use a notes app or scratch file &mdash; there's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant the same question</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to hand over all three problems with their real, specific evidence &mdash; not a vague "why is my agent's tool use bad" &mdash; or the AI has nothing concrete to diagnose and will produce generic advice instead of a checkable answer.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here are three observed problems in my agent's tool use... diagnose each one and propose a fix..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into Claude, ChatGPT, Copilot, or whatever assistant you use, and compare what it builds against this page's own critique in Step 3.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>I have an agent called FleetBot with three tools: get_vehicle_location(vehicle_id), check_maintenance_flag(vehicle_id), extend_reservation(reservation_id). Here are three real, observed problems: [paste the three numbered problems above verbatim]. For each problem, name which tool-use concept it's really about (wrong-tool-choice among plausible candidates, a missing timeout-vs-malformed-output distinction, or a succeeds-but-wrong-answer failure) and propose one concrete, specific code-level fix for each -- not a general "improve error handling" suggestion.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <p>A plausible-but-flawed AI answer to this exact prompt tends to make three specific mistakes worth watching for:</p>
+  <div class="what-is">
+    <span class="label">Common AI diagnosis mistakes on this scenario</span>
+    <ul>
+      <li><strong>Mislabeling Problem 1 as "the tool descriptions need better wording."</strong> Better descriptions can help, but the real issue is that FleetBot never checked the cheaper, more decisive signal first — the lesson's Section 6 fix isn't a wording tweak, it's re-ordering which tool gets tried first based on cost and decisiveness, not topical similarity to the customer's phrasing.</li>
+      <li><strong>Treating Problem 2 as "just add error handling."</strong> The real bug is more specific: a timeout and a malformed response are different failure types that need different code paths (Sections 10-11 of the lesson) — a hang should be caught by a bounded timeout wrapper and possibly retried, while a malformed response should never be retried and should never reach a parser that assumes it's well-formed. Collapsing both into one generic "try/except everything" often still crashes on the actual hang case, because the wait itself was never bounded.</li>
+      <li><strong>Proposing "just check if extend_reservation returns True" as sufficient for Problem 3.</strong> It already does — that's exactly the bug. The fix has to check independent evidence (whether a next renter is actually scheduled), the same outcome-check discipline the lesson's <code>restart_modem_with_outcome_check</code> and this chapter's exercises' <code>verify_resolution</code> both use, not trust the tool's own reported success.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's actual answer against your own Step 1 notes and the three watch-outs above. Which one(s) did it get right? Which, if any, did it get wrong the way described here? That comparison &mdash; not the AI's fluency &mdash; is the real test.</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Exercises</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

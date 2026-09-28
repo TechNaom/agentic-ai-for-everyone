@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 3 Project: RepairBot — Agentic AI for Everyone</title>
+<meta name="description" content="Chapter mini-project: build tool selection, timeout-retry handling, and outcome verification for Kestrel Appliance Service's RepairBot.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-03">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../interview-questions.html">&larr; Back to interview questions</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 3 Project &middot; Chapter Mini-Project</span>
+    <span class="reading-time">~45 min</span>
+  </div>
+  <h1>Project: Robust Tool Use for RepairBot</h1>
+  <p>
+    <strong>Kestrel Appliance Service</strong> wants <strong>RepairBot</strong>
+    to combine this chapter's three pillars in one build:
+    <strong>tool selection</strong> (check the cheap, decisive warranty
+    status before an expensive diagnostic call), <strong>timeout-aware
+    failure handling</strong> (a diagnostic call that can hang, needing
+    a bounded retry), and <strong>outcome verification</strong> (a
+    repair-scheduling tool that always "succeeds" without guaranteeing
+    the appliance is actually fixed). Complete the three-<code>TODO</code>
+    scaffold in <code>starter.py</code> so all three pillars work
+    correctly and compose into one end-to-end service flow.
+  </p>
+
+  <div class="what-is">
+    <span class="label">Not one of this course's numbered projects</span>
+    This is a chapter mini-project, not the L1/L2/L3/L4 ladder from
+    <code>docs/curriculum/CURRICULUM_MAP.md</code> (Chapter 3's own
+    material folds into the L2 Assisted project that ships after
+    Chapter 4, the same way Chapter 2's did). It exists so all three of
+    this chapter's tool-use pillars get one combined, hands-on build
+    before that larger project arrives.
+  </div>
+
+  <h2>The three TODOs</h2>
+  <ol>
+    <li><strong>TODO 1</strong> &mdash; <code>diagnose_appliance_issue()</code>: the tool-selection function, checking warranty status before an expensive diagnostic.</li>
+    <li><strong>TODO 2</strong> &mdash; <code>run_diagnostic_with_retry()</code>: the timeout-retry policy for a call that can hang.</li>
+    <li><strong>TODO 3</strong> &mdash; <code>verify_repair_outcome()</code>: the outcome-verification function for a tool that always reports success.</li>
+  </ol>
+
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+
+  <p>Full instructions in <code>README.md</code>, self-grading criteria in <code>RUBRIC.md</code>, and the fully filled-in reference in <code>solution.py</code> (passes all 7 self-checks).</p>
+
+  <div class="chapter-nav">
+    <a href="ai-paired.html">Now Pair With an AI &rarr;</a>
+    <a href="../../../docs/curriculum/index.html">Back to Roadmap &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

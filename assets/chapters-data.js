@@ -7,8 +7,9 @@
   set it to null until that module's written exam actually exists in
   assessments/written-exams/.
 
-  Chapters 1-2 (Module 1 complete) are live as of this build -- see
-  PROJECT_STATE.md for status. Chapters 3-13 are planned, `.gitkeep`'d,
+  Chapters 1-3 are live as of this build (Module 1 complete; Module 2
+  in progress with Chapter 3 live, Chapter 4 still planned) -- see
+  PROJECT_STATE.md for status. Chapters 4-13 are planned, `.gitkeep`'d,
   not yet built.
 */
 
@@ -43,7 +44,8 @@ window.AAFE_MODULES = [
         id: "chapter-03",
         num: 3,
         title: "Tool Use and Function Calling",
-        description: "Choosing the right tool, forming correct arguments, and handling tool failure."
+        description: "Choosing the right tool, forming correct arguments, and handling tool failure.",
+        path: "chapters/chapter-03-tool-use-and-function-calling/lesson.html"
       },
       {
         id: "chapter-04",

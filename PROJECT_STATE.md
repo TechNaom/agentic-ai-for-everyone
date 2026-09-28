@@ -1,11 +1,13 @@
 # PROJECT_STATE.md — Agentic AI for Everyone
 
-Last updated: 2026-09-28 (Session 2 — Chapter 2, "Planning and Task
-Decomposition," complete and live, closing **Module 1 — Foundations of
-the Agent Loop** (now fully complete: Chapters 1 and 2 both live).
-Chapters 3-13 are scaffolded (`.gitkeep`'d directories), not yet built.
-Nothing has been pushed to GitHub — all work is local-only, matching
-Session 1's explicit instructions and this session's own.)
+Last updated: 2026-09-28 (Session 3 — Chapter 3, "Tool Use and
+Function Calling," complete and live, opening **Module 2 — Giving
+Agents Capabilities** (Module 1 — Foundations of the Agent Loop —
+remains fully complete: Chapters 1-2. Module 2 is now in progress:
+Chapter 3 live, Chapter 4 still planned). Chapters 4-13 are scaffolded
+(`.gitkeep`'d directories), not yet built. Nothing has been pushed to
+GitHub — all work is local-only, matching every prior session's
+explicit instructions and this session's own.)
 
 ## Course Objective
 
@@ -317,122 +319,272 @@ verified, not rebuilt. This session completed the rest:
   `docs/curriculum/index.html` and root `index.html` both reflect
   Chapter 2 live, Module 1 complete.
 
-## Next Recommended Task: Chapter 3 — "Tool Use and Function Calling"
+## Session 3 — Chapter 3, "Tool Use and Function Calling" (2026-09-28)
+
+Built cold, from this file's own "Next Recommended Task" brief, with
+zero memory of Session 2:
+
+1. Read `PROJECT_STATE.md`'s Chapter 3 brief, Chapter 2's full file set
+   as the structural template, `python-for-everyone`'s density
+   benchmark, and `quality-audits/chapter-02-audit.md`'s org-exclusion
+   list before writing anything.
+2. Picked a fresh scenario per the brief's own guidance: **Palisade
+   Broadband**/NetBot, with three genuinely overlapping tools for the
+   same request ("my internet is down" could be a billing suspension,
+   an area outage, or a bad line) and a tool (`restart_modem`) whose
+   failure mode is a clean, well-formed success that doesn't mean the
+   problem is fixed.
+3. Attempted two live Ollama calls this session (a plain sanity check
+   and a real tool-selection call with `tools=TOOLS`), each under a
+   440-second budget. **Neither returned — both were killed by the
+   timeout wrapper with no output at all**, worse than Chapter 1's
+   disclosed 138s hang or the prior session's disclosed 432s data
+   point. Per this course's reliability policy, this session did not
+   idle-wait past budget and did not fabricate a transcript — every
+   lesson example instead runs against real, executed, deterministic
+   Python (tested in a scratch directory before being written into
+   `lesson.html`), disclosed explicitly in the lesson's own Section 2
+   and in `quality-audits/chapter-03-audit.md`.
+4. Built `lesson.html` around three pillars beyond Chapters 1-2's tool-
+   calling mechanics: tool selection among overlapping candidates
+   (ordered by cost/decisiveness, not topical keyword similarity),
+   argument-formatting drift handled by drift-specific normalizers (not
+   one shared strip-and-lower pattern), and three distinct tool-failure
+   types (timeout, malformed output, succeeds-but-wrong-answer) each
+   with its own retry policy, unified behind one dispatcher routed by a
+   per-tool `FAILURE_POLICY` dict. A real bug (the dispatcher's first
+   draft forced a simulated hang on every retry attempt, so it never
+   recovered) was caught by testing and fixed before being written into
+   the lesson, the same "genuine bug becomes the honest example"
+   pattern as Chapter 1's Cedar Hollow bug.
+5. Verified lesson density: **70 lines** match `<pre\|<code` via
+   `grep -c '<pre\|<code' lesson.html` (above Chapter 1's 61 and
+   Chapter 2's 63), **130 total occurrences** via
+   `grep -oE '<pre|<code' | wc -l`.
+6. Built the full file set matching Chapter 2's exactly: `quiz.html`
+   (10 fill-in-the-blank), `interview-questions.html` + `.md` (10
+   questions across 4 levels), `exercises/` (Thornbury Insurance
+   Group/ClaimBot, 8 tasks, 16 points, `ai-paired.html` using a third
+   scenario, Wrenhollow Auto Rentals/FleetBot), `practice/` (8
+   independent scenarios, 8 points, `ai-paired.html` using a ninth,
+   unnamed-org scenario, HandoffBot), and `project/` (Kestrel Appliance
+   Service/RepairBot, explicitly labeled a chapter mini-project per
+   `CURRICULUM_MAP.md`'s project ladder — the next numbered slot, L2
+   Assisted, ships after Chapter 4 — 3 TODOs, 7 structural self-checks,
+   `RUBRIC.md`, `ai-paired.html`).
+7. Verified every `solution.py`/`starter.py` pair by actually running
+   it: `exercises` 16/16 vs. 3/16 (no crash), `practice` 8/8 vs. 0/8
+   (no crash), `project` 7/7 vs. 2/7 (no crash).
+8. Wrote `quality-audits/chapter-03-audit.md`, extending (not
+   restarting) `chapter-02-audit.md`'s fictional-org exclusion list.
+   Four new orgs this chapter: **Palisade Broadband** (lesson; NetBot),
+   **Thornbury Insurance Group** (exercises; ClaimBot), **Wrenhollow
+   Auto Rentals** (exercises `ai-paired.html`; FleetBot), **Kestrel
+   Appliance Service** (project; RepairBot) — plus HandoffBot's unnamed
+   org (practice `ai-paired.html`). Running exclusion list now:
+   Northbeam Outdoors, Summit Gear Co-op, Fernbrook Ski Patrol,
+   Wavecrest Marina, Alderleaf Research Group, Pinehurst Realty Group,
+   Thistlewood Veterinary Group, Cobblestone Courier Co., Palisade
+   Broadband, Thornbury Insurance Group, Wrenhollow Auto Rentals,
+   Kestrel Appliance Service.
+9. Wired Chapter 3 into `assets/chapters-data.js` (real `path` added),
+   `docs/curriculum/index.html` (Chapter 3 card converted to a live
+   link, Module 2 feature card marked "In Progress" — the same wording
+   precedent Module 1 used while only Chapter 1 was live), and root
+   `index.html` (`hero-stats` updated to 3/13 chapters; modules-complete
+   stays at 1/6 since Module 2 isn't done until Chapter 4 ships).
+10. Ran `bash scripts/local_check.sh < /dev/null` for the whole repo —
+    all 6 checks passed clean.
+11. Committed Chapter 3 locally (all its files, `chapters-data.js`,
+    `docs/curriculum/index.html`, root `index.html`, this file, and the
+    new audit) — no remote added, nothing pushed, matching every prior
+    session's explicit local-only instructions.
+
+## Chapter 3 — COMPLETE
+
+- `lesson.html`: 70 lines match `<pre\|<code` (130 total tag
+  occurrences via `-o`), above both prior chapters' density. Built
+  around Palisade Broadband's NetBot: a naive keyword-matching tool-
+  selection baseline that provably fails on genuine ambiguity, the
+  fix (cheapest-most-decisive-signal-first ordering, exercised across
+  all three real branches), two argument normalizers for two distinct
+  drift patterns (account IDs, ZIP codes), three distinct tool-failure
+  types each demonstrated and given its own retry policy (timeout ->
+  bounded retry; malformed output -> no retry, proven identical across
+  3 attempts; succeeds-but-wrong-answer -> independent outcome
+  verification, no retry concept applies at all), a unified dispatcher
+  routing by per-tool failure policy, and the fully assembled NetBot
+  agent run across 3 end-to-end cases. Honestly discloses that no live
+  Ollama call succeeded this session (two attempts, 440s budget each,
+  both non-returning) and explains what stands in for it.
+- `quiz.html`: 10 fill-in-the-blank questions covering selection
+  ordering, the three failure types and their distinct policies, the
+  unified dispatcher, and this chapter's own scenario.
+- `interview-questions.html` + `.md`: 10 questions across
+  beginner/intermediate/senior/architect.
+- `exercises/`: Thornbury Insurance Group/ClaimBot scenario, 8 tasks (5
+  production-gear), 16 points total. `solution.py` verified 16/16;
+  `starter.py` verified 3/16 with no crash. `ai-paired.html` uses a
+  third scenario (Wrenhollow Auto Rentals/FleetBot).
+- `practice/`: 8 independent diagnostic scenarios, 8 points.
+  `solution.py` verified 8/8; `starter.py` verified 0/8 with no crash.
+  `ai-paired.html` uses a ninth scenario (HandoffBot, org left
+  unnamed).
+- `project/` (chapter mini-project, not on the numbered L1-L4 ladder):
+  Kestrel Appliance Service/RepairBot, a 3-`TODO` scaffold combining
+  tool selection, timeout-retry handling, and outcome verification,
+  graded by 7 deterministic structural self-checks. `solution.py`
+  verified 7/7; `starter.py` verified 2/7 with no crash. `RUBRIC.md`
+  included. `ai-paired.html` has the learner independently prompt an AI
+  for `verify_repair_outcome()` and review it against a named checklist
+  of common AI-generated outcome-check mistakes.
+- Wired into `assets/chapters-data.js` with a real `path`;
+  `docs/curriculum/index.html` and root `index.html` both reflect
+  Chapter 3 live, Module 2 in progress.
+
+## Next Recommended Task: Chapter 4 — "Memory and State"
 
 This is written so a fresh Sonnet session, with zero memory of this
 one, can pick it up cold.
 
-**Where it sits:** Module 2 — Giving Agents Capabilities, opening the
-module (Chapter 4, "Memory and State," closes it). Per
-`docs/curriculum/CURRICULUM_MAP.md`, difficulty: Intermediate.
+**Where it sits:** Module 2 — Giving Agents Capabilities, *closing*
+the module (Chapter 3, "Tool Use and Function Calling," opened it and
+is now live). Per `docs/curriculum/CURRICULUM_MAP.md`, difficulty:
+Intermediate. Completing Chapter 4 completes Module 2 — update the
+module-complete count in `docs/curriculum/index.html` and root
+`index.html` accordingly when this chapter ships.
 
 **What it must teach**, per the curriculum map and discovery notes:
-Chapters 1-2 both used tool calling already, but only as much
-mechanics as each needed in passing (JSON schemas, one call, then a
-handful of calls in a plan). Chapter 3's job is to go *deep* on the
-tool layer itself, treating it as its own discipline rather than
-something that just works once you've written a schema: choosing the
-*right* tool among several plausible candidates when more than one
-tool could plausibly answer a request; forming *correct* arguments
-reliably, including realistic argument-formatting drift beyond the
-single normalize-and-guard pattern Chapters 1-2 already used; and
-handling *tool failure* as a first-class case — timeouts, malformed
-tool output, a tool that succeeds but returns data that doesn't
-actually answer the question, and retry policy for each failure type
-distinctly (not one undifferentiated "retry on error"). This is
-explicitly flagged in Chapter 2's own `lesson.html` closing section
-("Chapter 3 builds on this... it goes deep on tool design and failure
-handling itself... beyond the single normalize-and-guard pattern used
-here and in Chapter 1") — read that closing paragraph before starting,
-it's the exact hand-off point.
+short-term *working* memory (what stays in an agent's context within a
+single run — conversation history, tool results so far, the working
+plan) versus long-term *persisted* memory (what survives across
+separate runs/sessions — facts about a user, past outcomes, learned
+corrections), and the real engineering trade-offs between them: what
+to keep in-context vs. what to write out to storage, when a working-
+memory buffer needs to be summarized or pruned as it grows (token-
+budget pressure, a preview of Chapter 8's cost/latency subject, not
+its full treatment), what a minimal persisted-memory store actually
+looks like in code (a plain dict/JSON-file/SQLite-style key-value
+store is enough — no vector database or embedding framework required
+to teach the *engineering* decision, matching this course's no-heavy-
+framework policy), and how a persisted fact gets retrieved and
+correctly merged back into a later run's working context. This course
+explicitly **defers deep RAG/embedding-retrieval methodology** to
+`context-engineering-for-everyone` (see `docs/discovery-notes.md`'s
+cross-course boundary check) — Chapter 4's job is the *architectural*
+short-term/long-term split and its trade-offs, not a retrieval-quality
+or embedding-similarity deep dive.
+
+**Hand-off point:** Chapter 3's own `lesson.html` closing section
+(Section 13's final paragraph) should be read before starting — it
+names what Chapter 4 adds ("memory so a plan's outcome can be recalled
+in a later session instead of vanishing when a function returns"),
+matching the same explicit hand-off convention Chapter 2's closing
+section used for Chapter 3. Read it for the exact framing this
+session should pick up.
+
+**Project-ladder note, read before deciding whether to build a mini-
+project or a real one:** `docs/curriculum/CURRICULUM_MAP.md`'s
+"Projects" section states the **L2 Assisted project ships after
+Chapter 4** ("Build a multi-tool agent with memory and a reflection
+step for a provided scenario, partial scaffold... ships after Ch. 4,
+extended through Ch. 5-6's reflection/guardrail material"). This is
+different from Chapters 2-3, which both explicitly had no ladder slot
+and built a chapter mini-project instead. Chapter 4 is the chapter
+where the ladder says the L2 project actually begins — decide, and
+state explicitly in `project/README.md` and this file's own "Chapter 4
+— COMPLETE" section, whether this chapter's `project/` folder is (a)
+the actual start of the L2 Assisted project scaffold (a multi-tool
+agent using memory, with reflection deferred to Chapters 5-6 since
+that material doesn't exist yet), or (b) still a chapter mini-project
+with the real L2 scaffold deferred to Chapter 6 once reflection/
+guardrail material exists to extend it through. Don't default to the
+mini-project pattern silently just because Chapters 2-3 used it — the
+curriculum map's own wording for Chapter 4 is different from theirs.
 
 **Directory already scaffolded:**
-`chapters/chapter-03-tool-use-and-function-calling/` with empty
-`exercises/`, `practice/`, `project/` subdirs and a `.gitkeep`. No
-`lesson.html` etc. exist yet — Chapter 1's and Chapter 2's own
-directories are the complete reference for the exact file set to
-produce (Chapter 2's is the more recent and closest in shape/density).
+`chapters/chapter-04-memory-and-state/` with empty `exercises/`,
+`practice/`, `project/` subdirs and a `.gitkeep`. No `lesson.html` etc.
+exist yet — Chapter 3's own directory
+(`chapters/chapter-03-tool-use-and-function-calling/`) is the most
+recent and closest-in-shape reference for the exact file set to
+produce.
 
 **Concrete build steps:**
 
 1. Pick a fresh fictional scenario, distinct from every org in
-   `quality-audits/chapter-02-audit.md`'s running exclusion list
+   `quality-audits/chapter-03-audit.md`'s running exclusion list
    (currently: Northbeam Outdoors, Summit Gear Co-op, Fernbrook Ski
    Patrol, Wavecrest Marina, Alderleaf Research Group, Pinehurst
    Realty Group, Thistlewood Veterinary Group, Cobblestone Courier
-   Co.) — extend that list, don't restart it. A natural fit: a system
-   with several tools that plausibly overlap in what they could answer
-   (so wrong-tool-choice is a real, demonstrable failure, not a
-   strawman) and at least one tool whose realistic failure modes go
-   beyond a clean error dict — e.g., a tool that times out, or one that
-   returns a technically well-formed but substantively wrong or
-   incomplete result.
+   Co., Palisade Broadband, Thornbury Insurance Group, Wrenhollow Auto
+   Rentals, Kestrel Appliance Service) — extend that list, don't
+   restart it. A natural fit: a system where a user interacts across
+   multiple separate sessions, where something learned or stated in an
+   earlier session needs to correctly inform a later one (so the
+   short-term/long-term split is real and demonstrable, not a
+   strawman) — e.g., a preference stated once that should persist, or
+   an outcome from a prior run that should change later behavior.
 2. Test every code example for real (local Ollama, `llama3.2:latest`,
    `base_url="http://localhost:11434/v1"`) before writing it into
-   `lesson.html`, exactly like Chapters 1-2's scratchpad-first
+   `lesson.html`, exactly like Chapters 1-3's scratchpad-first
    discipline — see `CONTRIBUTING.md`'s non-negotiable rule. Budget up
-   to 450s per live call, never idle-wait past that; if a call
-   genuinely can't be captured this session, say so explicitly in the
-   lesson text rather than claiming a transcript that wasn't observed.
+   to 450s per live call, never idle-wait past that. **Chapter 3's own
+   session saw both of its live-call attempts fail to return at all
+   within that budget** (see `quality-audits/chapter-03-audit.md`) —
+   if this recurs, disclose it exactly as Chapter 3 did (state the
+   attempt, the timeout, and use deterministic Python for every
+   teaching example instead of fabricating a transcript) rather than
+   assuming this session's own attempt will succeed just because prior
+   sessions' did.
 3. Build `lesson.html` to the same 60+ `<pre>`/`<code>`-block density
-   bar, verified with
-   `grep -c '<pre\|<code' chapters/chapter-03-.../lesson.html` (or the
-   `grep -o ... | wc -l` total-occurrence count, whichever this
-   session uses — be explicit in the audit about which method was
-   used) before calling it done — do not skip this check.
-4. Build the full file set matching Chapter 2's exactly: `quiz.html`
+   bar, verified with `grep -c '<pre\|<code' lesson.html` (Chapter 3
+   used this exact method, scoring 70) before calling it done — do not
+   skip this check.
+4. Build the full file set matching Chapter 3's exactly: `quiz.html`
    (10 fill-in-the-blank), `interview-questions.html` + `.md` (10
    questions across 4 levels), `exercises/` (8+ tasks, 5+ production-
    gear, `starter.py`/`solution.py` both run and verified — starter
    fails cleanly, solution scores perfect — `README.md`, `index.html`,
    `ai-paired.html`), `practice/` (8+ scenarios, same file set,
-   `ai-paired.html`). Check `docs/curriculum/CURRICULUM_MAP.md`'s
-   project ladder before assuming a full graded project is required —
-   if Chapter 3 has no dedicated L1/L2 slot (Chapter 2 didn't; its
-   project work was a chapter mini-project, not a ladder entry), either
-   follow the same chapter-mini-project pattern Chapter 2 used
-   (`project/README.md`, `RUBRIC.md`, `index.html`, `ai-paired.html`,
-   `starter.py`, `solution.py`, explicitly labeled as not being on the
-   numbered ladder) or confirm the ladder places Chapter 3's graded
-   project work elsewhere before skipping it — don't skip silently.
-5. Wire Chapter 3 into `assets/chapters-data.js` — add its real `path`
+   `ai-paired.html`), and `project/` per the project-ladder note above
+   — resolve that question explicitly before building, don't default
+   silently.
+5. Wire Chapter 4 into `assets/chapters-data.js` — add its real `path`
    only once `lesson.html` exists; the module's `examPath` stays
-   `null` until a written exam actually exists. Chapters 4-13 stay
+   `null` until a written exam actually exists. Chapters 5-13 stay
    without a `path`.
-6. Update `docs/curriculum/index.html`'s Chapter 3 card from a
+6. Update `docs/curriculum/index.html`'s Chapter 4 card from a
    non-linked "Planned" `<div>` to a linked `<a class="chapter-card">`.
-   Module 2 ("Giving Agents Capabilities") does *not* go to "Complete"
-   yet — it only completes once Chapter 4 also ships — so leave its
-   feature-card status as "Planned" or introduce an "In Progress"
-   state if the template supports one (check how Module 1 was worded
-   while only Chapter 1 was live, in this file's git history, for the
-   precedent).
-7. Update root `index.html`'s `hero-stats` chapter count (3 of 13
-   chapters live); the module-complete count stays at 1 of 6 until
-   Chapter 4 also ships.
-8. Write `quality-audits/chapter-03-audit.md` following
-   `chapter-02-audit.md`'s exact format: honest self-critique, the
+   Module 2 ("Giving Agents Capabilities") **should** go to "Complete"
+   this time (unlike Chapter 3's session, where Module 2 stayed "In
+   Progress" because Chapter 4 wasn't done yet) — this is the chapter
+   that closes it.
+7. Update root `index.html`'s `hero-stats`: chapter count to 4 of 13
+   live, and the module-complete count to 2 of 6 (Module 1 + Module 2
+   both complete once this chapter ships).
+8. Write `quality-audits/chapter-04-audit.md` following
+   `chapter-03-audit.md`'s exact format: honest self-critique, the
    extended fictional-org exclusion list, source verification (if any
-   external sources are cited), the Ollama check done fresh (or an
-   honest disclosure of what wasn't re-run and why, the same way this
-   session disclosed it didn't need a fresh live call for static/
-   deterministic files), and the full code-tested-before-writing
-   disclosure.
+   external sources are cited — this chapter may be the first to
+   legitimately need one, if it cites any general memory-architecture
+   convention; if so, verify it for real, don't assert it uncited),
+   the Ollama check done fresh (with an honest disclosure either way,
+   following Chapter 3's precedent for what to do if it hangs again),
+   and the full code-tested-before-writing disclosure.
 9. Run `bash scripts/local_check.sh < /dev/null` before considering the
    chapter done — fix anything it flags.
-10. Update this file's "Last updated" line, add a new "Session 3"
-    section documenting what was built, move Chapter 3 from "Next
-    Recommended Task" into a "Chapter 3 — COMPLETE" section (matching
-    how this session moved Chapter 2 from planned to complete), and
-    rewrite "Next Recommended Task" for Chapter 4 with the same
-    concrete, cold-pickup detail as this section, before ending the
-    session.
+10. Update this file's "Last updated" line, add a new "Session 4"
+    section documenting what was built, move Chapter 4 from "Next
+    Recommended Task" into a "Chapter 4 — COMPLETE" section (matching
+    how this session moved Chapter 3 from planned to complete), and
+    rewrite "Next Recommended Task" for Chapter 5 ("Reflection and
+    Self-Correction," opening Module 3) with the same concrete,
+    cold-pickup detail as this section, before ending the session.
 
-**Do not** re-teach Chapters 1-2's own tool-calling mechanics from
-scratch (the JSON schema shape, `tool_calls`, `tool_call_id`, executing
-a call and feeding back an observation) — assume the reader can already
-build a working tool-calling loop and plan against it; Chapter 3's job
-is adding genuinely new depth (tool selection among overlapping
-candidates, argument-formation robustness beyond one normalize
-pattern, and differentiated failure/retry handling per failure type),
-not re-explaining what a tool call is.
+**Do not** re-teach Chapters 1-3's own tool-calling mechanics (the JSON
+schema shape, tool selection, argument normalization, or the three
+differentiated failure types) from scratch — assume the reader can
+already build a working, robust tool-calling loop; Chapter 4's job is
+adding memory as a genuinely new architectural layer on top of that,
+not re-explaining tool use.
