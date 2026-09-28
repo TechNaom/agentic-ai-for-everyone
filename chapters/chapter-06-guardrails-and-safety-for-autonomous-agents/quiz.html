@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guardrails and Safety Quiz — Agentic AI for Everyone</title>
+<meta name="description" content="Interactive quiz for Guardrails and Safety for Autonomous Agents.">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-06" data-chapter-id="chapter-06">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="lesson.html">&larr; Back to the lesson</a></p>
+
+  <span class="chapter-badge">Chapter 6 Quiz</span>
+  <h1>Guardrails and Safety for Autonomous Agents</h1>
+  <p>Fill in each blank, then check your answers. A perfect score marks this chapter complete.</p>
+
+  <div class="quiz-progress-wrap" aria-hidden="true">
+    <div class="quiz-progress-fill" id="quiz-progress-fill"></div>
+  </div>
+
+  <form onsubmit="return false;">
+
+    <div class="quiz-question">
+      <label for="q1"><span class="q-num">1</span> A ______ is a hard, enforced boundary that decides whether an action is allowed to execute, checked BEFORE dispatch -- not a system-prompt instruction the model can choose to follow.</label>
+      <div class="fib-row">
+        <input type="text" id="q1" class="fib-blank" data-answers="guardrail,Guardrail" aria-label="Answer for question 1">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q2"><span class="q-num">2</span> Reflection revises what an agent ______ -- a guardrail stops what an agent DOES, before it happens, which is the exact gap Chapter 5 named as reflection's own honest limit.</label>
+      <div class="fib-row">
+        <input type="text" id="q2" class="fib-blank" data-answers="says" aria-label="Answer for question 2">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q3"><span class="q-num">3</span> A human-approval checkpoint must be a real pause-and-______ -- logging that approval is needed and proceeding anyway is an alert, not a guardrail.</label>
+      <div class="fib-row">
+        <input type="text" id="q3" class="fib-blank" data-answers="wait" aria-label="Answer for question 3">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q4"><span class="q-num">4</span> This chapter's own live LedgerBot test showed the SAME model resisting an injected instruction once and ______ with it once, depending only on how the surrounding prompt framed the task -- proof a model's own judgment can't be the only safety layer.</label>
+      <div class="fib-row">
+        <input type="text" id="q4" class="fib-blank" data-answers="complying,comply" aria-label="Answer for question 4">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q5"><span class="q-num">5</span> The injected instruction in this chapter's live test arrived through a transaction's memo field -- a TOOL ______, the same channel earlier chapters taught as trustworthy observation data.</label>
+      <div class="fib-row">
+        <input type="text" id="q5" class="fib-blank" data-answers="result,results" aria-label="Answer for question 5">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q6"><span class="q-num">6</span> Guardrails must fail ______ (default deny) under an error or an unrecognized case -- never fail open (default allow).</label>
+      <div class="fib-row">
+        <input type="text" id="q6" class="fib-blank" data-answers="safe,closed" aria-label="Answer for question 6">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q7"><span class="q-num">7</span> Chapter 1's max_iterations bounds reasoning steps; this chapter's ActionBudget bounds ______ actions dispatched in a session -- two independent bounds, not the same one.</label>
+      <div class="fib-row">
+        <input type="text" id="q7" class="fib-blank" data-answers="dispatched" aria-label="Answer for question 7">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q8"><span class="q-num">8</span> ActionBudget.consume() is called even for a call the dispatcher later refuses, so a disallowed or denied action can't be hammered for ______ cost.</label>
+      <div class="fib-row">
+        <input type="text" id="q8" class="fib-blank" data-answers="zero,no" aria-label="Answer for question 8">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q9"><span class="q-num">9</span> This chapter replaced CareBot's CHAPTER 6 EXTENSION POINT with guardrail_check_booking(), which now runs BEFORE ______ is ever dispatched, holding an unapproved booking instead of letting it through automatically.</label>
+      <div class="fib-row">
+        <input type="text" id="q9" class="fib-blank" data-answers="schedule_followup" aria-label="Answer for question 9">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q10"><span class="q-num">10</span> This chapter's LedgerBot agent was built for the fictional credit union ______.</label>
+      <div class="fib-row">
+        <input type="text" id="q10" class="fib-blank" data-answers="millbrook,Millbrook" aria-label="Answer for question 10">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div id="check-all-wrap">
+      <button type="button" id="check-all-btn" class="check-btn">Check All Answers</button>
+      <span id="quiz-score"></span>
+    </div>
+
+    <div class="quiz-celebration" id="quiz-celebration" aria-live="polite">
+      Perfect score. Chapter complete.
+    </div>
+  </form>
+
+  <div class="chapter-nav">
+    <a href="lesson.html">&larr; Back to Lesson</a>
+    <a href="exercises/index.html">Exercises &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/quiz-engine.js"></script>
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

@@ -8,14 +8,16 @@ agent with memory and a reflection step for a provided scenario, partial
 scaffold, ships after Ch. 4, extended through Ch. 5-6's reflection/
 guardrail material"). Chapter 4 shipped the multi-tool-plus-memory half
 of that description in full, with reflect_on_response() wired in as a
-labeled no-op. THIS FILE HAS NOW BEEN EXTENDED BY CHAPTER 5
-("Reflection and Self-Correction"): reflect_on_response()'s body below
-is a real, deterministic self-critique-and-revise step -- see the
-CHAPTER 5 EXTENSION comment block for exactly what changed and why
-TODOs 1-3 (build_working_context, promote_worthy_and_persist,
-run_visit_session) were NOT touched. Chapter 6 will extend this file a
-second time, adding guardrails around the tool-dispatch step (see the
-CHAPTER 6 EXTENSION POINT comment near run_visit_session below).
+labeled no-op. Chapter 5 ("Reflection and Self-Correction") filled in
+reflect_on_response() for real -- see the CHAPTER 5 EXTENSION comment
+block. THIS FILE HAS NOW BEEN EXTENDED A SECOND TIME BY CHAPTER 6
+("Guardrails and Safety for Autonomous Agents"): run_visit_session() now
+calls guardrail_check_booking() BEFORE schedule_followup() is ever
+dispatched -- a hard, enforced check, not a message revised after the
+fact -- see the CHAPTER 6 EXTENSION comment block for exactly what
+changed and why TODOs 1-3 (build_working_context,
+promote_worthy_and_persist, run_visit_session's original body) and
+Chapter 5's reflection body were NOT restructured.
 
 Scenario: Hollowridge Wellness Clinic wants CareBot, a scheduling and
 intake assistant with three tools plus a persisted long-term memory
@@ -26,10 +28,11 @@ scenario.
 
 How to run:
     python3 solution.py
-It prints a structural self-check: 8 checks across memory merge,
-promote-before-persist, the composed end-to-end visit flow, and (new
-this chapter) the reflection step actually catching and revising an
-unsafe draft response.
+It prints a structural self-check: 10 checks across memory merge,
+promote-before-persist, the composed end-to-end visit flow, the
+reflection step catching and revising an unsafe draft response, and
+(new this chapter) the guardrail actually holding an unsafe booking
+before it's dispatched, and releasing it once explicitly approved.
 """
 
 import json
@@ -121,6 +124,23 @@ def is_blocking_condition(text):
 
 
 # ---------------------------------------------------------------------------
+# CHAPTER 6 EXTENSION -- guardrail: a hard, enforced check at the
+# tool-dispatch boundary, checked BEFORE schedule_followup() is ever called,
+# not a message revised after the fact. See run_visit_session() above for
+# the call site.
+# ---------------------------------------------------------------------------
+def guardrail_check_booking(current_facts, human_approved=True):
+    """Returns {"allowed": bool, "blocking": [...]}. A blocking condition
+    on file requires human_approved=True before the booking is allowed to
+    proceed; with no blocking condition, booking is always allowed."""
+    conditions = current_facts.get("conditions", [])
+    blocking = [c for c in conditions if is_blocking_condition(c)]
+    if blocking and not human_approved:
+        return {"allowed": False, "blocking": blocking}
+    return {"allowed": True, "blocking": blocking}
+
+
+# ---------------------------------------------------------------------------
 # CHAPTER 5 EXTENSION -- reflection step, filled in for real this chapter.
 # ---------------------------------------------------------------------------
 # Chapter 4 shipped this function as a labeled no-op passthrough. Chapter 5
@@ -203,7 +223,7 @@ def promote_worthy_and_persist(patient_id, user_messages, store):
 # TODO 3 (solved): the composed multi-tool + memory visit flow, with the
 # Chapter 5 reflection hook already wired in as a labeled no-op call.
 # ---------------------------------------------------------------------------
-def run_visit_session(patient_id, store, user_messages, requested_date=None):
+def run_visit_session(patient_id, store, user_messages, requested_date=None, human_approved=True):
     working_memory, facts = build_working_context(patient_id, store)
     for text in user_messages:
         working_memory.append({"role": "user", "content": text})
@@ -211,21 +231,39 @@ def run_visit_session(patient_id, store, user_messages, requested_date=None):
     current_facts = promote_worthy_and_persist(patient_id, user_messages, store)
 
     tool_trace = []
+    booking_held = False
     if requested_date:
         slot = check_appointment_slot(requested_date)
         tool_trace.append(("check_appointment_slot", slot))
-        # CHAPTER 6 EXTENSION POINT: schedule_followup() dispatches here with
-        # no guardrail check at all -- any available slot gets booked,
-        # regardless of what's in current_facts["conditions"]. Chapter 6
-        # ("Guardrails and Safety") is expected to add a bounds/approval
-        # check right here, BEFORE dispatch, so a blocking condition can
-        # stop the booking (or require human approval) instead of only
-        # being caught after the fact by reflect_on_response() below.
         if slot["available"]:
-            booking = schedule_followup(patient_id, requested_date)
-            tool_trace.append(("schedule_followup", booking))
+            # CHAPTER 6 EXTENSION -- guardrail check, BEFORE dispatch.
+            # A blocking condition on file gates schedule_followup() itself,
+            # not just the message describing it -- this is the hard,
+            # enforced boundary Chapter 5's reflect_on_response() (below)
+            # could not provide, because reflection only ever runs AFTER a
+            # tool call already fired. human_approved defaults to True to
+            # keep Chapter 4-5's own regression checks (1-8 below) passing
+            # unchanged, matching their original fixtures exactly -- a real
+            # production entry point would default new sessions to False
+            # ("not yet approved") instead; see project/README.md's "What
+            # Chapter 6 changed" section for why this default was chosen
+            # explicitly rather than silently.
+            gate = guardrail_check_booking(current_facts, human_approved=human_approved)
+            tool_trace.append(("guardrail_check_booking", gate))
+            if gate["allowed"]:
+                booking = schedule_followup(patient_id, requested_date)
+                tool_trace.append(("schedule_followup", booking))
+            else:
+                booking_held = True
 
-    if current_facts["conditions"]:
+    if booking_held:
+        flagged = "; ".join(gate["blocking"])
+        draft_response = (
+            f"I can't automatically confirm your requested follow-up because "
+            f"of a concern in your file ({flagged}). This needs a member of "
+            f"our care team to review and approve it before it's scheduled."
+        )
+    elif current_facts["conditions"]:
         draft_response = f"Noted your history ({'; '.join(current_facts['conditions'])}) -- I'll flag this for your provider."
     else:
         draft_response = "Thanks, I've logged today's visit notes."
@@ -290,6 +328,34 @@ def self_check():
         and final_reply != f"Noted your history (I have a new condition: chest pain that hasn't been evaluated yet.) -- I'll flag this for your provider."
     )
     results.append(("reflect_on_response revises the draft when a blocking condition was booked (Ch5)", ok))
+
+    # --- Chapter 6 additions: the guardrail actually stops/holds the
+    # unsafe booking BEFORE dispatch, not just revises the message after. ---
+    store4 = MemoryStore()
+    visit4 = run_visit_session(
+        "pt-99", store4,
+        ["I have a new condition: severe allergic reaction, unresolved."],
+        requested_date="2026-10-05",
+        human_approved=False,
+    )
+    ok = (
+        not any(t[0] == "schedule_followup" for t in visit4["tool_trace"])
+        and any(t[0] == "guardrail_check_booking" and t[1]["allowed"] is False for t in visit4["tool_trace"])
+    )
+    results.append(("guardrail holds the booking for a blocking condition when not approved (Ch6)", ok))
+
+    store5 = MemoryStore()
+    visit5 = run_visit_session(
+        "pt-99", store5,
+        ["I have a new condition: severe allergic reaction, unresolved."],
+        requested_date="2026-10-05",
+        human_approved=True,
+    )
+    ok = (
+        any(t[0] == "schedule_followup" for t in visit5["tool_trace"])
+        and any(t[0] == "guardrail_check_booking" and t[1]["allowed"] is True for t in visit5["tool_trace"])
+    )
+    results.append(("guardrail allows the booking for the same condition once human-approved (Ch6)", ok))
 
     print("Chapter 4 Project -- Structural Self-Check")
     print("=" * 60)

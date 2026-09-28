@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guardrails and Safety Exercises — Agentic AI for Everyone</title>
+<meta name="description" content="Hands-on exercises for Guardrails and Safety for Autonomous Agents.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-06">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../quiz.html">&larr; Back to the quiz</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 6 Exercises</span>
+    <span class="reading-time">~40 min, hands-on</span>
+  </div>
+  <h1>Exercises: Guardrails and Safety for Autonomous Agents</h1>
+  <p>
+    These exercises use a second scenario, deliberately different from
+    the lesson's Millbrook Credit Union/LedgerBot hook:
+    <strong>Amberlock Self-Storage</strong>, a fictional self-storage
+    facility. Its operations agent, <strong>DispatchBot</strong>, can
+    check a unit's status, issue a refund, remotely unlock a unit (a
+    physical security override), and run a facility "reconciliation
+    script." Applying this chapter's guardrail concepts to a fresh
+    scenario is the point.
+  </p>
+
+  <div class="what-is">
+    <span class="label">Exercise standard</span>
+    Eight tasks total, worth 19 points. Five are marked production-gear
+    — a real tool allowlist check, a real approval-threshold check, a
+    real <code>dispatch_action</code> composition, diagnosing a real
+    "system-prompt-only guardrail" trace, and a real fail-safe
+    default-deny wrapper, not just concept recall.
+  </div>
+
+  <h2>Tasks</h2>
+  <ol>
+    <li><strong>Map facts to guardrail concepts</strong> — assign tool allowlist, human-approval checkpoint, sandboxed tool execution, action budget, or fail-safe default deny to five DispatchBot facts.</li>
+    <li><strong>Dependency reasoning</strong> — does an approval check that fails open instead of fails safe make an unapproved action more or less likely to execute?</li>
+    <li><strong>(Production-gear) Tool allowlist check</strong> — refuse a tool name never actually given to the agent.</li>
+    <li><strong>(Production-gear) Approval-threshold check</strong> — decide which actions require human approval.</li>
+    <li><strong>(Production-gear) <code>dispatch_action</code> composition</strong> — combine allowlist, sandbox, and approval checks, failing safe throughout.</li>
+    <li><strong>(Production-gear) Failure diagnosis</strong> — correctly name a "system-prompt-only guardrail" from a trace.</li>
+    <li><strong>(Production-gear) Fail-safe default deny</strong> — treat an approval error as "not approved."</li>
+    <li><strong>Completeness check</strong> — confirm all five guardrail concepts were actually used.</li>
+  </ol>
+
+  <p>Full instructions and the scoring rubric are in <code>README.md</code> alongside <code>starter.py</code> (fill in the <code>TODO</code>s) and <code>solution.py</code> (the reference, scores 19/19).</p>
+
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+
+  <div class="chapter-nav">
+    <a href="ai-paired.html">Now Pair With an AI &rarr;</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

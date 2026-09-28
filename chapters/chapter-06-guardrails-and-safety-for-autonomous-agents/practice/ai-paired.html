@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 6 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose EscrowBot's layered guardrail bug yourself, then critique an AI's plausible-but-flawed answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-06">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 6 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, not in the eight above: <strong>"EscrowBot"</strong>, a real-estate closing assistant at a fictional title company (left unnamed on purpose, the same way Chapter 5's RenewBot scenario did — a small scenario doesn't need an invented company). EscrowBot can release funds from escrow once a closing checklist is complete. Two real, layered problems were observed in the same trace. First: EscrowBot's "guardrail" was a system-prompt instruction ("never release funds unless the checklist tool confirms complete") with no code anywhere actually checking the checklist tool's return value before calling release_funds -- the model usually remembered to check, but on one real run, a differently-worded request caused it to call release_funds without ever calling the checklist tool first. Second, in a completely different case: a genuine code-level guardrail correctly refused a release because the checklist wasn't complete -- but the approval-service callback it depended on threw a timeout exception, and the exception handler had a bug that treated any exception as "approved" instead of "denied," so the release went through anyway.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>Before reading further: name the two distinct problems here using this chapter's vocabulary (one is about a check that was never actually enforced in code at all; the other is about a real code-level check that existed but failed OPEN instead of failing SAFE) and write your own fix for each. There's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> this scenario has two layered problems (a system-prompt-only guardrail AND a fail-open bug in a real code-level check), so the prompt needs to ask the AI to identify both, not just one — a shallow prompt like "why did my agent release funds it shouldn't have" invites a single, incomplete answer.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here's how my agent EscrowBot checks and releases escrow funds... identify every distinct guardrail problem in this description, not just one..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice and compare its answer against the critique below.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Here's my agent EscrowBot, which can release escrow funds once a closing checklist is complete: [paste the scenario above]. Identify EVERY distinct guardrail problem in this description, not just the first one you notice -- there are two -- and name each using this chapter's vocabulary (a check that exists only as a system-prompt instruction with nothing enforcing it in code, versus a real code-level check that fails OPEN instead of failing SAFE when its own dependency errors). Propose a concrete, specific fix for each.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <div class="what-is">
+    <span class="label">What a complete diagnosis catches</span>
+    <ul>
+      <li><strong>Problem 1 (system-prompt-only guardrail):</strong> telling the model "never release funds unless the checklist confirms complete" is not a guardrail — it's an instruction the model can forget or misapply under a different phrasing, exactly as this chapter's own live Sections 11-12 demonstrated with a different injected instruction. The fix is a real code check: `dispatch_release()` must itself call the checklist tool and inspect its result before allowing `release_funds()` to run, regardless of what the model's own reasoning concluded.</li>
+      <li><strong>Problem 2 (fails open, not safe):</strong> a real code-level check existed, but its exception handler had the fail-safe logic backwards — treating "the approval service errored" as "approved" instead of "not approved." The fix is Section 14's rule applied literally: any exception from an approval dependency must resolve to denial, never to approval, and this needs a test that actually simulates the error path, not just the happy path.</li>
+      <li>A shallow AI answer often catches only Problem 2 (the more obviously "buggy-looking" code) and misses that Problem 1 is a structural issue — there was never a real guardrail there to begin with, just text a model happened to usually follow.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's answer against your own Step 1 notes and the two-problem breakdown above. Did it catch both? Did it propose the right fix for each — moving the check into enforced code, and fixing the fail-safe direction — or did it conflate the two into one vague "add more error handling" suggestion?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice Bank</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

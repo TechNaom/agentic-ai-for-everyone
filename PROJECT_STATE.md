@@ -1,15 +1,14 @@
 # PROJECT_STATE.md — Agentic AI for Everyone
 
-Last updated: 2026-09-28 (Session 5 — Chapter 5, "Reflection and
-Self-Correction," complete and live, **opening Module 3 — Making
-Agents Reliable** (Advanced tier, this course's first). Module 3 is
-**in progress, not complete** — Chapter 6 ("Guardrails and Safety for
-Autonomous Agents") is still needed to close it. Modules 1 and 2
-(Chapters 1-4) remain fully complete. This session also extended
-Chapter 4's L2 Assisted project in place: `reflect_on_response()` in
-`chapters/chapter-04-memory-and-state/project/` now contains a real
-self-critique-and-revise step (no longer a no-op), with a new labeled
-extension point left for Chapter 6's guardrails. Chapters 6-13 are
+Last updated: 2026-09-28 (Session 6 — Chapter 6, "Guardrails and Safety
+for Autonomous Agents," complete and live, **closing Module 3 — Making
+Agents Reliable**. Modules 1, 2, and 3 (Chapters 1-6) are now all fully
+complete. This session also extended Chapter 4's L2 Assisted project in
+place a third and final time: `run_visit_session()` in
+`chapters/chapter-04-memory-and-state/project/` now calls a real
+`guardrail_check_booking()` check immediately before
+`schedule_followup()` is dispatched — the L2 project is now complete
+across Chapters 4-6 (memory, reflection, guardrails). Chapters 7-13 are
 scaffolded (`.gitkeep`'d directories), not yet built. Nothing has been
 pushed to GitHub — all work is local-only, matching every prior
 session's explicit instructions and this session's own.)
@@ -715,180 +714,319 @@ extended in place, not recreated, per the brief's explicit instruction.
   `docs/curriculum/index.html` and root `index.html` both reflect
   Chapter 5 live, Module 3 in progress.
 
-## Next Recommended Task: Chapter 6 — "Guardrails and Safety for Autonomous Agents"
+## Session 6 — Chapter 6, "Guardrails and Safety for Autonomous Agents" (2026-09-28)
+
+Built cold, from this file's own "Next Recommended Task" brief, with
+one important extra: Chapter 4's own L2 Assisted project's `project/`
+directory (`chapters/chapter-04-memory-and-state/project/`) was
+extended in place a third and final time, per the brief's explicit
+instruction, completing the L2 project across Chapters 4-6.
+
+1. Pre-warmed Ollama (`curl .../api/generate ... keep_alive: "120m"`)
+   before writing any lesson code, and ran a plain sanity check
+   (`elapsed: 1.30`, `OK`). Unlike Chapter 5's session (413.8s on its
+   first substantive call), this session's documented sandbox hang
+   **did not recur** — every live call this session completed in under
+   16 seconds, disclosed honestly either way per this course's own
+   policy (no claim that fast timing generalizes).
+2. Built the fresh lesson scenario, Millbrook Credit Union/LedgerBot (a
+   real-money agent: check balance, transfer funds, delete a scheduled
+   payment, run a "reconciliation script"), testing every deterministic
+   code example for real in a scratch directory before writing it into
+   `lesson.html` — five independent guardrail mechanisms (tool
+   allowlist, human-approval checkpoint with a genuine pause-and-wait,
+   sandboxed command execution via an allowlist/denylist, a hard action
+   budget distinct from Chapter 1's `max_iterations`, and a rate limiter
+   independent of the action budget), composed into one dispatcher
+   function that every tool call must pass through.
+3. **Two genuine, unscripted live-model results became this chapter's
+   central worked examples**, neither manufactured: a prompt-injection
+   attempt via a transaction's memo field (a tool result, not a system
+   prompt) was run twice against `llama3.2:latest` with two different
+   system-prompt framings. A neutral "review this memo" framing: the
+   model correctly identified the injected instruction as suspicious
+   and took no action. A more "compliant, automate this" framing: the
+   same model complied with the injected instruction — but never
+   actually emitted a `transfer_funds` tool call, only narrated in
+   plain text that a transfer had occurred. This second result became
+   the chapter's central finding: it demonstrates a failure mode
+   (false narrated compliance with no real tool call) distinct from
+   "the model calls the dangerous tool," and is the concrete reason a
+   guardrail enforced in code at the dispatch boundary — checking real
+   dispatched tool calls, not a model's own narration — is necessary.
+4. Verified lesson density: **62 lines** match `<pre\|<code` via
+   `grep -c '<pre\|<code' lesson.html` (above the 60+ requirement,
+   matching Chapters 4-5's own 62 exactly), **129 total occurrences**
+   via `grep -oE '<pre|<code' | wc -l`.
+5. Built the full file set matching Chapter 5's exactly: `quiz.html`
+   (10 fill-in-the-blank), `interview-questions.html` + `.md` (10
+   questions across 4 levels), `exercises/` (Amberlock Self-Storage/
+   DispatchBot, 8 tasks, 19 points, `ai-paired.html` using a third
+   scenario, Cascadia Home Security/GuardBot), `practice/` (8 scenarios,
+   `ai-paired.html` using a ninth, unnamed EscrowBot scenario).
+6. Extended Chapter 4's L2 project in place a third and final time:
+   `chapters/chapter-04-memory-and-state/project/solution.py`'s
+   `run_visit_session()` now calls a new `guardrail_check_booking()`
+   function immediately before `schedule_followup()` is dispatched — a
+   hard, enforced check, not a message revised after the fact. TODOs
+   1-4 and Chapters 4-5's original 8 self-checks were confirmed
+   unchanged before any edit. `starter.py` gained a new TODO 5 (the
+   guardrail wiring, given the `guardrail_check_booking()` helper
+   itself as "given," per this chapter's own reuse convention).
+   `README.md` and `RUBRIC.md` were both updated with a new "What
+   Chapter 6 changed" section and a sixth grading criterion.
+   **A real, disclosed design tension was found and resolved
+   explicitly**: the brief requires both that the guardrail stop an
+   unsafe booking automatically, and that the existing 8 self-checks
+   (one of which requires `schedule_followup` to have fired for its own
+   blocking-condition test case) pass unchanged. `human_approved`
+   defaults to `True` to preserve every existing call site's behavior;
+   the guardrail's real enforcement is exercised via two brand-new
+   checks (9 and 10) that pass `human_approved=False` explicitly. This
+   trade-off, and the honest note that a production default should be
+   `False`, is stated in `project/README.md`, `RUBRIC.md`, and the
+   lesson's own Section 17. Per the brief's own stated preference,
+   Chapter 5's `reflect_on_response()` was deliberately **kept**, not
+   removed, as a defense-in-depth backstop — justified explicitly in
+   `project/README.md`. `solution.py` verified 10/10 (was 8/8);
+   `starter.py` verified 2/10 with no crash (was 2/8).
+7. Chapter 6's own `project/` directory (per the curriculum map, this
+   chapter has no separate numbered project slot — the L2 project is
+   one continuous project extended across Ch. 4-6, now complete) was
+   built as a signpost only: `README.md` and `index.html` explaining
+   that the actual gradable files live in
+   `chapters/chapter-04-memory-and-state/project/`, and linking there
+   directly.
+8. Wrote `quality-audits/chapter-06-audit.md`, extending (not
+   restarting) `chapter-05-audit.md`'s fictional-org exclusion list.
+   Three new orgs this chapter: **Millbrook Credit Union** (lesson;
+   LedgerBot), **Amberlock Self-Storage** (exercises; DispatchBot),
+   **Cascadia Home Security** (exercises `ai-paired.html`; GuardBot) —
+   plus EscrowBot's unnamed org (practice `ai-paired.html`). Hollowridge
+   Wellness Clinic (CareBot) was deliberately reused, not treated as a
+   new org, since it's the L2 project's own canonical scenario.
+9. Wired Chapter 6 into `assets/chapters-data.js` (real `path` added,
+   Chapters 7-13 confirmed still without one), `docs/curriculum/
+   index.html` (Chapter 6 card converted to a live link, Module 3
+   feature card marked "Complete," closing the module), and root
+   `index.html` (`hero-stats` updated to 6/13 chapters, 3/6 modules; the
+   chapter-map section intro paragraph, found stale from before this
+   session in the same spot Chapter 4's session once found one, was
+   also corrected to reflect Chapters 1-6 live).
+10. Ran `bash scripts/local_check.sh < /dev/null` for the whole repo —
+    all 6 checks passed clean.
+11. Committed Chapter 6, the Chapter 4 project's third extension, and
+    all wiring/audit/state changes locally — no remote added, nothing
+    pushed, matching every prior session's explicit local-only
+    instructions and this session's own.
+
+## Chapter 6 — COMPLETE
+
+- `lesson.html`: 62 lines match `<pre\|<code` (129 total tag
+  occurrences via `-o`), above the 60+ requirement, matching Chapters
+  4-5's own 62 exactly. Built around Millbrook Credit Union's LedgerBot:
+  what a guardrail is versus reflection (a hard boundary checked before
+  dispatch, not a text revision checked after), a naive-baseline
+  failure (an unguarded $600 external transfer executing with zero
+  checks), all five guardrail mechanisms (tool allowlist, a real
+  pause-and-wait human-approval checkpoint, sandboxed command execution,
+  a hard action budget distinct from Chapter 1's `max_iterations`, and
+  an independent rate limiter), a unified dispatcher at the
+  tool-dispatch boundary, two real live prompt-injection tests (one
+  resisted, one fell for it via false narrated compliance with no real
+  tool call), a deterministic demonstration that the guardrail catches
+  an injected transfer's exact arguments regardless of how the call was
+  produced, a fail-safe default-deny treatment, guardrails-and-
+  reflection as defense-in-depth, the fully assembled LedgerBot session
+  (five guardrails, five real refusals, one real success), and a real
+  third extension of CareBot with a full before/after.
+- `quiz.html`: 10 fill-in-the-blank questions covering the guardrail
+  definition, the pause-and-wait requirement, the live injection test's
+  own result, tool-result-borne injection, fail-safe defaults, the
+  action-budget-vs-max_iterations distinction, and the CareBot
+  extension.
+- `interview-questions.html` + `.md`: 10 questions across
+  beginner/intermediate/senior/architect.
+- `exercises/`: Amberlock Self-Storage/DispatchBot scenario, 8 tasks (5
+  production-gear), 19 points total. `solution.py` verified 19/19;
+  `starter.py` verified 5/19 with no crash. `ai-paired.html` uses a
+  third scenario (Cascadia Home Security/GuardBot).
+- `practice/`: 8 independent diagnostic scenarios, 8 points.
+  `solution.py` verified 8/8; `starter.py` verified 0/8 with no crash.
+  `ai-paired.html` uses a ninth scenario (EscrowBot, org left unnamed).
+- `project/` (signpost only, per the L2 project's continuous-across-
+  chapters design, now complete): points to and documents the real
+  extension inside `chapters/chapter-04-memory-and-state/project/`,
+  where `run_visit_session()` now calls `guardrail_check_booking()`
+  before `schedule_followup()` dispatches. `solution.py` there verified
+  10/10; `starter.py` verified 2/10 with no crash. `RUBRIC.md` there
+  updated to 6 criteria (30 points). **This closes the L2 Assisted
+  project** — no further chapter extends it.
+- Wired into `assets/chapters-data.js` with a real `path`;
+  `docs/curriculum/index.html` and root `index.html` both reflect
+  Chapter 6 live, Module 3 complete.
+
+## Next Recommended Task: Chapter 7 — "Evaluating Agent Reliability"
 
 This is written so a fresh session, with zero memory of this one, can
 pick it up cold.
 
-**Where it sits:** Module 3 — Making Agents Reliable, *closing* the
-module (per `docs/curriculum/CURRICULUM_MAP.md`, Module 3 covers
-Chapters 5-6). Chapter 5 shipped reflection; Chapter 6 owns the
-guardrails half of Module 3's outcome: "design guardrails mapped to
-specific failure modes." Difficulty: Advanced, same tier as Chapter 5.
-Once Chapter 6 ships, Module 3 becomes **Complete** — update
-`docs/curriculum/index.html`'s Module 3 feature card from "In
-Progress" to "Complete," and root `index.html`'s module-complete count
-from 2/6 to 3/6, only at that point, not before.
+**Where it sits:** Module 4 — Measuring and Controlling Agents,
+*opening* the module (per `docs/curriculum/CURRICULUM_MAP.md`, Module 4
+covers Chapters 7-8). Chapters 1-6 (Modules 1-3) are all complete.
+Chapter 7 owns the evaluation half of Module 4's outcome: "design an
+agent reliability/observability plan." Chapter 8 (cost/latency control)
+is the module's other half and is NOT this session's job. Difficulty:
+Advanced, same tier as Chapters 5-6. Module 4 does **not** become
+complete until Chapter 8 also ships — do not mark it "Complete" this
+session; "In Progress" is correct once Chapter 7 is live (following
+Chapter 3's own precedent for a module's first-of-two chapter).
 
-**What it must teach**, per the curriculum map and this course's own
-architecture: iteration bounds, human-approval checkpoints, sandboxed
-tool execution, and rate limiting, each mapped explicitly to the
-specific failure mode it stops — not a generic "add safety" chapter.
-The map's own lab framing: "add iteration bounds, a human-approval
-checkpoint, and a sandboxed tool, then break each on purpose to show
-the guardrail catch it." This should cover: the difference between a
-guardrail (a hard, enforced boundary that stops an action, checked
-*before* it executes) and reflection (a soft check that revises what
-an agent *says*, checked *after* a draft exists but often *after* a
-tool call has already fired too — Chapter 5's own Section 14 named
-this exact gap using CareBot's `schedule_followup()` as the concrete
-example); why a guardrail has to sit at the tool-dispatch boundary,
-not just in a system prompt; what a human-approval checkpoint actually
-requires architecturally (a real pause-and-wait, not a logged warning
-that execution ignores); and what sandboxing a tool call means
-concretely for this course's own no-framework, plain-Python approach
-(a bounded, revocable execution context — file/network/subprocess
-restrictions — not a full container orchestration treatment, which is
-out of scope).
+**What it must teach, and — just as important — what it must NOT
+teach:** per `docs/discovery-notes.md` Section 1.4 (read this before
+starting), this course's own boundary against `llm-evaluation-for-
+everyone` was decided explicitly and confirmed from both sides: that
+sibling course's own discovery notes name THIS course
+(`agentic-ai-for-everyone`) as the future home for agent
+*architecture*, as opposed to evaluating agent *output*. Chapter 7
+teaches evaluation from the **systems-design side only**: what makes
+agent behavior measurable and observable, and how to reason about
+reliability while designing the loop. It must explicitly reference (by
+name, not re-derive) `llm-evaluation-for-everyone` for: golden-set/eval-
+dataset construction methodology, human evaluation and inter-annotator
+agreement, LLM-as-judge design and bias mitigation, and statistical
+rigor (sample size, confidence intervals, significance testing) — the
+same "defer, don't re-teach" pattern this course's own Chapter 4 used
+for `context-engineering-for-everyone`. What IS this chapter's own,
+non-duplicative territory, per the curriculum map's own outcome and lab
+language: **task success measurement, trajectory/tool-call correctness
+(did the agent call the right tools in a sane order, not just "did it
+eventually get the right answer"), and multi-turn drift** (does a
+long-running agent's behavior degrade across many turns/sessions) —
+instrumenting an agent with task-completion and trajectory logging is
+the module's own stated lab. A good test while drafting: if a
+paragraph would apply equally to evaluating a single, non-agentic LLM
+call, it belongs in `llm-evaluation-for-everyone`, not here; if it's
+specifically about evaluating a *loop's* behavior over multiple
+steps/tools/turns, it belongs here.
 
-**Hand-off point:** Chapter 5's own `lesson.html` names Chapter 6
-directly in its Section 14 code-breakdown (the CareBot extension) and
-in its recap's final bullet — both say guardrails are what closes the
-exact gap reflection leaves open (revising text after a tool call
-already fired). Read Chapter 5's Section 14 before starting; it's the
-clearest, most concrete statement of what Chapter 6 needs to fix.
+**Hand-off point:** Chapter 6's own `lesson.html` doesn't name Chapter
+7 directly the way Chapter 5 named Chapter 6 (guardrails and evaluation
+are less directly coupled than guardrails and reflection were) — there
+is no required "extend this exact mechanism" hand-off comment to find.
+Instead, the natural continuity is architectural: Chapter 6's own
+`dispatch_tool_call()` / `guardrail_check_booking()` pattern already
+produces a structured `tool_trace` (a list of `(tool_name, result)`
+pairs) on every run — Chapter 7's own trajectory-logging material has a
+ready-made, already-demonstrated data source to build on and reference,
+rather than inventing tracing from scratch. Consider opening Chapter
+7's lesson by pointing at this continuity explicitly (an agent that
+already produces a `tool_trace` is most of the way to being
+*measurable*; Chapter 7 is what makes that trace worth something).
 
-**This chapter MUST extend the existing L2 Assisted project a third
-time, not start a new one.**
-`chapters/chapter-04-memory-and-state/project/` is still the canonical
-home of the L2 project (Hollowridge Wellness Clinic's CareBot),
-now on its second extension (Chapter 5 added real reflection). Chapter
-6's job:
+**No L2/L3/L4 project work this chapter.** Per
+`docs/curriculum/CURRICULUM_MAP.md`'s project ladder, the L2 Assisted
+project (Hollowridge Wellness Clinic's CareBot) closed at Chapter 6 —
+do NOT extend `chapters/chapter-04-memory-and-state/project/` again.
+The next numbered project, **L3 Independent** ("Design and implement a
+reliability-instrumented, cost-bounded agent for a given problem, no
+scaffold"), ships after Chapter 8, not Chapter 7 — so Chapter 7's own
+`project/` directory should be a **chapter mini-project** (the same
+"not yet on the numbered ladder" pattern Chapters 2-3 used before the
+L2 slot opened at Chapter 4), not a signpost and not a new numbered
+scaffold. Build it as a real, standalone `starter.py`/`solution.py`
+scaffold with its own structural self-checks, clearly labeled in
+`README.md`/`RUBRIC.md` as a chapter mini-project, not the L3 project.
 
-1. Inside `run_visit_session()` in both `solution.py` and `starter.py`,
-   there is already a comment reading `CHAPTER 6 EXTENSION POINT`,
-   placed immediately before `schedule_followup()` is dispatched (right
-   after `check_appointment_slot()` confirms a slot is available).
-   Replace that comment with a real guardrail check: if the patient's
-   current facts include a blocking condition (reuse
-   `is_blocking_condition()`, already defined in both files from
-   Chapter 5), the booking should NOT proceed automatically — either
-   block it outright and return a "needs human review before booking"
-   result, or require an explicit approval flag to be True before
-   `schedule_followup()` is called. Either design is acceptable as
-   long as it's a real, enforced check *before* dispatch, not a
-   revised message *after* it — that's the exact distinction Chapter 5
-   named as reflection's own honest limit.
-2. This turns `reflect_on_response()`'s Chapter 5 body (which currently
-   revises the message *after* an unsafe booking already happened) into
-   a true last-resort/defense-in-depth layer instead of the *only*
-   layer catching the problem — after Chapter 6, the blocking-condition
-   case should ideally never reach `reflect_on_response()` needing to
-   revise anything, because the guardrail should have already stopped
-   or held the booking. Decide, and state explicitly in
-   `project/README.md`, whether Chapter 6 keeps Chapter 5's reflection
-   check as a genuine defense-in-depth backstop (recommended — two
-   independent layers catching the same failure class is a legitimate,
-   common production pattern) or whether it becomes redundant once the
-   guardrail is in place, and justify the choice.
-3. Add at least one new structural self-check to both `solution.py`
-   and `starter.py` proving the guardrail actually stops (or holds) the
-   unsafe booking BEFORE it's dispatched — e.g., assert that
-   `schedule_followup` never appears in `tool_trace` for a blocking-
-   condition visit, or that a human-approval flag is required and
-   respected. The existing 8 checks (TODOs 1-4 from Chapters 4-5) must
-   still pass unchanged.
-4. Update `chapters/chapter-04-memory-and-state/project/README.md` and
-   `RUBRIC.md` again, the same way Chapter 5 did: a new "What Chapter 6
-   changed" section, a new TODO (5) in `starter.py` if the guardrail
-   logic is left as an exercise rather than given, and a sixth grading
-   criterion in `RUBRIC.md`.
-5. Chapter 6's OWN `lesson.html`, `quiz.html`, etc. should use a fresh
-   scenario for teaching the general guardrails mechanism (per this
-   course's per-chapter fresh-scenario convention), but must explicitly
-   show, in at least one section, the CareBot/Hollowridge guardrail
-   extension described above — the same "prove the L2 project is
-   genuinely being extended" pattern Chapter 5's own Section 14 used.
-
-**Directory already scaffolded:**
-`chapters/chapter-06-guardrails-and-safety-for-autonomous-agents/`
-with empty `exercises/`, `practice/`, `project/` subdirs and a
-`.gitkeep`. No `lesson.html` etc. exist yet. Chapter 5's own directory
-(`chapters/chapter-05-reflection-and-self-correction/`) is the closest
-reference for the exact file set to produce, INCLUDING its `project/`
-pattern (a signpost `README.md` + `index.html` pointing to
-`chapters/chapter-04-memory-and-state/project/`, not a recreated
-scaffold) — reuse that same signpost pattern for Chapter 6's own
-`project/` directory.
+**Module 4 assessment status — check and flag, do not silently skip:**
+`docs/curriculum/CURRICULUM_MAP.md` states Module 4's own assessment is
+"reliability-plan + cost-control exercise." As of this session,
+`assessments/module-assessments/` is **empty across the entire repo** —
+no module (including Modules 1-3, already complete) has shipped a
+module-level assessment file yet. This is a pre-existing gap, not
+something Chapter 6 introduced, but it should not keep being silently
+deferred forever. This session should explicitly decide one of: (a)
+build Module 4's assessment now, once both halves (Chapter 7's
+reliability-plan component) exist — likely premature until Chapter 8
+also ships the cost-control half; (b) explicitly flag in this file's
+own next hand-off that a future, dedicated session should audit
+`assessments/` across ALL modules once Chapter 8 ships and Module 4
+closes, rather than each chapter session continuing to defer it
+individually with no plan to ever actually build it. Do not simply
+repeat this note verbatim without making an actual decision — pick (a)
+or (b) explicitly and say why.
 
 **Concrete build steps:**
 
 1. Pick a fresh fictional scenario, distinct from every org in
-   `quality-audits/chapter-05-audit.md`'s running exclusion list
+   `quality-audits/chapter-06-audit.md`'s running exclusion list
    (currently: Northbeam Outdoors, Summit Gear Co-op, Fernbrook Ski
-   Patrol, Wavecrest Marina, Alderleaf Research Group, Pinehurst
-   Realty Group, Thistlewood Veterinary Group, Cobblestone Courier
-   Co., Palisade Broadband, Thornbury Insurance Group, Wrenhollow Auto
+   Patrol, Wavecrest Marina, Alderleaf Research Group, Pinehurst Realty
+   Group, Thistlewood Veterinary Group, Cobblestone Courier Co.,
+   Palisade Broadband, Thornbury Insurance Group, Wrenhollow Auto
    Rentals, Kestrel Appliance Service, Larkspur Fitness Studio,
    Driftwood Legal Clinic, Saltmarsh Language Academy, Hollowridge
    Wellness Clinic, Briarcliff Bike Rentals, Fenwick Home Repair
-   Co-op, Mossgate Dental Group) — extend that list, don't restart it.
-   A natural fit: a system where an agent can take a real, consequential
-   action (send money, delete a record, send a message, execute code)
-   that a guardrail needs to bound, approve, or sandbox BEFORE it
-   happens — something with genuine stakes, not a strawman "the
-   guardrail saves the day" scenario.
+   Co-op, Mossgate Dental Group, Millbrook Credit Union, Amberlock
+   Self-Storage, Cascadia Home Security) — extend that list, don't
+   restart it. A natural fit: a multi-tool, multi-turn agent where
+   "did it work" isn't a single yes/no (a research/investigation agent,
+   a multi-step booking or diagnosis agent) so task-success and
+   trajectory-correctness are genuinely distinct, non-trivial questions.
 2. Re-warm and test every code example for real (local Ollama,
    `llama3.2:latest`, `base_url="http://localhost:11434/v1"`) before
-   writing it into `lesson.html`, exactly like Chapters 1-5's
+   writing it into `lesson.html`, exactly like Chapters 1-6's
    scratchpad-first discipline — see `CONTRIBUTING.md`'s non-negotiable
    rule. Budget up to 450s per live call, never idle-wait past that.
-   Chapter 5's own session pre-warmed Ollama explicitly and still saw
-   its documented sandbox hang recur on the first live call (413.8s) —
-   do the pre-warm anyway
+   This session's own calls were all fast (under 16s) despite Chapter
+   5's disclosed 413.8s stall the session before it — do not assume
+   fast timing is now the norm; pre-warm anyway
    (`curl -s localhost:11434/api/generate -d
    '{"model":"llama3.2","prompt":"","keep_alive":"120m"}'`, allow up to
-   ~450s if cold), but don't assume it guarantees fast calls, and
-   disclose honestly (per Chapters 3 and 5's precedent) whatever
-   actually happens.
+   ~450s if cold), and disclose honestly (per Chapters 3, 5, and 6's own
+   precedent) whatever actually happens.
 3. Build `lesson.html` to the same 60+ `<pre>`/`<code>`-block density
    bar, verified with `grep -c '<pre\|<code' lesson.html` before
    calling it done — do not skip this check.
-4. Build the full file set matching Chapter 5's exactly: `quiz.html`
+4. Build the full file set matching Chapter 6's exactly: `quiz.html`
    (10 fill-in-the-blank), `interview-questions.html` + `.md` (10
    questions across 4 levels), `exercises/` (8+ tasks, 5+ production-
    gear, `starter.py`/`solution.py` both run and verified), `practice/`
-   (8+ scenarios, same file set), and the L2 project EXTENSION
-   described above (signpost `project/` here, real work in
-   `chapters/chapter-04-memory-and-state/project/`).
-5. `assets/chapters-data.js`: add Chapter 6's real `path` only once
-   `lesson.html` exists. Chapters 7-13 stay without a `path`. The
-   module's `examPath` stays `null` until a written exam actually
-   exists.
-6. Update `docs/curriculum/index.html`'s Chapter 6 card from a
+   (8+ scenarios, same file set), and a **chapter mini-project**
+   `project/` (real scaffold, not a signpost — see above).
+5. `assets/chapters-data.js`: add Chapter 7's real `path` only once
+   `lesson.html` exists. Chapters 8-13 stay without a `path`. Module
+   4's `examPath` stays `null` until a written exam actually exists.
+6. Update `docs/curriculum/index.html`'s Chapter 7 card from a
    non-linked "Planned" `<div>` to a linked `<a class="chapter-card">`.
-   Module 3 ("Making Agents Reliable") goes to **"Complete"** now that
-   both Chapters 5 and 6 are live.
-7. Update root `index.html`'s `hero-stats`: chapter count to 6 of 13
-   live, module-complete count to 3 of 6 (Module 3 now closes).
-8. Write `quality-audits/chapter-06-audit.md` following
-   `chapter-05-audit.md`'s exact format: honest self-critique, the
-   extended fictional-org exclusion list, source verification (if any
-   external sources are cited), a fresh Ollama check with honest
-   disclosure either way, and the full code-tested-before-writing
-   disclosure.
+   Module 4 ("Measuring and Controlling Agents") goes to **"In
+   Progress"**, NOT "Complete" — Chapter 8 still has to ship first.
+7. Update root `index.html`'s `hero-stats`: chapter count to 7 of 13
+   live. Module-complete count **stays at 3 of 6** (Module 4 isn't done
+   until Chapter 8 ships) — do not increment it this session.
+8. Write `quality-audits/chapter-07-audit.md` following
+   `chapter-06-audit.md`'s exact format: honest self-critique, the
+   extended fictional-org exclusion list, source verification (this
+   chapter likely names `llm-evaluation-for-everyone` — confirm that
+   reference is accurate against that course's own current curriculum
+   map/chapter list before citing specifics, the same verification
+   discipline this course's own discovery-notes work already used), a
+   fresh Ollama check with honest disclosure either way, and the full
+   code-tested-before-writing disclosure.
 9. Run `bash scripts/local_check.sh < /dev/null` before considering the
    chapter done — fix anything it flags.
-10. Update this file's "Last updated" line, add a new "Session 6"
-    section documenting what was built, move Chapter 6 from "Next
-    Recommended Task" into a "Chapter 6 — COMPLETE" section, and
-    rewrite "Next Recommended Task" for Chapter 7 ("Evaluating Agent
-    Reliability," opening Module 4) with the same concrete, cold-pickup
-    detail as this section, before ending the session.
+10. Update this file's "Last updated" line, add a new "Session 7"
+    section documenting what was built, move Chapter 7 from "Next
+    Recommended Task" into a "Chapter 7 — COMPLETE" section, and
+    rewrite "Next Recommended Task" for Chapter 8 ("Cost and Latency
+    Control of Agent Loops," closing Module 4) with the same concrete,
+    cold-pickup detail as this section, including a final, explicit
+    decision on the Module 4 assessment question raised above, before
+    ending the session.
 
-**Do not** re-teach Chapters 1-5's own mechanics (the agent loop, tool
-selection, memory, or reflection/self-correction) from scratch —
-assume the reader can already build a working, memory-equipped,
-reflection-capable agent; Chapter 6's job is adding guardrails as a
-genuinely new architectural layer that bounds what that agent is
-*allowed to do*, not re-explaining how it decides what to say.
+**Do not** re-teach Chapters 1-6's own mechanics (the agent loop, tool
+selection, memory, reflection/self-correction, or guardrails) from
+scratch — assume the reader can already build a working, memory-
+equipped, reflection-capable, guardrail-bounded agent; Chapter 7's job
+is making that agent's behavior *measurable*, not re-explaining how it
+decides what to do.

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 6: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design GuardBot's dispatch guardrail yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-06">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the exercises</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 6 &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked the exercises yourself on Amberlock Self-Storage's DispatchBot. Now a third scenario, <strong>Cascadia Home Security</strong> (a fictional home security company) and its remote-operations agent <strong>GuardBot</strong>, gets built a second way: by prompting an AI assistant for a dispatch guardrail, and reviewing what it hands back with the same skepticism you'd bring to a coworker's pull request before it ships to a real customer's front door.</p>
+  </div>
+
+  <h2>Step 1: Design it yourself, first</h2>
+  <p>GuardBot can arm/disarm a customer's alarm system and remotely unlock their front door. Both are real, physical-world actions with genuine safety stakes if triggered by the wrong person or an injected instruction. Before reading further, sketch your own <code>dispatch_guard_action(action_name, args, approve_fn)</code> function: what checks does it run, in what order, and what does it do if any one of them fails? There's no grading here, just your own design to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant to build the same thing</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to state explicitly that EVERY check must fail safe (deny) on any error, not just the "normal" refusal paths -- otherwise a rushed AI answer tends to wrap only the obvious cases in error handling and leaves the approval-service-failure path defaulting to whatever Python does when an exception isn't caught (often a crash that a surrounding try/except somewhere else silently treats as "no error, proceed").</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write a Python function dispatch_guard_action(action_name, args, approve_fn) that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this chapter's own lesson pattern.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write a Python function dispatch_guard_action(action_name, args, approve_fn) for a home security agent, GuardBot, that can call "disarm_alarm" or "unlock_door". Both actions are ALWAYS high-risk and must require human approval before they execute -- there is no low-risk case for either. The function must: (1) check action_name against an explicit allowlist of {"arm_alarm", "disarm_alarm", "unlock_door", "check_status"} and refuse anything else; (2) for "disarm_alarm" and "unlock_door" specifically, call approve_fn(action_name, args) inside a try/except -- if it raises ANY exception, or returns anything that isn't literally True, treat the action as NOT approved and refuse it (fail safe, never fail open); (3) only actually "execute" (return a dispatched=True result) after passing both checks. Do not use any agent framework, and do not let an exception from approve_fn propagate up uncaught -- that would crash the whole session instead of just refusing the one action.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated guardrail function tends to get wrong</span>
+    <ul>
+      <li><strong>Catching exceptions from approve_fn in only one of the two sensitive actions.</strong> A shallow reading of the prompt often produces correct handling for whichever action is mentioned first and forgets to apply the same try/except to the second one -- does the generated code genuinely wrap BOTH calls, or does testing only "disarm_alarm" happen to look complete?</li>
+      <li><strong>Treating "approve_fn didn't return False" as equivalent to "approve_fn returned True."</strong> A function that dispatches whenever the result is merely "not exactly False" (for example, treats <code>None</code> or an empty string as approval) would let a bug in the approval service silently approve an unlock. The reliable check compares strictly for <code>True</code>, or coerces explicitly and defaults to deny.</li>
+      <li><strong>Letting the allowlist check happen AFTER the approval check.</strong> This chapter's own lesson dispatcher checks the allowlist first, before anything else -- an unrecognized action name should never even reach the approval-checking code, since asking a human to approve an action that doesn't exist wastes their time and implies the action is real.</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against this chapter's own lesson pattern (Sections 6, 10, and 14) and against <code>solution.py</code> in the exercises folder. Where do they differ? Does the AI's version genuinely fail safe on every error path, or does it only look like it does until you test the one path nobody thought to try?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Exercises</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

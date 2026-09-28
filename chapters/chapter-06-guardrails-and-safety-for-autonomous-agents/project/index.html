@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 6 Project: L2 Assisted, Guardrail Stage (Final) — Agentic AI for Everyone</title>
+<meta name="description" content="The L2 Assisted project is extended in place, not re-created here -- Chapter 6's guardrail work lives in chapter-04-memory-and-state/project/, completing the project.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-06">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../interview-questions.html">&larr; Back to interview questions</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 6 Project &middot; L2 Assisted, Guardrail Stage (Final)</span>
+    <span class="reading-time">~5 min (signpost)</span>
+  </div>
+  <h1>The L2 Project's Guardrail Stage — and Its Completion</h1>
+
+  <div class="what-is">
+    <span class="label">This directory is a signpost, not a separate project</span>
+    Per <code>docs/curriculum/CURRICULUM_MAP.md</code>'s project
+    ladder, the <strong>L2 Assisted</strong> project is one continuous
+    project — Hollowridge Wellness Clinic's CareBot — that ships
+    partial after Chapter 4 and is extended <em>in place</em> through
+    Chapters 5 and 6, not rebuilt fresh in each chapter's own
+    directory. Chapter 6 is where it becomes <strong>complete</strong>.
+  </div>
+
+  <p>
+    Chapter 6's actual project work — replacing CareBot's
+    <code>CHAPTER 6 EXTENSION POINT</code> comment with a real
+    <code>guardrail_check_booking()</code> call, enforced BEFORE
+    <code>schedule_followup()</code> is ever dispatched — lives in
+    <code>chapters/chapter-04-memory-and-state/project/</code>, the
+    canonical home of this project across all three chapters. Go
+    there for the full README, the updated <code>starter.py</code>
+    (now 5 TODOs) and <code>solution.py</code>, the updated
+    <code>RUBRIC.md</code> (6 criteria), and the project's own
+    <code>index.html</code>/<code>ai-paired.html</code>.
+  </p>
+
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>cd chapters/chapter-04-memory-and-state/project
+python3 starter.py   # 10 structural self-checks</code></pre>
+  </div>
+
+  <p>See <code>README.md</code> in this directory for exactly what
+  Chapter 6 changed there, why <code>human_approved</code> defaults to
+  <code>True</code> (a disclosed trade-off to keep Chapters 4-5's own
+  regression checks passing unchanged), and why Chapter 5's reflection
+  step was deliberately kept as a defense-in-depth backstop rather than
+  removed now that the guardrail exists.</p>
+
+  <p><strong>This project is now complete.</strong> No further chapter
+  extends <code>chapters/chapter-04-memory-and-state/project/</code>.</p>
+
+  <p>
+    <a href="../../chapter-04-memory-and-state/project/index.html">Go to the L2 project (chapter-04-memory-and-state/project/) &rarr;</a>
+  </p>
+
+  <div class="chapter-nav">
+    <a href="../../../docs/curriculum/index.html">Back to Roadmap &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

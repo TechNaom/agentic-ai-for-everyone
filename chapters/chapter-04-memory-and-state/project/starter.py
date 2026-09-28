@@ -7,12 +7,13 @@ docs/curriculum/CURRICULUM_MAP.md's project ladder: "Build a multi-tool
 agent with memory and a reflection step for a provided scenario, partial
 scaffold, ships after Ch. 4, extended through Ch. 5-6's reflection/
 guardrail material"). Chapter 4 shipped the multi-tool-plus-memory half
-of that description in full. NOW that Chapter 5 ("Reflection and
-Self-Correction") has taught the general mechanism, TODO 4 below asks
-you to apply it here: replace reflect_on_response()'s no-op body with a
-real self-critique-and-revise step, using the same deterministic
-pattern Chapter 5's own lesson built for a fresh scenario (Briarcliff
-Bike Rentals/BikeBot).
+of that description in full. Chapter 5 ("Reflection and Self-
+Correction") taught the general reflection mechanism, applied here in
+TODO 4. NOW that Chapter 6 ("Guardrails and Safety for Autonomous
+Agents") has taught guardrails, TODO 5 asks you to wire
+guardrail_check_booking() (given below) into run_visit_session() BEFORE
+schedule_followup() is dispatched -- a hard, enforced check, not a
+message revised after the fact.
 
 Scenario: Hollowridge Wellness Clinic wants CareBot, a scheduling and
 intake assistant with three tools plus a persisted long-term memory
@@ -21,7 +22,7 @@ LATER, separate visit.
 
 How to run:
     python3 starter.py
-It prints a structural self-check: 8 checks. Fill in the 4 # TODOs and
+It prints a structural self-check: 10 checks. Fill in the 5 # TODOs and
 watch checks pass.
 """
 
@@ -110,6 +111,24 @@ def is_blocking_condition(text):
 
 
 # ---------------------------------------------------------------------------
+# Given -- a guardrail check. Not a TODO body itself (see TODO 5 in
+# run_visit_session below for where you wire this in), but read it: this
+# is a HARD, enforced check at the tool-dispatch boundary, called BEFORE
+# schedule_followup() -- not a message revised after the fact the way
+# Chapter 5's reflect_on_response() (TODO 4 below) works.
+# ---------------------------------------------------------------------------
+def guardrail_check_booking(current_facts, human_approved=True):
+    """Returns {"allowed": bool, "blocking": [...]}. A blocking condition
+    on file requires human_approved=True before the booking is allowed to
+    proceed; with no blocking condition, booking is always allowed."""
+    conditions = current_facts.get("conditions", [])
+    blocking = [c for c in conditions if is_blocking_condition(c)]
+    if blocking and not human_approved:
+        return {"allowed": False, "blocking": blocking}
+    return {"allowed": True, "blocking": blocking}
+
+
+# ---------------------------------------------------------------------------
 # TODO 4 (new this chapter): implement reflection for real.
 # ---------------------------------------------------------------------------
 def reflect_on_response(draft_response, context):
@@ -169,7 +188,7 @@ def promote_worthy_and_persist(patient_id, user_messages, store):
 # do not modify the reflect_on_response call itself, only the rest of the
 # flow around it).
 # ---------------------------------------------------------------------------
-def run_visit_session(patient_id, store, user_messages, requested_date=None):
+def run_visit_session(patient_id, store, user_messages, requested_date=None, human_approved=True):
     """
     1. working_memory, facts = build_working_context(patient_id, store)
     2. Append each text in user_messages to working_memory as a
@@ -178,13 +197,23 @@ def run_visit_session(patient_id, store, user_messages, requested_date=None):
        user_messages, store)
     4. tool_trace = []. If requested_date is given, call
        check_appointment_slot(requested_date), append ("check_appointment_
-       slot", result) to tool_trace, and if result["available"] is True,
-       call schedule_followup(patient_id, requested_date) and append
-       ("schedule_followup", booking) to tool_trace too.
-    5. Build draft_response: if current_facts["conditions"] is non-empty,
-       "Noted your history (<conditions joined with '; '>) -- I'll flag
-       this for your provider." else "Thanks, I've logged today's visit
-       notes."
+       slot", result) to tool_trace. If result["available"] is True:
+       a. CHAPTER 6: call gate = guardrail_check_booking(current_facts,
+          human_approved=human_approved) and append
+          ("guardrail_check_booking", gate) to tool_trace.
+       b. If gate["allowed"] is True, call schedule_followup(patient_id,
+          requested_date) and append ("schedule_followup", booking) to
+          tool_trace. Otherwise, do NOT call schedule_followup() -- set a
+          local booking_held = True instead.
+    5. Build draft_response:
+       - If booking_held is True: return a response naming the blocking
+         condition(s) (gate["blocking"], joined with "; ") and saying it
+         needs care-team review before it can be scheduled -- do NOT say
+         it's been booked.
+       - Else if current_facts["conditions"] is non-empty: "Noted your
+         history (<conditions joined with '; '>) -- I'll flag this for
+         your provider."
+       - Else: "Thanks, I've logged today's visit notes."
     6. final_response = reflect_on_response(draft_response,
        {"facts": current_facts, "tool_trace": tool_trace})  # given, do
        not change this line
@@ -193,6 +222,8 @@ def run_visit_session(patient_id, store, user_messages, requested_date=None):
        "persisted_facts": current_facts}
     """
     # TODO 3: implement the composed flow described above.
+    # TODO 5 (new, Chapter 6): the guardrail_check_booking() call and the
+    # booking_held branch described in step 4/5 above.
     return {"working_memory": [], "tool_trace": [], "persisted_facts": {"conditions": [], "preferences": []}}
 
 
@@ -248,6 +279,34 @@ def self_check():
         and "clinical review" in final_reply
     )
     results.append(("reflect_on_response revises the draft when a blocking condition was booked (Ch5)", ok))
+
+    # --- Chapter 6 additions: the guardrail actually stops/holds the
+    # unsafe booking BEFORE dispatch, not just revises the message after. ---
+    store4 = MemoryStore()
+    visit4 = run_visit_session(
+        "pt-99", store4,
+        ["I have a new condition: severe allergic reaction, unresolved."],
+        requested_date="2026-10-05",
+        human_approved=False,
+    )
+    ok = (
+        not any(t[0] == "schedule_followup" for t in visit4["tool_trace"])
+        and any(t[0] == "guardrail_check_booking" and t[1]["allowed"] is False for t in visit4["tool_trace"])
+    )
+    results.append(("guardrail holds the booking for a blocking condition when not approved (Ch6)", ok))
+
+    store5 = MemoryStore()
+    visit5 = run_visit_session(
+        "pt-99", store5,
+        ["I have a new condition: severe allergic reaction, unresolved."],
+        requested_date="2026-10-05",
+        human_approved=True,
+    )
+    ok = (
+        any(t[0] == "schedule_followup" for t in visit5["tool_trace"])
+        and any(t[0] == "guardrail_check_booking" and t[1]["allowed"] is True for t in visit5["tool_trace"])
+    )
+    results.append(("guardrail allows the booking for the same condition once human-approved (Ch6)", ok))
 
     print("Chapter 4 Project -- Structural Self-Check")
     print("=" * 60)
