@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 4 Project: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design CareBot's fact-promotion function yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-04">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the project</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 4 Project &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already built CareBot's fact-promotion function yourself. Now try the reverse: describe the same task to an AI assistant without showing it your own solution, and review what it hands back with the same scrutiny you'd bring to a teammate's pull request before merging it into Hollowridge Wellness Clinic's real intake system.</p>
+  </div>
+
+  <h2>Step 1: Have the AI build it independently</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to make explicit that a patient may already have OTHER facts on file before this write happens — otherwise the AI has no reason to load existing state first, and will likely write a version that only ever handles a patient's very first fact correctly, which is exactly the blind-overwrite bug this exercise is designed to surface.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write a Python function promote_worthy_and_persist(patient_id, user_messages, store) that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this project's own solution.py.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write a Python function promote_worthy_and_persist(patient_id, user_messages, store) for a clinic intake agent. `store` is a MemoryStore instance with these methods already implemented: store.get(patient_id) -> {"conditions": [...], "preferences": [...]} (loads existing state, read-only), store.add_condition(patient_id, note) -> appends note to that patient's conditions and saves (already read-modify-write internally), store.add_preference(patient_id, note) -> same for preferences. `user_messages` is a list of strings from ONE visit. The function should classify each message with an already-given is_promote_worthy(text) helper that returns "condition", "preference", or None, call the matching store method for each promote-worthy message, and return store.get(patient_id) at the end reflecting everything just written. Assume this patient may ALREADY have prior conditions/preferences on file from an earlier, separate visit -- your function must not lose them. Do not use any agent framework.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 2: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated fact-promotion function tends to get wrong</span>
+    <ul>
+      <li><strong>Bypassing the given `add_condition`/`add_preference` methods and writing to the store directly.</strong> Since those methods already do read-modify-write internally, a version that calls them correctly is safe by construction — but does the generated code actually call them, or does it reach into some other save path (or reconstruct a facts dict itself) that skips the existing-state load and silently reproduces the lesson's own blind-overwrite bug?</li>
+      <li><strong>Only handling the first promote-worthy message per category.</strong> If a visit has TWO condition statements, does the generated code promote both, or does an early `return`/`break` after the first match silently drop the second?</li>
+      <li><strong>Calling `store.get(patient_id)` once at the top and returning that stale value at the end,</strong> instead of re-fetching after all the writes have happened — this is the same stale-snapshot mistake the lesson's Section 15 caught in its own finished agent, just in a different function.</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against <code>solution.py</code> in this same folder. Where do they differ? Is the AI's version genuinely equivalent, or does it handle one of the three watch-outs above differently — and is that difference actually a bug, or a legitimate different design choice?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Project</a>
+    <a href="../../../docs/curriculum/index.html">Back to Roadmap &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

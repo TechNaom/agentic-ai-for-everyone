@@ -7,10 +7,9 @@
   set it to null until that module's written exam actually exists in
   assessments/written-exams/.
 
-  Chapters 1-3 are live as of this build (Module 1 complete; Module 2
-  in progress with Chapter 3 live, Chapter 4 still planned) -- see
-  PROJECT_STATE.md for status. Chapters 4-13 are planned, `.gitkeep`'d,
-  not yet built.
+  Chapters 1-4 are live as of this build (Module 1 and Module 2 both
+  complete) -- see PROJECT_STATE.md for status. Chapters 5-13 are
+  planned, `.gitkeep`'d, not yet built.
 */
 
 window.AAFE_MODULES = [
@@ -51,7 +50,8 @@ window.AAFE_MODULES = [
         id: "chapter-04",
         num: 4,
         title: "Memory and State",
-        description: "Short-term working memory vs. long-term persisted memory, and their real engineering trade-offs."
+        description: "Short-term working memory vs. long-term persisted memory, and their real engineering trade-offs.",
+        path: "chapters/chapter-04-memory-and-state/lesson.html"
       }
     ]
   },

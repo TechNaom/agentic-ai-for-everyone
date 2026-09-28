@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory and State Quiz — Agentic AI for Everyone</title>
+<meta name="description" content="Interactive quiz for Memory and State.">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-04" data-chapter-id="chapter-04">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="lesson.html">&larr; Back to the lesson</a></p>
+
+  <span class="chapter-badge">Chapter 4 Quiz</span>
+  <h1>Memory and State</h1>
+  <p>Fill in each blank, then check your answers. A perfect score marks this chapter complete.</p>
+
+  <div class="quiz-progress-wrap" aria-hidden="true">
+    <div class="quiz-progress-fill" id="quiz-progress-fill"></div>
+  </div>
+
+  <form onsubmit="return false;">
+
+    <div class="quiz-question">
+      <label for="q1"><span class="q-num">1</span> Short-term ______ memory is the message list scoped to one run -- it dies when the process exits, by design.</label>
+      <div class="fib-row">
+        <input type="text" id="q1" class="fib-blank" data-answers="working" aria-label="Answer for question 1">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q2"><span class="q-num">2</span> Long-term ______ memory is written to storage that survives past process exit and gets merged into a later, separate session.</label>
+      <div class="fib-row">
+        <input type="text" id="q2" class="fib-blank" data-answers="persisted,persistent" aria-label="Answer for question 2">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q3"><span class="q-num">3</span> This chapter's minimal persisted store is a plain ______ file, with no vector database or embedding framework required to teach the architectural decision.</label>
+      <div class="fib-row">
+        <input type="text" id="q3" class="fib-blank" data-answers="JSON,json" aria-label="Answer for question 3">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q4"><span class="q-num">4</span> Every persisted write in this chapter follows read-modify-______, never a blind write, after a real bug showed a second promoted fact silently deleting the first.</label>
+      <div class="fib-row">
+        <input type="text" id="q4" class="fib-blank" data-answers="write" aria-label="Answer for question 4">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q5"><span class="q-num">5</span> Not every message should be persisted -- only ______-worthy facts (injuries, lasting preferences, schedule constraints), decided by a filter live-tested against the real model this chapter.</label>
+      <div class="fib-row">
+        <input type="text" id="q5" class="fib-blank" data-answers="promote" aria-label="Answer for question 5">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q6"><span class="q-num">6</span> As working memory grows, it eventually exceeds the model's practical context, creating ______-budget pressure that requires pruning or summarizing.</label>
+      <div class="fib-row">
+        <input type="text" id="q6" class="fib-blank" data-answers="token" aria-label="Answer for question 6">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q7"><span class="q-num">7</span> This chapter's own live summarization call really did drop a durable detail, proving summarization is not a substitute for ______ a fact in the long-term store.</label>
+      <div class="fib-row">
+        <input type="text" id="q7" class="fib-blank" data-answers="persisting" aria-label="Answer for question 7">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q8"><span class="q-num">8</span> The correct ordering rule: promote-worthy facts must be persisted ______ the working-memory turns that stated them are ever pruned or summarized away.</label>
+      <div class="fib-row">
+        <input type="text" id="q8" class="fib-blank" data-answers="before" aria-label="Answer for question 8">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q9"><span class="q-num">9</span> The finished CoachBot agent's reply-decision bug -- using a variable captured before a write instead of re-checking the store after it -- is called a stale ______.</label>
+      <div class="fib-row">
+        <input type="text" id="q9" class="fib-blank" data-answers="snapshot" aria-label="Answer for question 9">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q10"><span class="q-num">10</span> This chapter's CoachBot agent was built for the fictional gym ______ Fitness Studio.</label>
+      <div class="fib-row">
+        <input type="text" id="q10" class="fib-blank" data-answers="larkspur,Larkspur" aria-label="Answer for question 10">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div id="check-all-wrap">
+      <button type="button" id="check-all-btn" class="check-btn">Check All Answers</button>
+      <span id="quiz-score"></span>
+    </div>
+
+    <div class="quiz-celebration" id="quiz-celebration" aria-live="polite">
+      Perfect score. Chapter complete.
+    </div>
+  </form>
+
+  <div class="chapter-nav">
+    <a href="lesson.html">&larr; Back to Lesson</a>
+    <a href="exercises/index.html">Exercises &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/quiz-engine.js"></script>
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

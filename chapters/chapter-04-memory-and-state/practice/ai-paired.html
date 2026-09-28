@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 4 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose MemoBot's layered memory bug yourself, then critique an AI's plausible-but-flawed answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-04">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 4 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, not in the eight above: <strong>"MemoBot"</strong>, a personal-assistant agent at a fictional productivity app (left unnamed on purpose, the same way Chapter 3's HandoffBot scenario did — a small scenario doesn't need an invented company). MemoBot persists a small set of durable facts per user (dietary restrictions, recurring reminders) to a JSON file, one file per user. Two real, layered problems were observed in the same trace. First: a user told MemoBot about a peanut allergy in one session; a second session, weeks later, recorded a new reminder preference — and the peanut allergy vanished from the store entirely after that second write, even though the second write never touched allergies at all. Second, in a completely different session: a user stated a new dietary restriction ("actually I'm vegetarian now too") midway through a single conversation, and MemoBot's own reply at the very end of that <em>same</em> conversation still didn't reflect it — even though the very next, separate session correctly showed the vegetarian restriction had been saved.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>Before reading further: name the two distinct problems here using this chapter's vocabulary (one is about a write silently destroying unrelated data; the other is about trusting a variable captured before a write instead of re-checking after it) and write your own fix for each. There's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> this scenario has two layered problems (a blind-overwrite merge bug AND a stale-snapshot bug), so the prompt needs to ask the AI to identify both, not just one — a shallow prompt like "why is my agent's memory broken" invites a single, incomplete answer, usually just whichever bug is described first.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here's how my agent MemoBot persists and uses user facts... identify every distinct memory problem in this description, not just one..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice and compare its answer against the critique below.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Here's my agent MemoBot, which persists a small set of durable facts per user (dietary restrictions, reminders) to a JSON file, one file per user: [paste the scenario above]. Identify EVERY distinct memory problem in this description, not just the first one you notice -- there are two -- and name each using this chapter's vocabulary (a read-modify-write / blind-overwrite merge bug, or a stale-snapshot bug where mid-session behavior uses a variable captured before a write instead of re-checking the store after it). Propose a concrete, specific fix for each.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <div class="what-is">
+    <span class="label">What a complete diagnosis catches</span>
+    <ul>
+      <li><strong>Problem 1 (blind-overwrite merge bug):</strong> a write path that constructs a fresh facts dict (or only partially loads existing state) instead of loading the user's complete existing record first destroys unrelated fields it never intended to touch — the peanut allergy wasn't targeted by the reminder-preference write, but it was still lost, because the write never read the full existing record before saving. The fix is read-modify-write on the complete record, every time.</li>
+      <li><strong>Problem 2 (stale-snapshot bug):</strong> code that decided the final reply used a `facts` variable captured at the start of the session, before the vegetarian-restriction message was ever processed — the write to disk succeeded (which is why the next session saw it correctly), but nothing mid-session re-checked the store after that write to inform the reply happening in the same turn.</li>
+      <li>A shallow AI answer often catches only Problem 1 (the more visible data-loss issue) and misses that Problem 2 is a separate, independent issue — fixing the merge bug alone doesn't make same-session behavior reflect a fact stated moments earlier, and vice versa.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's answer against your own Step 1 notes and the two-problem breakdown above. Did it catch both? Did it propose the right fix for each — read-modify-write on the full record, and a post-write re-check before deciding the reply — or did it conflate the two into one vague "fix the memory system" suggestion?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice Bank</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

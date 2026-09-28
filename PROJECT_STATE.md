@@ -1,13 +1,14 @@
 # PROJECT_STATE.md — Agentic AI for Everyone
 
-Last updated: 2026-09-28 (Session 3 — Chapter 3, "Tool Use and
-Function Calling," complete and live, opening **Module 2 — Giving
-Agents Capabilities** (Module 1 — Foundations of the Agent Loop —
-remains fully complete: Chapters 1-2. Module 2 is now in progress:
-Chapter 3 live, Chapter 4 still planned). Chapters 4-13 are scaffolded
-(`.gitkeep`'d directories), not yet built. Nothing has been pushed to
-GitHub — all work is local-only, matching every prior session's
-explicit instructions and this session's own.)
+Last updated: 2026-09-28 (Session 4 — Chapter 4, "Memory and State,"
+complete and live, **closing Module 2 — Giving Agents Capabilities**.
+Module 1 — Foundations of the Agent Loop — and Module 2 are now both
+fully complete: Chapters 1-4. Chapter 4's `project/` also ships this
+course's numbered **L2 Assisted** project (partial scaffold, per the
+curriculum map's project ladder), not a chapter mini-project. Chapters
+5-13 are scaffolded (`.gitkeep`'d directories), not yet built. Nothing
+has been pushed to GitHub — all work is local-only, matching every
+prior session's explicit instructions and this session's own.)
 
 ## Course Objective
 
@@ -442,149 +443,330 @@ zero memory of Session 2:
   `docs/curriculum/index.html` and root `index.html` both reflect
   Chapter 3 live, Module 2 in progress.
 
-## Next Recommended Task: Chapter 4 — "Memory and State"
+## Session 4 — Chapter 4, "Memory and State" (2026-09-28)
 
-This is written so a fresh Sonnet session, with zero memory of this
-one, can pick it up cold.
+Built cold, from this file's own "Next Recommended Task" brief, with
+zero memory of Session 3. This session was interrupted once (the
+parent session ended before a commit landed) and resumed cold in a
+second pass — the resume verified everything already on disk before
+building anything new, rather than restarting or rewriting complete
+work.
 
-**Where it sits:** Module 2 — Giving Agents Capabilities, *closing*
-the module (Chapter 3, "Tool Use and Function Calling," opened it and
-is now live). Per `docs/curriculum/CURRICULUM_MAP.md`, difficulty:
-Intermediate. Completing Chapter 4 completes Module 2 — update the
-module-complete count in `docs/curriculum/index.html` and root
-`index.html` accordingly when this chapter ships.
+1. Read `PROJECT_STATE.md`'s Chapter 4 brief, Chapter 3's full file set
+   as the structural template, `python-for-everyone`'s density
+   benchmark, `quality-audits/chapter-03-audit.md`'s org-exclusion
+   list, and `docs/curriculum/CURRICULUM_MAP.md`'s project-ladder
+   section (the brief's own flag that Chapter 4 is different from
+   Chapters 2-3: this is where the numbered **L2 Assisted** project
+   actually begins) before writing anything.
+2. Picked a fresh scenario per the brief's own guidance — a system
+   where a fact stated in one session must correctly inform a later,
+   separate session: **Larkspur Fitness Studio**/CoachBot, a fitness
+   coaching agent where a member's injury or preference, stated once,
+   must persist across genuinely separate sessions and change future
+   recommendations.
+3. Pre-warmed Ollama explicitly (`keep_alive: "120m"`) before writing
+   any lesson code, unlike Chapter 3's session. **Every live call this
+   session succeeded** — a sanity check (2.2s), a promote-worthy
+   classification call (4/4 correct), a live memory-grounded reply
+   contrasted against the same prompt with no memory injected, and a
+   live summarization call — all real, captured transcripts, not
+   deterministic stand-ins. The summarization call's own real output
+   dropped a genuine detail (real progress numbers), which became
+   Section 14's central worked example rather than a hypothetical.
+4. Built `lesson.html` around the short-term/long-term memory split:
+   working memory as the Chapter 1-3-familiar message list, a minimal
+   JSON-file persisted store (read-modify-write, no vector database or
+   embeddings, per this course's deferral to
+   `context-engineering-for-everyone`), proven across two genuinely
+   separate `python3` processes sharing one file on disk, a
+   live-tested promote-worthy filter, token-budget pruning/
+   summarization, and an explicit "summarization is not a substitute
+   for persisting a fact" section built directly from this session's
+   own real summarization-loss observation. Two real bugs, caught by
+   testing and fixed on the page: a blind-overwrite merge bug (a
+   second promoted fact silently deleted the first) and a stale-
+   snapshot bug in the finished agent (a reply decision used a
+   pre-write variable instead of re-checking the store after writing),
+   the same "genuine bug becomes the honest example" pattern every
+   prior chapter used.
+5. Verified lesson density: **62 lines** match `<pre\|<code` via
+   `grep -c '<pre\|<code' lesson.html` (above the 60+ requirement),
+   **114 total occurrences** via `grep -oE '<pre|<code' | wc -l`.
+6. Built the full file set matching Chapter 3's exactly: `quiz.html`
+   (10 fill-in-the-blank), `interview-questions.html` + `.md` (10
+   questions across 4 levels), `exercises/` (Driftwood Legal Clinic/
+   IntakeBot, 8 tasks, 16 points, `ai-paired.html` using a third
+   scenario, Saltmarsh Language Academy/TutorBot), `practice/` (8
+   independent scenarios, 8 points, `ai-paired.html` using a ninth,
+   unnamed-org scenario, MemoBot).
+7. Built `project/` as this course's numbered **L2 Assisted** project
+   (partial scaffold) — not a chapter mini-project, per the curriculum
+   map's own distinct wording for Chapter 4. Scenario: Hollowridge
+   Wellness Clinic/CareBot, combining multi-tool dispatch with
+   persisted memory in full, with a clearly labeled Chapter 5
+   extension point: `reflect_on_response()` is wired into the call
+   path exactly where reflection belongs, its body a no-op passthrough
+   documented explicitly in `project/README.md`'s "What Chapter 5 will
+   do with this file" section, so Chapter 5 can replace its body
+   without touching the rest of the flow. 3 TODOs, 7 structural
+   self-checks, `RUBRIC.md`, `ai-paired.html`.
+8. Verified every `solution.py`/`starter.py` pair by actually running
+   it, both in the original pass and again after this session's own
+   interruption and resume: `exercises` 16/16 vs. 3/16 (no crash),
+   `practice` 8/8 vs. 0/8 (no crash), `project` 7/7 vs. 2/7 (no crash).
+9. Wrote `quality-audits/chapter-04-audit.md`, extending (not
+   restarting) `chapter-03-audit.md`'s fictional-org exclusion list.
+   Four new orgs this chapter: **Larkspur Fitness Studio** (lesson;
+   CoachBot), **Driftwood Legal Clinic** (exercises; IntakeBot),
+   **Saltmarsh Language Academy** (exercises `ai-paired.html`;
+   TutorBot), **Hollowridge Wellness Clinic** (project; CareBot) — plus
+   MemoBot's unnamed org (practice `ai-paired.html`). Running exclusion
+   list now: Northbeam Outdoors, Summit Gear Co-op, Fernbrook Ski
+   Patrol, Wavecrest Marina, Alderleaf Research Group, Pinehurst Realty
+   Group, Thistlewood Veterinary Group, Cobblestone Courier Co.,
+   Palisade Broadband, Thornbury Insurance Group, Wrenhollow Auto
+   Rentals, Kestrel Appliance Service, Larkspur Fitness Studio,
+   Driftwood Legal Clinic, Saltmarsh Language Academy, Hollowridge
+   Wellness Clinic.
+10. Wired Chapter 4 into `assets/chapters-data.js` (real `path` added,
+    Chapters 5-13 confirmed still without one), `docs/curriculum/
+    index.html` (Chapter 4 card converted to a live link, Module 2
+    feature card marked "Complete" — closing the module), and root
+    `index.html` (`hero-stats` updated to 4/13 chapters, 2/6 modules;
+    the chapter-map section intro paragraph, found stale from before
+    this session, was also corrected to reflect Chapters 1-4 live).
+11. Ran `bash scripts/local_check.sh < /dev/null` for the whole repo —
+    all checks passed clean.
+12. Committed Chapter 4 locally (all its files, `chapters-data.js`,
+    `docs/curriculum/index.html`, root `index.html`, this file, and the
+    new audit) — no remote added, nothing pushed, matching every prior
+    session's explicit local-only instructions.
 
-**What it must teach**, per the curriculum map and discovery notes:
-short-term *working* memory (what stays in an agent's context within a
-single run — conversation history, tool results so far, the working
-plan) versus long-term *persisted* memory (what survives across
-separate runs/sessions — facts about a user, past outcomes, learned
-corrections), and the real engineering trade-offs between them: what
-to keep in-context vs. what to write out to storage, when a working-
-memory buffer needs to be summarized or pruned as it grows (token-
-budget pressure, a preview of Chapter 8's cost/latency subject, not
-its full treatment), what a minimal persisted-memory store actually
-looks like in code (a plain dict/JSON-file/SQLite-style key-value
-store is enough — no vector database or embedding framework required
-to teach the *engineering* decision, matching this course's no-heavy-
-framework policy), and how a persisted fact gets retrieved and
-correctly merged back into a later run's working context. This course
-explicitly **defers deep RAG/embedding-retrieval methodology** to
-`context-engineering-for-everyone` (see `docs/discovery-notes.md`'s
-cross-course boundary check) — Chapter 4's job is the *architectural*
-short-term/long-term split and its trade-offs, not a retrieval-quality
-or embedding-similarity deep dive.
+## Chapter 4 — COMPLETE
 
-**Hand-off point:** Chapter 3's own `lesson.html` closing section
-(Section 13's final paragraph) should be read before starting — it
-names what Chapter 4 adds ("memory so a plan's outcome can be recalled
-in a later session instead of vanishing when a function returns"),
-matching the same explicit hand-off convention Chapter 2's closing
-section used for Chapter 3. Read it for the exact framing this
-session should pick up.
+- `lesson.html`: 62 lines match `<pre\|<code` (114 total tag
+  occurrences via `-o`), above the 60+ requirement. Built around
+  Larkspur Fitness Studio's CoachBot: the short-term/long-term memory
+  split, a naive-baseline failure (working memory only, injury
+  forgotten every session), a minimal JSON-backed `MemoryStore`
+  (read-modify-write), persistence proven across two genuinely
+  separate `python3` processes, a live-tested promote-worthy filter, a
+  live memory-grounded reply contrasted against the same prompt with
+  no memory (real, captured, materially different outputs), a real
+  blind-overwrite bug and its fix, a corrections/supersede treatment,
+  token-budget pruning with a real live summarization call (which
+  really did drop a detail, motivating the "summarization is not a
+  substitute for persisting a fact" section), a prune-safety guard,
+  and the fully assembled CoachBot agent (which itself surfaced and
+  fixed a real stale-snapshot bug). Honestly discloses this session's
+  explicit pre-warm discipline and why it differs from Chapter 3's
+  disclosed hang.
+- `quiz.html`: 10 fill-in-the-blank questions covering the memory-type
+  split, read-modify-write, promote-worthy detection, token-budget
+  pruning, the summarization-is-not-persistence claim, and the
+  stale-snapshot bug.
+- `interview-questions.html` + `.md`: 10 questions across
+  beginner/intermediate/senior/architect.
+- `exercises/`: Driftwood Legal Clinic/IntakeBot scenario, 8 tasks (5
+  production-gear), 16 points total. `solution.py` verified 16/16;
+  `starter.py` verified 3/16 with no crash. `ai-paired.html` uses a
+  third scenario (Saltmarsh Language Academy/TutorBot).
+- `practice/`: 8 independent diagnostic scenarios, 8 points.
+  `solution.py` verified 8/8; `starter.py` verified 0/8 with no crash.
+  `ai-paired.html` uses a ninth scenario (MemoBot, org left unnamed).
+- `project/` (**L2 Assisted, partial scaffold** — this course's
+  numbered project ladder slot, not a chapter mini-project):
+  Hollowridge Wellness Clinic/CareBot, a 3-`TODO` scaffold combining
+  multi-tool dispatch (appointment availability, booking) with
+  persisted long-term memory (patient conditions/preferences merged
+  into a later, separate visit), graded by 7 deterministic structural
+  self-checks. The reflection half of the L2 description is a clearly
+  labeled no-op passthrough (`reflect_on_response()`), wired into the
+  call path for Chapter 5 to fill in — documented explicitly in
+  `project/README.md`. `solution.py` verified 7/7; `starter.py`
+  verified 2/7 with no crash. `RUBRIC.md` included. `ai-paired.html`
+  has the learner independently prompt an AI for
+  `promote_worthy_and_persist()` and review it against a named
+  checklist of common AI-generated memory-write mistakes.
+- Wired into `assets/chapters-data.js` with a real `path`;
+  `docs/curriculum/index.html` and root `index.html` both reflect
+  Chapter 4 live, Module 2 complete.
 
-**Project-ladder note, read before deciding whether to build a mini-
-project or a real one:** `docs/curriculum/CURRICULUM_MAP.md`'s
-"Projects" section states the **L2 Assisted project ships after
-Chapter 4** ("Build a multi-tool agent with memory and a reflection
-step for a provided scenario, partial scaffold... ships after Ch. 4,
-extended through Ch. 5-6's reflection/guardrail material"). This is
-different from Chapters 2-3, which both explicitly had no ladder slot
-and built a chapter mini-project instead. Chapter 4 is the chapter
-where the ladder says the L2 project actually begins — decide, and
-state explicitly in `project/README.md` and this file's own "Chapter 4
-— COMPLETE" section, whether this chapter's `project/` folder is (a)
-the actual start of the L2 Assisted project scaffold (a multi-tool
-agent using memory, with reflection deferred to Chapters 5-6 since
-that material doesn't exist yet), or (b) still a chapter mini-project
-with the real L2 scaffold deferred to Chapter 6 once reflection/
-guardrail material exists to extend it through. Don't default to the
-mini-project pattern silently just because Chapters 2-3 used it — the
-curriculum map's own wording for Chapter 4 is different from theirs.
+## Next Recommended Task: Chapter 5 — "Reflection and Self-Correction"
+
+This is written so a fresh session, with zero memory of this one, can
+pick it up cold.
+
+**Where it sits:** Module 3 — Making Agents Reliable, *opening* the
+module (per `docs/curriculum/CURRICULUM_MAP.md`, Module 3 covers
+Chapters 5-6: "an agent that notices and corrects its own mistakes,
+and stays inside safe bounds while doing it"). Per the map, difficulty:
+Advanced — the first Advanced-tier chapter in this course (Chapters
+1-4 were Beginner/Intermediate). Module 3's own outcome:
+"add a reflection/self-correction loop; design guardrails mapped to
+specific failure modes" — Chapter 5 owns the reflection half, Chapter
+6 the guardrails half. Module 3 is NOT complete until Chapter 6 also
+ships — do not mark Module 3 "Complete" in `docs/curriculum/index.html`
+or root `index.html` when Chapter 5 alone ships; use "In Progress" the
+same way Module 2 was marked while only Chapter 3 was live.
+
+**What it must teach**, per the curriculum map and this course's own
+architecture: a self-critique-and-revise step — an agent that produces
+a draft response or action, evaluates it against some standard
+(correctness, completeness, policy compliance), and revises it before
+it's returned or executed, as a genuinely separate, designed
+architectural component — not the model "trying harder" via a bigger
+prompt. The map's own lab framing: "add a self-critique step and show
+a real before/after correction." This should cover: what reflection
+actually is (a second, distinct model call or check evaluating the
+first call's output, not a retry of the same call), what makes a
+reflection step worth its extra cost (catching a real, demonstrable
+class of error the first pass alone misses — not reflection for its
+own sake), the difference between self-correction that revises an
+answer and self-correction that decides to call a different tool or
+gather more evidence, and when reflection should NOT run (a
+cost/latency trade-off this chapter should name honestly, previewing
+Chapter 8 without fully treating it, the same "preview, not full
+treatment" pattern Chapter 4 used for its own token-budget-pressure
+section referencing Chapter 8).
+
+**Hand-off point:** Chapter 4's own `lesson.html` doesn't have a
+dedicated closing hand-off paragraph naming Chapter 5 the way Chapter
+2's and Chapter 3's closing sections did — Chapter 4's actual hand-off
+to Chapter 5 lives in `project/README.md`'s "What Chapter 5 will do
+with this file" section instead (see below). Read that section before
+starting; it's the authoritative statement of what Chapter 5 is
+expected to build on top of, more precise than a lesson-prose
+hand-off would be.
+
+**This chapter MUST extend the existing L2 Assisted project, not start
+a new one.** `chapters/chapter-04-memory-and-state/project/` already
+exists in full (`README.md`, `RUBRIC.md`, `starter.py`, `solution.py`,
+`index.html`, `ai-paired.html`) and ships Hollowridge Wellness Clinic's
+CareBot with a `reflect_on_response(draft_response, context)` function
+that is currently a **labeled no-op passthrough**, called at the
+correct point inside `run_visit_session()` (right before the final
+response is returned). Chapter 5's job:
+
+1. Replace `reflect_on_response()`'s **body** — not its call site, not
+   `run_visit_session()`'s own structure — with a real self-critique-
+   and-revise implementation. A concrete, demonstrable target: CareBot
+   drafting a response that recommends/allows scheduling a follow-up
+   visit despite an unresolved condition that should have blocked it
+   (or should have at least flagged it for review) — reflection should
+   catch this class of mistake and revise the draft before it's
+   returned, with a real before/after example, the same way Chapter
+   1's Cedar Hollow bug and Chapter 4's blind-overwrite bug were real,
+   not manufactured.
+2. Decide, and build for real, whether this chapter's reflection step
+   is a second live-model call (self-critique via a second prompt) or
+   a deterministic check-and-revise function (mirroring how Chapters
+   1-4's finished agents used deterministic stand-ins for their own
+   live-model steps so the assembled file runs without Ollama) — most
+   likely both: a live version demonstrated and captured in the
+   lesson, a deterministic version in the finished project code for
+   gradability, exactly Chapter 4's own Section 6/Section 15 split
+   between `promote_check.py`'s live call and `coachbot_agent.py`'s
+   deterministic `is_promote_worthy`.
+3. Update `chapters/chapter-04-memory-and-state/project/solution.py`
+   and `starter.py` only as needed to reflect the new
+   `reflect_on_response()` body (the self-check count may need a new
+   check or two for reflection-specific behavior) — but the existing
+   TODOs 1-3 (working-context merge, fact promotion, composed visit
+   flow) must NOT be broken or restructured; Chapter 4's own grading
+   contract for those three should still pass unchanged.
+4. Chapter 5's OWN `lesson.html`, `quiz.html`, etc. should use a fresh
+   scenario for teaching the general reflection mechanism (per this
+   course's per-chapter fresh-scenario convention), but must explicitly
+   show, in at least one section, the CareBot/Hollowridge extension
+   described above — this is the concrete proof the L2 project is
+   genuinely being extended, not abandoned in favor of an unrelated
+   chapter mini-project.
 
 **Directory already scaffolded:**
-`chapters/chapter-04-memory-and-state/` with empty `exercises/`,
-`practice/`, `project/` subdirs and a `.gitkeep`. No `lesson.html` etc.
-exist yet — Chapter 3's own directory
-(`chapters/chapter-03-tool-use-and-function-calling/`) is the most
-recent and closest-in-shape reference for the exact file set to
-produce.
+`chapters/chapter-05-reflection-and-self-correction/` with empty
+`exercises/`, `practice/`, `project/` subdirs and a `.gitkeep`. No
+`lesson.html` etc. exist yet — Chapter 4's own directory
+(`chapters/chapter-04-memory-and-state/`) is the most recent and
+closest-in-shape reference for the exact file set to produce, EXCEPT
+for `project/`, which must be extended in place (see above), not
+recreated from scratch in the Chapter 5 directory. Confirm which
+directory holds the canonical L2 project files before writing anything
+— it is `chapters/chapter-04-memory-and-state/project/`, not a new
+`chapters/chapter-05-reflection-and-self-correction/project/`.
 
 **Concrete build steps:**
 
 1. Pick a fresh fictional scenario, distinct from every org in
-   `quality-audits/chapter-03-audit.md`'s running exclusion list
+   `quality-audits/chapter-04-audit.md`'s running exclusion list
    (currently: Northbeam Outdoors, Summit Gear Co-op, Fernbrook Ski
    Patrol, Wavecrest Marina, Alderleaf Research Group, Pinehurst
    Realty Group, Thistlewood Veterinary Group, Cobblestone Courier
    Co., Palisade Broadband, Thornbury Insurance Group, Wrenhollow Auto
-   Rentals, Kestrel Appliance Service) — extend that list, don't
-   restart it. A natural fit: a system where a user interacts across
-   multiple separate sessions, where something learned or stated in an
-   earlier session needs to correctly inform a later one (so the
-   short-term/long-term split is real and demonstrable, not a
-   strawman) — e.g., a preference stated once that should persist, or
-   an outcome from a prior run that should change later behavior.
-2. Test every code example for real (local Ollama, `llama3.2:latest`,
-   `base_url="http://localhost:11434/v1"`) before writing it into
-   `lesson.html`, exactly like Chapters 1-3's scratchpad-first
-   discipline — see `CONTRIBUTING.md`'s non-negotiable rule. Budget up
-   to 450s per live call, never idle-wait past that. **Chapter 3's own
-   session saw both of its live-call attempts fail to return at all
-   within that budget** (see `quality-audits/chapter-03-audit.md`) —
-   if this recurs, disclose it exactly as Chapter 3 did (state the
-   attempt, the timeout, and use deterministic Python for every
-   teaching example instead of fabricating a transcript) rather than
-   assuming this session's own attempt will succeed just because prior
-   sessions' did.
+   Rentals, Kestrel Appliance Service, Larkspur Fitness Studio,
+   Driftwood Legal Clinic, Saltmarsh Language Academy, Hollowridge
+   Wellness Clinic) — extend that list, don't restart it. A natural
+   fit: a system where a draft response/action has a real, checkable
+   failure mode a second evaluation pass can catch (a math/logic error,
+   a policy violation, an incomplete answer, a recommendation that
+   contradicts known constraints) — something genuinely demonstrable,
+   not a strawman "the model reflects and magically does better."
+2. Re-warm and test every code example for real (local Ollama,
+   `llama3.2:latest`, `base_url="http://localhost:11434/v1"`) before
+   writing it into `lesson.html`, exactly like Chapters 1-4's
+   scratchpad-first discipline — see `CONTRIBUTING.md`'s non-negotiable
+   rule. Budget up to 450s per live call, never idle-wait past that.
+   **Chapter 4's session pre-warmed Ollama explicitly before writing
+   any lesson code and every live call succeeded** — do the same
+   (`curl -s localhost:11434/api/generate -d
+   '{"model":"llama3.2","prompt":"","keep_alive":"120m"}'`, allow up to
+   ~450s if cold) rather than assuming a prior session's warm state
+   persists, and disclose honestly (per Chapter 3's precedent) if a
+   hang recurs anyway.
 3. Build `lesson.html` to the same 60+ `<pre>`/`<code>`-block density
-   bar, verified with `grep -c '<pre\|<code' lesson.html` (Chapter 3
-   used this exact method, scoring 70) before calling it done — do not
-   skip this check.
-4. Build the full file set matching Chapter 3's exactly: `quiz.html`
+   bar, verified with `grep -c '<pre\|<code' lesson.html` before
+   calling it done — do not skip this check.
+4. Build the full file set matching Chapter 4's exactly: `quiz.html`
    (10 fill-in-the-blank), `interview-questions.html` + `.md` (10
    questions across 4 levels), `exercises/` (8+ tasks, 5+ production-
-   gear, `starter.py`/`solution.py` both run and verified — starter
-   fails cleanly, solution scores perfect — `README.md`, `index.html`,
-   `ai-paired.html`), `practice/` (8+ scenarios, same file set,
-   `ai-paired.html`), and `project/` per the project-ladder note above
-   — resolve that question explicitly before building, don't default
-   silently.
-5. Wire Chapter 4 into `assets/chapters-data.js` — add its real `path`
-   only once `lesson.html` exists; the module's `examPath` stays
-   `null` until a written exam actually exists. Chapters 5-13 stay
-   without a `path`.
-6. Update `docs/curriculum/index.html`'s Chapter 4 card from a
+   gear, `starter.py`/`solution.py` both run and verified), `practice/`
+   (8+ scenarios, same file set), and the L2 project EXTENSION
+   described above (not a new project folder).
+5. `assets/chapters-data.js`: add Chapter 5's real `path` only once
+   `lesson.html` exists. Chapters 6-13 stay without a `path`. The
+   module's `examPath` stays `null` until a written exam actually
+   exists.
+6. Update `docs/curriculum/index.html`'s Chapter 5 card from a
    non-linked "Planned" `<div>` to a linked `<a class="chapter-card">`.
-   Module 2 ("Giving Agents Capabilities") **should** go to "Complete"
-   this time (unlike Chapter 3's session, where Module 2 stayed "In
-   Progress" because Chapter 4 wasn't done yet) — this is the chapter
-   that closes it.
-7. Update root `index.html`'s `hero-stats`: chapter count to 4 of 13
-   live, and the module-complete count to 2 of 6 (Module 1 + Module 2
-   both complete once this chapter ships).
-8. Write `quality-audits/chapter-04-audit.md` following
-   `chapter-03-audit.md`'s exact format: honest self-critique, the
+   Module 3 ("Making Agents Reliable") should go to **"In Progress"**,
+   not "Complete" — Chapter 6 is still needed to close it.
+7. Update root `index.html`'s `hero-stats`: chapter count to 5 of 13
+   live. Module-complete count stays at 2 of 6 (Module 3 isn't done
+   until Chapter 6 ships).
+8. Write `quality-audits/chapter-05-audit.md` following
+   `chapter-04-audit.md`'s exact format: honest self-critique, the
    extended fictional-org exclusion list, source verification (if any
-   external sources are cited — this chapter may be the first to
-   legitimately need one, if it cites any general memory-architecture
-   convention; if so, verify it for real, don't assert it uncited),
-   the Ollama check done fresh (with an honest disclosure either way,
-   following Chapter 3's precedent for what to do if it hangs again),
-   and the full code-tested-before-writing disclosure.
+   external sources are cited), a fresh Ollama check with honest
+   disclosure either way, and the full code-tested-before-writing
+   disclosure.
 9. Run `bash scripts/local_check.sh < /dev/null` before considering the
    chapter done — fix anything it flags.
-10. Update this file's "Last updated" line, add a new "Session 4"
-    section documenting what was built, move Chapter 4 from "Next
-    Recommended Task" into a "Chapter 4 — COMPLETE" section (matching
-    how this session moved Chapter 3 from planned to complete), and
-    rewrite "Next Recommended Task" for Chapter 5 ("Reflection and
-    Self-Correction," opening Module 3) with the same concrete,
-    cold-pickup detail as this section, before ending the session.
+10. Update this file's "Last updated" line, add a new "Session 5"
+    section documenting what was built, move Chapter 5 from "Next
+    Recommended Task" into a "Chapter 5 — COMPLETE" section, and
+    rewrite "Next Recommended Task" for Chapter 6 ("Guardrails and
+    Safety for Autonomous Agents," closing Module 3) with the same
+    concrete, cold-pickup detail as this section — including how
+    Chapter 6 should extend the L2 project a second time (guardrails
+    around the tool-dispatch step, per this chapter's own
+    `project/README.md` forward-reference) — before ending the
+    session.
 
-**Do not** re-teach Chapters 1-3's own tool-calling mechanics (the JSON
-schema shape, tool selection, argument normalization, or the three
-differentiated failure types) from scratch — assume the reader can
-already build a working, robust tool-calling loop; Chapter 4's job is
-adding memory as a genuinely new architectural layer on top of that,
-not re-explaining tool use.
+**Do not** re-teach Chapters 1-4's own mechanics (the agent loop, tool
+selection, argument normalization, differentiated tool failure, or the
+short-term/long-term memory split) from scratch — assume the reader
+can already build a working, memory-equipped, tool-calling agent;
+Chapter 5's job is adding reflection as a genuinely new architectural
+layer that evaluates and revises that agent's own output, not
+re-explaining what came before it.

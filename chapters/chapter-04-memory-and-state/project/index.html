@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 4 Project: CareBot — Agentic AI for Everyone</title>
+<meta name="description" content="L2 Assisted project (partial scaffold): build a multi-tool agent with persisted memory for Hollowridge Wellness Clinic's CareBot, with a labeled Chapter 5 reflection extension point.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-04">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../interview-questions.html">&larr; Back to interview questions</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 4 Project &middot; L2 Assisted (partial scaffold)</span>
+    <span class="reading-time">~50 min</span>
+  </div>
+  <h1>Project: Multi-Tool Memory Agent for CareBot</h1>
+  <p>
+    <strong>Hollowridge Wellness Clinic</strong> wants <strong>CareBot</strong>,
+    a scheduling and intake assistant combining <strong>multi-tool
+    dispatch</strong> (checking appointment availability and booking a
+    follow-up) with <strong>persisted long-term memory</strong> (a
+    patient's conditions and preferences, correctly merged into a
+    LATER, separate visit's working context). Complete the
+    three-<code>TODO</code> scaffold in <code>starter.py</code> so both
+    halves work correctly and compose into one end-to-end visit flow.
+  </p>
+
+  <div class="what-is">
+    <span class="label">This IS one of this course's numbered projects</span>
+    Per <code>docs/curriculum/CURRICULUM_MAP.md</code>'s project
+    ladder, this is the <strong>L2 Assisted</strong> project — "build a
+    multi-tool agent with memory and a reflection step... ships after
+    Ch. 4, extended through Ch. 5-6." Chapter 4 ships the multi-tool-
+    plus-memory half in full. The reflection half is a clearly labeled
+    no-op passthrough (<code>reflect_on_response()</code>), already
+    wired into the call path, waiting for Chapter 5 to fill in its body
+    — see <code>README.md</code> for exactly why that's the honest
+    approach rather than building reflection early or faking it.
+  </div>
+
+  <h2>The three TODOs</h2>
+  <ol>
+    <li><strong>TODO 1</strong> &mdash; <code>build_working_context()</code>: merge a patient's persisted conditions/preferences into a fresh session's working memory.</li>
+    <li><strong>TODO 2</strong> &mdash; <code>promote_worthy_and_persist()</code>: classify and persist promote-worthy facts stated during the visit, via read-modify-write.</li>
+    <li><strong>TODO 3</strong> &mdash; <code>run_visit_session()</code>: compose the merge, tool dispatch, and promotion into one visit flow, calling the given <code>reflect_on_response()</code> at its labeled call site.</li>
+  </ol>
+
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+
+  <p>Full instructions in <code>README.md</code>, self-grading criteria in <code>RUBRIC.md</code>, and the fully filled-in reference in <code>solution.py</code> (passes all 7 self-checks).</p>
+
+  <div class="chapter-nav">
+    <a href="ai-paired.html">Now Pair With an AI &rarr;</a>
+    <a href="../../../docs/curriculum/index.html">Back to Roadmap &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

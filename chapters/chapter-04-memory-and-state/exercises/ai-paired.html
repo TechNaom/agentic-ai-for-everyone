@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 4: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose Saltmarsh Language Academy's TutorBot memory bugs yourself, then critique an AI's plausible-but-flawed diagnosis of the same scenario.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-04">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the exercises</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 4 &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked the exercises yourself on Driftwood Legal Clinic's IntakeBot. Now a third scenario, <strong>Saltmarsh Language Academy</strong> (a fictional online tutoring service) and its one-on-one tutoring agent <strong>TutorBot</strong>, gets diagnosed a second way: by prompting an AI assistant, and reviewing what it hands back with the same skepticism you'd bring to a coworker's write-up before it ships to Saltmarsh's real students.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>TutorBot persists a student's recurring weak grammar points (e.g., a durable note that a student consistently drops articles in English) to a JSON file so a completely separate lesson, days later, can correctly focus review time there. Saltmarsh's curriculum lead reports three real, observed problems:</p>
+  <ol>
+    <li>A student's very first lesson correctly identified and persisted "drops articles (a/an/the)" as a recurring weak point. Their second lesson, two days later and a genuinely separate process, opened with TutorBot recommending a completely generic warm-up — no mention of articles at all, as if the first lesson had never happened.</li>
+    <li>Partway through a 90-minute group lesson, TutorBot's working-memory buffer grew large enough to need pruning. The pruning function summarized the entire buffer, including the turn where a student stated they have a scheduling conflict every other Thursday going forward — a detail that needed to end up in the persisted store, not just in a rolling summary of that one lesson.</li>
+    <li>A student corrected TutorBot mid-lesson: "actually I'm not struggling with articles anymore, my teacher at school just covered it." The next lesson still opened by drilling articles, because the original "drops articles" note was never updated or resolved — only ever appended to, alongside everything stated since.</li>
+  </ol>
+  <p>Before reading further, write your own diagnosis: for each of the three problems, name the concept it's really about (using this chapter's vocabulary: a missing persisted-store load, a prune-before-promote ordering failure, or a missing correction/supersede handling) and propose one concrete fix. Use a notes app or scratch file &mdash; there's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant the same question</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to hand over all three problems with their real, specific evidence &mdash; not a vague "why does my agent forget things" &mdash; or the AI has nothing concrete to diagnose and will produce generic advice instead of a checkable answer.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here are three observed problems in my agent's memory system... diagnose each one and propose a fix..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into Claude, ChatGPT, Copilot, or whatever assistant you use, and compare what it builds against this page's own critique in Step 3.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>I have an agent called TutorBot that persists a small set of durable facts about each student (recurring weak points, scheduling constraints) to a JSON file, one file per student, so a later, separate lesson can load and act on them. Here are three real, observed problems: [paste the three numbered problems above verbatim]. For each problem, name which memory concept it's really about (a missing persisted-store load at session start, a prune-before-promote ordering failure, or missing correction/supersede handling for a fact that's no longer true) and propose one concrete, specific code-level fix for each -- not a general "add more memory" suggestion.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <p>A plausible-but-flawed AI answer to this exact prompt tends to make three specific mistakes worth watching for:</p>
+  <div class="what-is">
+    <span class="label">Common AI diagnosis mistakes on this scenario</span>
+    <ul>
+      <li><strong>Mislabeling Problem 1 as "the fact was never persisted in the first place."</strong> The scenario states it was correctly identified and persisted in Lesson 1 — the bug is on the read side, not the write side: the second session's own code never called the load-and-merge step at all (the lesson's Section 5/15 <code>build_working_context</code> pattern), so a fact that's sitting correctly on disk never reaches the second session's working memory.</li>
+      <li><strong>Treating Problem 2 as "just summarize better."</strong> No summarization strategy reliably guarantees a specific detail survives, because the summarizer has no way to know which detail a separate, future system needs kept forever (Section 14's central point). The real fix is a promote-before-prune ordering guarantee (Section 13's guard pattern) — persist the scheduling constraint as its own durable fact before that turn is ever eligible for summarization, not a smarter summary prompt.</li>
+      <li><strong>Proposing "just append the correction as a new fact" for Problem 3.</strong> That's the naive-append-only behavior the lesson's own correction section showed producing a store with two contradictory entries and no way to tell which is current. The fix has to actively resolve/supersede the original note, not just add a second, conflicting one alongside it.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's actual answer against your own Step 1 notes and the three watch-outs above. Which one(s) did it get right? Which, if any, did it get wrong the way described here? That comparison &mdash; not the AI's fluency &mdash; is the real test.</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Exercises</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

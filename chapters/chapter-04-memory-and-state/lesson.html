@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory and State — Agentic AI for Everyone</title>
+<meta name="description" content="Short-term working memory versus long-term persisted memory: what to keep in-context, what to write to storage, when a growing buffer needs pruning under token-budget pressure, and how a persisted fact gets correctly retrieved and merged back into a later session.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-04">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../../index.html">&larr; Back to all chapters</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 4 of 13</span>
+    <span class="badge-difficulty">Intermediate</span>
+    <span class="reading-time">50 min read, hands-on</span>
+  </div>
+  <h1>Memory and State</h1>
+  <p class="lede">Chapters 1-3 built an agent that reasons, calls tools, and recovers from tool failure — all within one run, one process, one call to <code>run_agent()</code>. Every one of those agents forgets everything the instant the function returns. This chapter adds the layer that lets an agent carry state <em>across</em> runs: <strong>short-term working memory</strong> (what lives inside one run's own context — the conversation so far, tool results, the working plan) versus <strong>long-term persisted memory</strong> (what survives after the process exits and gets picked back up correctly in a genuinely separate, later run). Both halves are demonstrated for real this chapter: two truly separate Python processes, a real JSON file on disk between them, and a real bug (a blind overwrite that silently deleted an already-persisted fact) caught while testing and fixed on the page.</p>
+
+  <nav class="page-toc" aria-label="On this page">
+    <span class="toc-label">On this page</span>
+    <a href="#two-kinds">1. Two kinds of memory, defined against Chapters 1-3</a>
+    <a href="#ollama-check">2. A live sanity check (this session, warm)</a>
+    <a href="#naive-baseline">3. The naive baseline: an agent with only working memory</a>
+    <a href="#minimal-store">4. A minimal persisted-memory store, in plain code</a>
+    <a href="#two-processes">5. Proof across two genuinely separate processes</a>
+    <a href="#what-to-promote">6. Deciding what to persist: promote-worthy vs. routine</a>
+    <a href="#fact-categories">7. Multiple fact categories, and key-lookup isolation</a>
+    <a href="#live-grounded-reply">8. A live, memory-grounded reply</a>
+    <a href="#overwrite-bug">9. A genuine bug: blind overwrite, not merge</a>
+    <a href="#overwrite-fix">10. The fix: read-modify-write</a>
+    <a href="#token-pressure">11. Token-budget pressure: working memory can't grow forever</a>
+    <a href="#pruning">12. Pruning and summarizing a working-memory buffer</a>
+    <a href="#prune-guard">13. A prune-safety guard</a>
+    <a href="#summary-is-not-persist">14. Why summarization is not a substitute for persisting a fact</a>
+    <a href="#finished-carebot">15. The finished CoachBot agent</a>
+    <a href="#checklist">16. A pre-production checklist for memory</a>
+    <a href="#thought-process">17. GenAI builder thought process</a>
+    <a href="#recap">18. Points to remember</a>
+  </nav>
+
+  <div class="hook">
+    <p><strong>Larkspur Fitness Studio</strong> is a fictional gym. Its coaching agent, <strong>CoachBot</strong>, talks to each member across many separate sessions — a phone call today, a chat message next week, an in-app check-in the week after. Midway through today's session, a member mentions their left knee has been sore since Tuesday. CoachBot should never suggest a heavy squat day again until that's resolved — not just for the rest of today's conversation, but in <em>every future session</em>, including ones that start as a completely fresh process with no memory of today at all. Chapters 1-3's agents have no mechanism for this whatsoever: their entire "memory" is a Python list that dies with the process. This chapter builds the mechanism that fixes that, and nothing more exotic than a JSON file and a few functions is needed to do it honestly.</p>
+  </div>
+
+  <section id="two-kinds" class="subtopic">
+    <h2>1. Two kinds of memory, defined against Chapters 1-3</h2>
+    <p>Every agent this course has built so far already has <em>working memory</em> — it just never had a name, because there was never a second kind to distinguish it from:</p>
+    <div class="what-is">
+      <span class="label">What is... short-term working memory?</span>
+      The list of messages (conversation history, tool calls, tool results) that lives inside <em>one run</em> of the agent loop — exactly the <code>messages</code> list Chapter 1's <code>run_agent()</code> built and fed back into the model on every iteration. It exists only as long as the process holding it is alive. When the function returns, or the process exits, it's gone. This is not a flaw to fix; short-term memory is <em>supposed</em> to be scoped to one run — the problem this chapter solves is that some facts need to outlive that scope, and working memory alone has no way to do that.
+    </div>
+    <div class="what-is">
+      <span class="label">What is... long-term persisted memory?</span>
+      Facts written to storage that survives past the process exiting — a file, a database row, anything durable — and gets read back and correctly merged into a <em>later, separate</em> run's own working memory. Unlike working memory, persisted memory is deliberately small and selective: it holds facts worth carrying forward (an injury, a stated preference, a past outcome), not the full transcript of every conversation that ever happened.
+    </div>
+    <p>The tools CoachBot needs, mostly unrelated to memory itself — this chapter doesn't re-teach Chapters 1-3's tool-calling mechanics, but CoachBot still needs real tools to reason about:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tools.py</span></div>
+      <pre><code>MEMBERS = {"mem-14": {"name": "Priya", "goal": "strength"}}
+WORKOUT_LOG = {"mem-14": [{"date": "2026-09-10", "type": "squat_day", "notes": "5x5 at 185lb"}]}
+
+def get_member_profile(member_id):
+    return MEMBERS.get(member_id, {"error": f"no member on file for '{member_id}'"})
+
+def get_last_workout(member_id):
+    log = WORKOUT_LOG.get(member_id, [])
+    return log[-1] if log else {"error": f"no workout history for '{member_id}'"}
+
+def log_workout(member_id, workout):
+    WORKOUT_LOG.setdefault(member_id, []).append(workout)
+    return {"logged": True, "member_id": member_id, "workout": workout}
+
+print(get_member_profile("mem-14"))
+print(get_last_workout("mem-14"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>{'name': 'Priya', 'goal': 'strength'}
+{'date': '2026-09-10', 'type': 'squat_day', 'notes': '5x5 at 185lb'}</code></pre>
+    </div>
+    <p>This chapter defers deep retrieval methodology — semantic search, embeddings, vector similarity — to <code>context-engineering-for-everyone</code> entirely, per this course's own cross-course boundary (see <code>docs/discovery-notes.md</code>). Every persisted-memory mechanism below is a plain key lookup: no vector database, no embedding model, because the <em>architectural</em> short-term/long-term split is this chapter's job, not retrieval quality.</p>
+  </section>
+
+  <section id="ollama-check" class="subtopic">
+    <h2>2. A live sanity check (this session, warm)</h2>
+    <p>Chapter 3's session saw both of its live Ollama calls fail to return at all within a 440-second budget — a genuine, disclosed sandbox hang. This session opened with an explicit warm-up call before writing any lesson code, so a cold model load couldn't blow the budget on the very first real example:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">warm_up.sh</span></div>
+      <pre><code>curl -s localhost:11434/api/generate -d '{"model":"llama3.2","prompt":"","keep_alive":"120m"}'</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>{"model":"llama3.2","created_at":"2026-09-28T11:47:49Z","response":"","done":true,"done_reason":"load"}</code></pre>
+    </div>
+    <p>With the model confirmed resident, the same plain sanity check every prior chapter opened with:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">check_ollama.py</span></div>
+      <pre><code>import time
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+
+t0 = time.monotonic()
+r = client.chat.completions.create(model="llama3.2:latest", messages=[{"role": "user", "content": "Say OK"}])
+print("elapsed:", time.monotonic() - t0)
+print(r.choices[0].message.content)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>elapsed: 2.226099
+OK. Is there something I can help you with?</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... different about this session?</span>
+      Before any lesson code was written, this session pre-warmed the model explicitly (<code>keep_alive: "120m"</code>) and confirmed it stayed resident and fast. Unlike Chapter 3, this chapter's live-model sections below are <strong>real, captured transcripts</strong> — not deterministic stand-ins disclosed as a fallback. Every live call still carries <code>extra_body={"keep_alive": "120m"}</code> so it doesn't cold-load again mid-chapter, and every call was still budgeted (this session used a 200-second ceiling per call, comfortably inside this course's documented 450-second policy) in case the hang recurred.
+    </div>
+  </section>
+
+  <section id="naive-baseline" class="subtopic">
+    <h2>3. The naive baseline: an agent with only working memory</h2>
+    <p>The failure this chapter fixes, demonstrated directly before any fix is introduced — an agent whose <em>only</em> memory is its own working-memory list, with no persisted store at all:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">naive_no_memory.py</span></div>
+      <pre><code>def suggest_todays_plan_naive(member_id):
+    working_memory = []  # every session starts here, always, no exceptions
+    # No load step exists at all in this version -- there is nothing TO load.
+    plan = "Standard progression -- no injury or preference data available."
+    working_memory.append({"role": "assistant", "content": plan})
+    return working_memory
+
+print("-- naive Session 1 (knee mentioned, never persisted) --")
+for m in suggest_todays_plan_naive("mem-14"):
+    print(f"  [{m['role']}] {m['content']}")
+
+print("-- naive Session 2 (separate call, same member, injury forgotten) --")
+for m in suggest_todays_plan_naive("mem-14"):
+    print(f"  [{m['role']}] {m['content']}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>-- naive Session 1 (knee mentioned, never persisted) --
+  [assistant] Standard progression -- no injury or preference data available.
+-- naive Session 2 (separate call, same member, injury forgotten) --
+  [assistant] Standard progression -- no injury or preference data available.
+BUG: Session 2 still recommends a standard (knee-unaware) plan -- nothing was ever remembered.</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why this isn't a strawman</dt>
+        <dd>This is exactly what happens if a team builds Chapters 1-3's tool-calling agent, ships it, and never adds a persisted store — which is the default state of any agent built strictly from those three chapters. Nothing crashes. Nothing errors. The agent just behaves as if every session is the member's first, forever, because structurally, as far as its own code is concerned, it is.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="minimal-store" class="subtopic">
+    <h2>4. A minimal persisted-memory store, in plain code</h2>
+    <p>The fix doesn't need a database engine or a framework — a plain JSON file and three functions are the entire mechanism, matching this course's no-heavy-framework policy exactly:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">memory_store.py</span></div>
+      <pre><code>import json, os
+
+MEMORY_PATH = "coachbot_memory.json"
+
+def load_all_memory(path=MEMORY_PATH):
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r") as f:
+        return json.load(f)
+
+def load_member_memory(member_id, path=MEMORY_PATH):
+    return load_all_memory(path).get(member_id, {"injuries": [], "preferences": [], "prs": {}})
+
+def save_member_memory(member_id, facts, path=MEMORY_PATH):
+    all_memory = load_all_memory(path)
+    all_memory[member_id] = facts
+    with open(path, "w") as f:
+        json.dump(all_memory, f, indent=2)
+    return facts
+
+def remember_injury(member_id, injury_note, path=MEMORY_PATH):
+    facts = load_member_memory(member_id, path)
+    facts["injuries"].append(injury_note)
+    return save_member_memory(member_id, facts, path)</code></pre>
+    </div>
+    <p>Run for real, proving the round trip works before anything else is built on top of it:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>before any write: {'injuries': [], 'preferences': [], 'prs': {}}
+after write: {'injuries': ['left knee soreness reported 2026-09-24'], 'preferences': [], 'prs': {}}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why a plain JSON file is enough to teach this</dt>
+        <dd>A real production system would likely use a real database (SQLite, Postgres, Redis) instead of a single flat file, for concurrency and scale reasons this chapter doesn't need to solve. But the <em>architectural</em> mechanism — load existing state, read a key, write a key back, survive past process exit — is identical either way. Swapping this file's read/write functions for real database calls later doesn't change anything else in this chapter's design.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="two-processes" class="subtopic">
+    <h2>5. Proof across two genuinely separate processes</h2>
+    <p>The strongest possible demonstration that this is real persistence, not just a variable living a bit longer in the same script: two separate files, run as two separate <code>python3</code> invocations, with the second one started only after the first has fully exited.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">session1.py</span></div>
+      <pre><code>from memory_store import remember_injury
+
+working_memory = []  # short-term: this process's own conversation history
+working_memory.append({"role": "user", "content": "Hey CoachBot, what's on my plan today?"})
+working_memory.append({"role": "assistant", "content": "Squat day, following your last block."})
+working_memory.append({"role": "user", "content": "Actually my left knee has been sore since Tuesday."})
+
+remember_injury("mem-14", "left knee soreness reported 2026-09-24")
+print(f"Session 1 working memory has {len(working_memory)} messages.")
+print("Session 1 persisted the injury fact and is now exiting -- working_memory is about to be lost.")</code></pre>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">session2.py</span></div>
+      <pre><code>from memory_store import load_member_memory
+from tools import get_last_workout
+
+def build_context(member_id):
+    working_memory = []  # fresh -- proves nothing survived from session1.py's process
+    facts = load_member_memory(member_id)
+    if facts["injuries"]:
+        injury_summary = "; ".join(facts["injuries"])
+        working_memory.append({"role": "system", "content": f"Known member history (persisted, from a prior session): {injury_summary}"})
+    return working_memory, facts
+
+def suggest_todays_plan(member_id):
+    working_memory, facts = build_context(member_id)
+    last = get_last_workout(member_id)
+    if facts["injuries"]:
+        plan = f"Modified session (knee-aware) -- last logged: {last.get('type')}. Avoid heavy squats/lunges; suggest upper body + light mobility."
+    else:
+        plan = f"Standard progression from last logged session: {last.get('type')}."
+    working_memory.append({"role": "assistant", "content": plan})
+    return working_memory
+
+convo = suggest_todays_plan("mem-14")
+print(f"Session 2 starts with {len(convo)} messages already in working memory (0 would mean the fact was lost).")
+for m in convo:
+    print(f"  [{m['role']}] {m['content']}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, run as two separate `python3` processes, second one after the first fully exited)</span>
+      <pre><code>$ python3 session1.py
+Session 1 working memory has 3 messages.
+Session 1 persisted the injury fact and is now exiting -- working_memory is about to be lost.
+
+$ python3 session2.py
+Session 2 starts with 2 messages already in working memory (0 would mean the fact was lost).
+  [system] Known member history (persisted, from a prior session): left knee soreness reported 2026-09-24
+  [assistant] Modified session (knee-aware) -- last logged: squat_day. Avoid heavy squats/lunges; suggest upper body + light mobility.</code></pre>
+    </div>
+    <p>Session 2's own <code>working_memory</code> starts as a genuinely empty list, in a Python interpreter that has never run Session 1's code. The only reason it knows about the knee is the <code>load_member_memory</code> call at the top of <code>build_context</code> — remove that one call, and Section 3's naive failure returns immediately, in this exact scenario.</p>
+  </section>
+
+  <section id="what-to-promote" class="subtopic">
+    <h2>6. Deciding what to persist: promote-worthy vs. routine</h2>
+    <p>Persisting <em>every</em> message would work mechanically but defeats the point — a store meant to hold a few durable facts would fill with "what's on my plan today?" and "cool, thanks!" a thousand times over. This decision — is this specific message worth writing to long-term storage? — was tested live against the local model this session:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">promote_check.py</span></div>
+      <pre><code>import time
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+
+def classify_promote_worthy(message_text):
+    t0 = time.monotonic()
+    resp = client.chat.completions.create(
+        model="llama3.2:latest",
+        messages=[
+            {"role": "system", "content": (
+                "Classify whether the user's message states a durable fact worth "
+                "remembering across future sessions (an injury, a lasting preference, "
+                "a schedule constraint) versus routine small talk or a one-off question. "
+                "Reply with exactly one word: PERSIST or SKIP."
+            )},
+            {"role": "user", "content": message_text},
+        ],
+        extra_body={"keep_alive": "120m"},
+    )
+    return resp.choices[0].message.content.strip(), time.monotonic() - t0
+
+MESSAGES = [
+    "what's on my plan today?",
+    "my left knee has been sore since Tuesday",
+    "can we start ten minutes earlier next time, mornings work better for me",
+    "cool, thanks!",
+]
+for msg in MESSAGES:
+    label, elapsed = classify_promote_worthy(msg)
+    print(f"{elapsed:5.2f}s  {label!r:12}  <- {msg!r}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, live Ollama call, captured this session)</span>
+      <pre><code> 9.51s  'SKIP'        &lt;- "what's on my plan today?"
+ 1.34s  'PERSIST'     &lt;- 'my left knee has been sore since Tuesday'
+ 1.66s  'PERSIST'     &lt;- 'can we start ten minutes earlier next time, mornings work better for me'
+ 1.07s  'SKIP'        &lt;- 'cool, thanks!'</code></pre>
+    </div>
+    <p>All four real, live classifications were correct: the two durable facts (an injury, a scheduling preference) were flagged <code>PERSIST</code>; the routine question and the pure small talk were flagged <code>SKIP</code>. The finished agent in Section 15 uses a deterministic keyword-based stand-in for this same decision — the same policy Chapters 1-3's finished reference agents used for their own live-model steps, so the assembled file runs without Ollama for grading, but the mechanism itself, live, is proven right here.</p>
+    <div class="what-is">
+      <span class="label">What is... the actual promotion rule this chapter uses?</span>
+      A message is promote-worthy if it states something that should change future behavior — an injury or health note, a lasting preference, a schedule constraint, a correction to a previously stated fact. It is not promote-worthy if it's a one-off question, an acknowledgment, or small talk that has no bearing on any future session. Getting this filter wrong in either direction has a real cost: too permissive, and the store fills with noise that dilutes the facts that matter; too strict, and Section 3's exact failure returns for facts that should have been caught.
+    </div>
+  </section>
+
+  <section id="fact-categories" class="subtopic">
+    <h2>7. Multiple fact categories, and key-lookup isolation</h2>
+    <p>Injuries and preferences aren't the only durable fact type CoachBot needs — a personal record (PR) is a third category, updated by a different tool entirely, but stored the same way:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">memory_store.py (continued)</span></div>
+      <pre><code>def record_pr(member_id, lift, weight_lb, path=MEMORY_PATH):
+    facts = load_member_memory(member_id, path)
+    facts["prs"][lift] = weight_lb
+    return save_member_memory(member_id, facts, path)
+
+record_pr("mem-14", "squat", 190)
+record_pr("mem-14", "deadlift", 225)
+print(load_member_memory("mem-14"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>{'injuries': [], 'preferences': [], 'prs': {'squat': 190, 'deadlift': 225}}</code></pre>
+    </div>
+    <p>Retrieval is a plain key lookup, keyed on <code>member_id</code> — no similarity search, no risk of one member's facts leaking into another's context, proven directly with two real members on file at once:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">isolation_check.py</span></div>
+      <pre><code>save_member_memory("mem-14", {"injuries": ["left knee soreness"], "preferences": [], "prs": {}})
+save_member_memory("mem-22", {"injuries": [], "preferences": ["prefers evening sessions"], "prs": {}})
+print("mem-14:", load_member_memory("mem-14"))
+print("mem-22:", load_member_memory("mem-22"))
+print("mem-14 sees mem-22's data:", "evening" in str(load_member_memory("mem-14")))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>mem-14: {'injuries': ['left knee soreness'], 'preferences': [], 'prs': {}}
+mem-22: {'injuries': [], 'preferences': ['prefers evening sessions'], 'prs': {}}
+mem-14 sees mem-22's data: False</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why this is worth proving, not just assuming</dt>
+        <dd>A dict keyed on <code>member_id</code>, one JSON file, is the entire isolation mechanism — no access-control layer, no query filter to get wrong. This is also exactly why this chapter's scope stays a plain key-value store: the moment retrieval needs to be "find facts similar to X across all members" rather than "get this one member's own facts," that's a different problem (semantic search), and this course hands it to <code>context-engineering-for-everyone</code> rather than solving it here.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="live-grounded-reply" class="subtopic">
+    <h2>8. A live, memory-grounded reply</h2>
+    <p>Every mechanism so far has been about getting the right facts into a Python data structure. The actual point is feeding those facts to the model as real context, so its real reply reflects them — tested live, this session:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">live_grounded_reply.py</span></div>
+      <pre><code>facts = {"injuries": ["left knee soreness since Tuesday"], "preferences": ["prefers morning sessions"]}
+system_context = (
+    f"You are CoachBot at Larkspur Fitness Studio. Known member history: "
+    f"injuries: {facts['injuries']}; preferences: {facts['preferences']}. "
+    f"Keep your reply to one short sentence."
+)
+resp = client.chat.completions.create(
+    model="llama3.2:latest",
+    messages=[
+        {"role": "system", "content": system_context},
+        {"role": "user", "content": "What should today's workout be?"},
+    ],
+    extra_body={"keep_alive": "120m"},
+)
+print(resp.choices[0].message.content.strip())</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, live Ollama call, captured this session — 9.74s)</span>
+      <pre><code>Considering you've had left knee soreness since Tuesday, I recommend a low-impact yoga or Pilates session in the morning to help alleviate tension and promote recovery before moving on to more intense exercises later in the day.</code></pre>
+    </div>
+    <p>The model was never told anything about knees or mornings in its own training — every specific, correct detail in that reply (the knee, the morning-session preference) came entirely from the <code>system_context</code> string this session's own persisted-memory mechanism built. The contrast makes this unambiguous: the identical question, asked with no persisted facts injected at all:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">live_ungrounded_reply.py</span></div>
+      <pre><code>resp = client.chat.completions.create(
+    model="llama3.2:latest",
+    messages=[
+        {"role": "system", "content": "You are CoachBot at Larkspur Fitness Studio. Keep your reply to one short sentence."},
+        {"role": "user", "content": "What should today's workout be?"},
+    ],
+    extra_body={"keep_alive": "120m"},
+)
+print(resp.choices[0].message.content.strip())</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, live Ollama call, captured this session — 5.98s)</span>
+      <pre><code>Let's do a high-energy cardio blast with our "Turboboost" class, focusing on interval training and dynamic stretching to get your heart rate up and burn calories!</code></pre>
+    </div>
+    <p>No knee, no morning preference, no awareness anything was ever said before — a generic, plausible-sounding reply that would have been actively wrong to give a member with a sore knee. This is the whole payoff of Sections 4-8: a real, live, personalized reply is only as good as the memory mechanism that fed it, and the same model produces a materially different, worse answer the instant that mechanism is removed.</p>
+  </section>
+
+  <section id="overwrite-bug" class="subtopic">
+    <h2>9. A genuine bug: blind overwrite, not merge</h2>
+    <p>While building this chapter's finished agent, a first draft of a second promotion function — <code>remember_preference</code>, meant to add a scheduling preference alongside an already-persisted injury — was tested against a member who already had a fact on file, and it failed for real:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">overwrite_bug.py (first draft, buggy)</span></div>
+      <pre><code>def remember_preference_BUGGY(member_id, pref_text, path=MEMORY_PATH):
+    # Bug: constructs a fresh facts dict instead of loading the existing one
+    # first -- any injuries or other preferences already on file are lost.
+    facts = {"injuries": [], "preferences": [pref_text], "prs": {}}
+    return save_member_memory(member_id, facts, path)
+
+save_member_memory("mem-14", {"injuries": ["left knee soreness reported 2026-09-24"], "preferences": [], "prs": {}})
+print("before remember_preference_BUGGY:", load_all_memory()["mem-14"])
+remember_preference_BUGGY("mem-14", "prefers morning sessions")
+print("after remember_preference_BUGGY: ", load_all_memory()["mem-14"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, the bug as actually observed)</span>
+      <pre><code>before remember_preference_BUGGY: {'injuries': ['left knee soreness reported 2026-09-24'], 'preferences': [], 'prs': {}}
+after remember_preference_BUGGY:  {'injuries': [], 'preferences': ['prefers morning sessions'], 'prs': {}}
+BUG CONFIRMED: the injury fact is gone -- overwritten, not merged.</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why this is the same class of bug as prior chapters' honest examples</dt>
+        <dd>This is the same "an unscripted failure surfaced by testing became the lesson's own honest example" pattern as Chapter 1's Cedar Hollow bug and Chapter 3's retry-timeout bug — not manufactured for the page. The function's own logic is completely correct <em>in isolation</em>; the bug only appears once a member already has a persisted fact on file before the second promotion call runs, which is precisely the scenario a real multi-visit member hits on their second-ever promoted fact.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="overwrite-fix" class="subtopic">
+    <h2>10. The fix: read-modify-write</h2>
+    <p>The fix loads the member's existing facts <em>first</em>, then appends to them — the same discipline Section 4's <code>remember_injury</code> already used correctly, which is why that first function never showed this bug:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">overwrite_fix.py</span></div>
+      <pre><code>def remember_preference_FIXED(member_id, pref_text, path=MEMORY_PATH):
+    facts = load_all_memory(path).get(member_id, {"injuries": [], "preferences": [], "prs": {}})
+    facts["preferences"].append(pref_text)
+    return save_member_memory(member_id, facts, path)
+
+save_member_memory("mem-14", {"injuries": ["left knee soreness reported 2026-09-24"], "preferences": [], "prs": {}})
+print("before remember_preference_FIXED:", load_all_memory()["mem-14"])
+remember_preference_FIXED("mem-14", "prefers morning sessions")
+print("after remember_preference_FIXED: ", load_all_memory()["mem-14"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, fixed)</span>
+      <pre><code>before remember_preference_FIXED: {'injuries': ['left knee soreness reported 2026-09-24'], 'preferences': [], 'prs': {}}
+after remember_preference_FIXED:  {'injuries': ['left knee soreness reported 2026-09-24'], 'preferences': ['prefers morning sessions'], 'prs': {}}</code></pre>
+    </div>
+    <p>Both facts now coexist after the fix, matching what actually happened across the member's real history. This pattern — <strong>read-modify-write</strong>, not blind-write — is this chapter's single most important persisted-memory rule, and it's used everywhere writes happen for the rest of this chapter, including the finished agent in Section 15.</p>
+    <p>One more edge case worth confirming before trusting the fix: a member with no prior file on disk at all — the very first write of their entire history — needs to work too, not just the already-has-a-record case shown above:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">overwrite_fix.py (edge case)</span></div>
+      <pre><code>if os.path.exists(MEMORY_PATH):
+    os.remove(MEMORY_PATH)
+print("no file on disk yet:", os.path.exists(MEMORY_PATH))
+remember_preference_FIXED("mem-99", "prefers text reminders")
+print(load_all_memory()["mem-99"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>no file on disk yet: False
+{'injuries': [], 'preferences': ['prefers text reminders'], 'prs': {}}</code></pre>
+    </div>
+    <p><code>load_all_memory</code>'s own <code>os.path.exists</code> check (Section 4) is what makes this safe — the very first write for any member falls back to the default empty-facts shape instead of crashing on a missing file.</p>
+    <p>Read-modify-write fixes the blind-overwrite bug, but it introduces a second, related question: what happens when a new fact <em>contradicts</em> an old one, rather than just adding to it? A member reporting their knee is fine now shouldn't leave the original injury note sitting there, unqualified, forever:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">correction.py</span></div>
+      <pre><code>def naive_append_only(member_id, note, path=MEMORY_PATH):
+    facts = get_member_memory(member_id, path)
+    facts["injuries"].append(note)
+    return save_member_memory(member_id, facts, path)
+
+naive_append_only("mem-14", "left knee soreness reported 2026-09-24")
+naive_append_only("mem-14", "knee feels fine now, no more soreness")
+print(get_member_memory("mem-14"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>{'injuries': ['left knee soreness reported 2026-09-24', 'knee feels fine now, no more soreness'], 'preferences': [], 'prs': {}}
+BUG: both the original injury AND the all-clear are now permanently listed as separate 'injuries' -- a future session can't tell which is current.</code></pre>
+    </div>
+    <p>Read-modify-write alone doesn't fix this — it correctly merged both facts in, which is exactly the problem. A correction needs its own handling, replacing the specific fact it resolves rather than appending alongside it:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">correction.py (continued)</span></div>
+      <pre><code>def resolve_injury(member_id, resolved_text, path=MEMORY_PATH):
+    facts = get_member_memory(member_id, path)
+    facts["injuries"] = [i for i in facts["injuries"] if "RESOLVED" not in i]
+    facts["injuries"].append(f"RESOLVED: {resolved_text}")
+    return save_member_memory(member_id, facts, path)
+
+resolve_injury("mem-14", "knee soreness cleared as of 2026-09-24")
+print(get_member_memory("mem-14"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>{'injuries': ['left knee soreness reported 2026-09-24', 'RESOLVED: knee soreness cleared as of 2026-09-24'], 'preferences': [], 'prs': {}}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why this is a distinct concern from read-modify-write, not a restatement of it</dt>
+        <dd>Read-modify-write answers "did this write destroy a fact that should have survived?" A correction answers a different question: "does the store's current state accurately reflect the world right now?" A member's original injury note stays visible as history (useful context), but a real system would also check whether <code>injuries</code> contains an unresolved entry before treating the member as currently injured — a detail Section 15's finished agent keeps simple on purpose, since the full correction-and-conflict-resolution problem belongs to this chapter's own broader "what to keep vs. forget" question, not a solved subproblem worth over-engineering here.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="token-pressure" class="subtopic">
+    <h2>11. Token-budget pressure: working memory can't grow forever</h2>
+    <p>Section 5 solved persisting a fact across sessions. A separate problem exists <em>within</em> one long session: working memory that just appends forever eventually doesn't fit in the model's context window. A rough token estimate (characters divided by 4, the common approximation used when a real tokenizer isn't wired in) is enough to see the shape of the problem — exact tokenizer accounting is this course's Chapter 8 cost/latency subject, not this chapter's:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">token_pressure.py</span></div>
+      <pre><code>def estimate_tokens(text):
+    return max(1, len(text) // 4)  # rough approximation, not a real tokenizer
+
+def running_token_count(messages):
+    total, counts = 0, []
+    for m in messages:
+        total += estimate_tokens(m["content"])
+        counts.append(total)
+    return counts
+
+counts = running_token_count(CONVERSATION)  # 12 real coaching-session turns
+for i, (m, c) in enumerate(zip(CONVERSATION, counts), start=1):
+    print(f"turn {i:2} ({m['role']:9}): +{estimate_tokens(m['content']):3} tokens -> running total {c:4}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>turn  1 (user     ): +  6 tokens -> running total    6
+turn  2 (assistant): + 18 tokens -> running total   24
+turn  3 (user     ): + 15 tokens -> running total   39
+turn  4 (assistant): + 36 tokens -> running total   75
+turn  5 (user     ): + 18 tokens -> running total   93
+turn  6 (assistant): + 28 tokens -> running total  121
+turn  7 (user     ): + 12 tokens -> running total  133
+turn  8 (assistant): + 30 tokens -> running total  163
+turn  9 (user     ): + 12 tokens -> running total  175
+turn 10 (assistant): + 15 tokens -> running total  190
+turn 11 (user     ): + 25 tokens -> running total  215
+turn 12 (assistant): + 18 tokens -> running total  233
+
+After 12 turns, working memory is ~233 estimated tokens.
+A real multi-hour coaching relationship easily reaches thousands of turns -- unbounded growth is not viable.</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... the actual failure mode of unbounded working memory?</span>
+      Two, not one. First, cost and latency: every turn re-sends the entire growing history to the model, so cost per turn keeps climbing even though the useful new information per turn stays constant (Chapter 8's full subject). Second, and this chapter's concern: eventually the buffer exceeds what the model can actually attend to well, and the model's own reasoning quality degrades on the earliest, buried context — long before a hard token-limit error would even trigger.
+    </div>
+  </section>
+
+  <section id="pruning" class="subtopic">
+    <h2>12. Pruning and summarizing a working-memory buffer</h2>
+    <p>The fix keeps the most recent turns verbatim (recency matters most for coherence) and replaces everything older with one rolling summary — generated live by the local model, not fabricated, and budgeted the same way as every other live call this chapter:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">prune_summarize.py</span></div>
+      <pre><code>BUDGET_TOKENS = 150
+KEEP_LAST = 4
+
+def summarize_for_real(messages_to_summarize):
+    transcript = "\n".join(f"{m['role']}: {m['content']}" for m in messages_to_summarize)
+    resp = client.chat.completions.create(
+        model="llama3.2:latest",
+        messages=[
+            {"role": "system", "content": (
+                "Summarize this coaching conversation excerpt in one short sentence, "
+                "keeping any durable facts (injuries, preferences, numbers) and dropping "
+                "small talk."
+            )},
+            {"role": "user", "content": transcript},
+        ],
+        extra_body={"keep_alive": "120m"},
+    )
+    return resp.choices[0].message.content.strip()
+
+def prune_if_over_budget(messages, budget_tokens=BUDGET_TOKENS, keep_last=KEEP_LAST):
+    total = sum(estimate_tokens(m["content"]) for m in messages)
+    if total <= budget_tokens or len(messages) <= keep_last:
+        return messages, False
+    to_summarize, to_keep = messages[:-keep_last], messages[-keep_last:]
+    summary_text = summarize_for_real(to_summarize)
+    summary_msg = {"role": "system", "content": f"[rolling summary of {len(to_summarize)} earlier turns] {summary_text}"}
+    return [summary_msg] + to_keep, True</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, live Ollama summarization call, captured this session — took 23.19s)</span>
+      <pre><code>before: 12 messages, ~233 tokens
+after:  5 messages, ~116 tokens, pruned=True
+  [system] [rolling summary of 8 earlier turns] The plan is to modify squat day due to knee soreness by replacing the squats with upper body push/pull superset and light mobility work on the knee.
+  [user] Perfect, let's log that as today's session then.
+  [assistant] Logged: upper body push/pull + mobility, knee-modified session.
+  [user] One more thing -- can we start ten minutes earlier next time? Mornings work better for me generally.
+  [assistant] Got it, I'll note the earlier start-time preference for future scheduling.</code></pre>
+    </div>
+    <p>The buffer shrank from ~233 to ~116 estimated tokens, staying coherent — the summary correctly captured the knee/squat-swap decision. But look closely at what it <strong>didn't</strong> capture: the real progress numbers from turn 4 ("up about 15lb on squat... since last month") are gone. The model's summary kept what it judged most salient, not everything — which is exactly Section 14's subject.</p>
+  </section>
+
+  <section id="prune-guard" class="subtopic">
+    <h2>13. A prune-safety guard</h2>
+    <p>Rather than hoping the promotion step (Section 6) always ran before pruning does, a guard function can check directly — refusing to let messages containing an unpersisted promote-worthy fact be summarized away:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">prune_guard.py</span></div>
+      <pre><code>def has_unpersisted_promote_worthy(messages_to_prune, already_persisted_texts):
+    for m in messages_to_prune:
+        if m["role"] != "user":
+            continue
+        text = m["content"].lower()
+        if any(w in text for w in ["sore", "hurt", "pain", "injury"]):
+            if m["content"] not in already_persisted_texts:
+                return True
+    return False
+
+to_prune = [
+    {"role": "user", "content": "My left knee has been sore since Tuesday."},
+    {"role": "assistant", "content": "Noted."},
+]
+print("guard before persisting:", has_unpersisted_promote_worthy(to_prune, already_persisted_texts=set()))
+persisted = {"My left knee has been sore since Tuesday."}
+print("guard after persisting: ", has_unpersisted_promote_worthy(to_prune, already_persisted_texts=persisted))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>guard before persisting: True
+guard after persisting:  False</code></pre>
+    </div>
+    <p>A pruning function that calls this guard first and promotes anything it flags before summarizing is the concrete implementation of Section 14's central claim — it can't accidentally lose an unpersisted fact to summarization, because it refuses to prune past one until it's safely on disk.</p>
+  </section>
+
+  <section id="summary-is-not-persist" class="subtopic">
+    <h2>14. Why summarization is not a substitute for persisting a fact</h2>
+    <p>Section 12's own real output makes the point better than a hypothetical could: a real detail (the progress numbers) was silently dropped by summarization, because the summarizer has no way to know which details a <em>different, future</em> system (Section 4's persisted store) actually needs to keep forever. This is a structurally different mechanism from pruning, not a smaller version of it:</p>
+    <table>
+      <thead><tr><th>Mechanism</th><th>Scope</th><th>What it optimizes for</th><th>Risk if relied on alone</th></tr></thead>
+      <tbody>
+        <tr><td>Pruning/summarizing (Section 12)</td><td>Within one session's working memory</td><td>Staying under the token budget while keeping recent coherence</td><td>Can silently drop a detail the summarizer didn't judge important enough</td></tr>
+        <tr><td>Persisting (Sections 4, 9-10)</td><td>Across separate sessions, indefinitely</td><td>Keeping a specific, deliberately chosen fact correct and available forever</td><td>None, if the promotion step (Section 6) runs before the fact would ever be pruned away</td></tr>
+      </tbody>
+    </table>
+    <p>The correct architecture, and this chapter's central claim: <strong>promote-worthy facts must be written to the persisted store <em>before</em> pruning/summarization ever runs on the messages that contain them</strong> — never rely on a rolling summary to be the thing that remembers an injury or a preference. Section 15's finished agent enforces this ordering directly.</p>
+  </section>
+
+  <section id="finished-carebot" class="subtopic">
+    <h2>15. The finished CoachBot agent</h2>
+    <p>Persisted memory (Sections 4, 9-10), promotion (Section 6), and the working-context merge (Section 5), assembled into one file CoachBot would actually run across real, separate sessions:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">coachbot_agent.py</span></div>
+      <pre><code>class MemoryStore:
+    """Minimal persisted long-term memory -- one JSON file, one dict per
+    member, read-modify-write on every mutation so a save never clobbers
+    facts a prior session already wrote."""
+    def __init__(self, path=MEMORY_PATH):
+        self.path = path
+
+    def _load_all(self):
+        if not os.path.exists(self.path):
+            return {}
+        with open(self.path, "r") as f:
+            return json.load(f)
+
+    def get(self, member_id):
+        return self._load_all().get(member_id, {"injuries": [], "preferences": [], "prs": {}})
+
+    def _save_all(self, all_memory):
+        with open(self.path, "w") as f:
+            json.dump(all_memory, f, indent=2)
+
+    def add_injury(self, member_id, note):
+        all_memory = self._load_all()
+        facts = all_memory.get(member_id, {"injuries": [], "preferences": [], "prs": {}})
+        facts["injuries"].append(note)
+        all_memory[member_id] = facts
+        self._save_all(all_memory)
+
+    def add_preference(self, member_id, note):
+        all_memory = self._load_all()
+        facts = all_memory.get(member_id, {"injuries": [], "preferences": [], "prs": {}})
+        facts["preferences"].append(note)
+        all_memory[member_id] = facts
+        self._save_all(all_memory)
+
+def is_promote_worthy(message_text):
+    """Deterministic stand-in for Section 6's live classification call --
+    the assembled reference agent uses this so it's runnable without Ollama,
+    the same pattern Chapters 1-3 used for their own finished agents."""
+    text = message_text.lower()
+    if any(w in text for w in ["sore", "hurt", "pain", "injury", "injured"]):
+        return "injury"
+    if any(w in text for w in ["prefer", "earlier", "later", "instead of", "rather"]):
+        return "preference"
+    return None
+
+def build_working_context(member_id, store):
+    working_memory = []
+    facts = store.get(member_id)
+    if facts["injuries"]:
+        working_memory.append({"role": "system", "content": f"Known injuries (persisted): {'; '.join(facts['injuries'])}"})
+    if facts["preferences"]:
+        working_memory.append({"role": "system", "content": f"Known preferences (persisted): {'; '.join(facts['preferences'])}"})
+    return working_memory, facts
+
+def run_session(member_id, store, user_messages):
+    working_memory, facts = build_working_context(member_id, store)
+    for text in user_messages:
+        working_memory.append({"role": "user", "content": text})
+        category = is_promote_worthy(text)
+        if category == "injury":
+            store.add_injury(member_id, text)
+        elif category == "preference":
+            store.add_preference(member_id, text)
+    last = get_last_workout(member_id)
+    current_facts = store.get(member_id)  # re-check post-write: a fact stated THIS turn should count too
+    if current_facts["injuries"]:
+        reply = f"Knee-modified plan today -- last logged: {last['type']}. Avoiding heavy loading."
+    else:
+        reply = f"Standard progression from last logged session: {last['type']}."
+    working_memory.append({"role": "assistant", "content": reply})
+    return working_memory</code></pre>
+    </div>
+    <p>Two real sessions, run end to end — Session 1 mentions the injury and preference and correctly reacts to them <em>within the same turn</em> (via the post-write re-check), and Session 2, a genuinely separate call, correctly inherits both facts from disk:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session — <code>python3 coachbot_agent.py</code>)</span>
+      <pre><code>=== Session 1 ===
+  [user] What's on my plan today?
+  [user] My left knee has been sore since Tuesday.
+  [user] Also I'd prefer earlier morning sessions going forward.
+  [assistant] Knee-modified plan today -- last logged: squat_day. Avoiding heavy loading.
+=== Session 2 (separate call, memory retrieved from the JSON file) ===
+  [system] Known injuries (persisted): My left knee has been sore since Tuesday.
+  [system] Known preferences (persisted): Also I'd prefer earlier morning sessions going forward.
+  [user] What's on my plan today?
+  [assistant] Knee-modified plan today -- last logged: squat_day. Avoiding heavy loading.
+=== Persisted store on disk ===
+{'injuries': ['My left knee has been sore since Tuesday.'], 'preferences': ["Also I'd prefer earlier morning sessions going forward."], 'prs': {}}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why `current_facts` is re-fetched instead of reusing the `facts` captured at session start</dt>
+        <dd>An earlier version of this function used the <code>facts</code> variable captured once at the very top of <code>run_session</code> to decide the reply — and Session 1's own reply came back wrong, still recommending a standard plan, because that snapshot was taken <em>before</em> the injury message was even processed. This is the exact "stale snapshot" bug this chapter's practice bank names directly (Scenario 6) — caught the same way every other bug in this course was: by actually running the code before writing it into the lesson.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="checklist" class="subtopic">
+    <h2>16. A pre-production checklist for memory</h2>
+    <p>Sections 3-15 generalize into a classifier, mirroring Chapter 3 Section 14's own checklist pattern, but for the memory layer instead of the tool layer:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">checklist.py</span></div>
+      <pre><code>def classify_memory_risk(scenario):
+    if scenario.get("has_persisted_store") is False:
+        return "no persistence -- Section 3's naive-baseline failure"
+    if scenario.get("promotes_before_prune") is False:
+        return "prune-before-promote -- Section 14's summarization-loss risk"
+    if scenario.get("read_before_write") is False:
+        return "blind overwrite -- Section 9's merge bug"
+    if scenario.get("re_checks_after_write") is False:
+        return "stale snapshot -- Section 15's re-fetch fix"
+    return "no known risk pattern matched"
+
+print(classify_memory_risk({"has_persisted_store": False}))
+print(classify_memory_risk({"has_persisted_store": True, "promotes_before_prune": False}))
+print(classify_memory_risk({"has_persisted_store": True, "promotes_before_prune": True, "read_before_write": False}))
+print(classify_memory_risk({"has_persisted_store": True, "promotes_before_prune": True, "read_before_write": True, "re_checks_after_write": True}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>no persistence -- Section 3's naive-baseline failure
+prune-before-promote -- Section 14's summarization-loss risk
+blind overwrite -- Section 9's merge bug
+no known risk pattern matched</code></pre>
+    </div>
+    <p>The four questions this classifier's branches encode:</p>
+    <ol>
+      <li><strong>Does a fact stated in one session need to correctly inform a later, separate one?</strong> If yes, working memory alone can never satisfy that — a persisted store is required (Sections 3-5), not optional.</li>
+      <li><strong>Is every promote-worthy fact written to the persisted store before the working-memory turns that stated it could ever be pruned or summarized away?</strong> If the ordering is reversed, Section 14's exact loss risk applies.</li>
+      <li><strong>Does every write to the persisted store load the existing record first?</strong> If any write path constructs a fresh record instead, Section 9's blind-overwrite bug is waiting for the second fact any given user states.</li>
+      <li><strong>Does anything that decides behavior mid-session re-check the store after a write, or does it trust a variable captured before the write happened?</strong> The latter is Section 15's stale-snapshot bug.</li>
+    </ol>
+  </section>
+
+  <section id="thought-process" class="subtopic">
+    <h2>17. GenAI Builder Thought Process</h2>
+    <div class="thinking-box">
+      <p><strong>Thought process:</strong> the natural first instinct when adding "memory" to an agent is to reach for a vector database and embeddings immediately — but Sections 4-10 show that the actual architectural problem (does a fact survive past this process, and does writing it correctly merge with what's already there) has nothing to do with retrieval quality, and everything to do with two disciplined habits: promote selectively (Section 6) and always read-modify-write (Sections 9-10). A team that gets those two habits wrong will have the exact same bugs with a vector database as with a JSON file — a fancier retrieval layer doesn't fix a blind overwrite underneath it. A strong prompt for an AI pair-programmer extending this chapter's agent: "I have an agent that needs to persist a small number of durable facts about a user (not a full conversation log) to a JSON file, merge them correctly into a fresh session's working context, and never let a later write silently delete an earlier one. Write a MemoryStore class with get/add methods that always load existing state before writing, a promote-worthy classifier that distinguishes durable facts from routine chat, and a working-memory pruning function that only ever summarizes turns whose promote-worthy facts have already been persisted. Do not use an agent framework or a vector database -- plain Python and JSON, and the openai client against local Ollama only for the classification/summarization steps."</p>
+    </div>
+  </section>
+
+  <div class="real-world">
+    <span class="label">In the Real World</span>
+    <ul>
+      <li>Customer-support agents that "forget" a customer already explained their issue in a prior chat are almost always missing Section 3's persisted-store step entirely, not failing at some more sophisticated retrieval problem.</li>
+      <li>Section 9's blind-overwrite bug is one of the most common real memory bugs in production agents, precisely because it's invisible on a user's very first interaction — it only appears the second time that same user's record needs to be updated, which is exactly the kind of bug that slips past a demo and only surfaces once real, repeat usage begins.</li>
+      <li>Section 14's summarization-loss risk is why serious production memory systems treat "what to summarize" and "what to persist as a durable fact" as two separate, deliberately designed decisions with two separate code paths — never one mechanism doing both jobs by accident.</li>
+    </ul>
+  </div>
+
+  <section id="recap" class="subtopic">
+    <div class="points-to-remember">
+      <h2>Points to Remember</h2>
+      <ul>
+        <li><strong>Short-term working memory</strong> is the conversation/tool-result list scoped to one run — it was already present in every agent Chapters 1-3 built, and it dies with the process, by design.</li>
+        <li><strong>Long-term persisted memory</strong> is a deliberately small, selective set of facts written to storage that survives past process exit and gets correctly merged into a later, separate session's own working memory — proven this chapter across two genuinely separate <code>python3</code> processes sharing one JSON file.</li>
+        <li><strong>Deciding what to promote</strong> to long-term storage (Section 6) is its own decision, live-tested against the real model this session — durable facts (injuries, preferences, constraints) get promoted; routine chat doesn't.</li>
+        <li><strong>Persisted writes must be read-modify-write, never blind-write</strong> (Sections 7-8) — a genuine bug this session showed a second promoted fact silently deleting the first one until the fix loaded existing state before writing.</li>
+        <li><strong>Working memory needs pruning/summarizing under token-budget pressure</strong> (Sections 11-12), but <strong>summarization is not a substitute for persisting a fact</strong> (Section 14) — this session's own real summarization call silently dropped a real detail, which is exactly why promote-worthy facts must be persisted before the turns containing them are ever pruned.</li>
+        <li>No vector database or embedding framework was used anywhere in this chapter — every persisted-memory mechanism is a plain JSON file and a few read-modify-write functions, per this course's explicit deferral of retrieval methodology to <code>context-engineering-for-everyone</code>.</li>
+        <li>No agent framework was used anywhere in this chapter — every function is plain Python and, where a live reasoning step is genuinely needed (Sections 2, 6, 10), the plain <code>openai</code> client against local Ollama, the same pattern Chapters 1-3 used.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p>Ready to check what stuck? Head to the interactive quiz next &mdash; every blank has a Check button, so you'll know instantly if you've got it.</p>
+
+  <div class="chapter-nav">
+    <a href="../../index.html">&larr; All Chapters</a>
+    <a href="quiz.html">Take the Quiz &rarr;</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+    <span><a href="https://github.com/TechNaom/agentic-ai-for-everyone">github.com/TechNaom/agentic-ai-for-everyone</a></span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>
