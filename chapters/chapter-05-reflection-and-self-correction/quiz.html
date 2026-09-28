@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reflection and Self-Correction Quiz — Agentic AI for Everyone</title>
+<meta name="description" content="Interactive quiz for Reflection and Self-Correction.">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-05" data-chapter-id="chapter-05">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="lesson.html">&larr; Back to the lesson</a></p>
+
+  <span class="chapter-badge">Chapter 5 Quiz</span>
+  <h1>Reflection and Self-Correction</h1>
+  <p>Fill in each blank, then check your answers. A perfect score marks this chapter complete.</p>
+
+  <div class="quiz-progress-wrap" aria-hidden="true">
+    <div class="quiz-progress-fill" id="quiz-progress-fill"></div>
+  </div>
+
+  <form onsubmit="return false;">
+
+    <div class="quiz-question">
+      <label for="q1"><span class="q-num">1</span> ______ is a second, genuinely separate step that evaluates a draft against a standard and revises it if that standard isn't met -- not the model "thinking harder" in one bigger prompt.</label>
+      <div class="fib-row">
+        <input type="text" id="q1" class="fib-blank" data-answers="reflection,Reflection" aria-label="Answer for question 1">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q2"><span class="q-num">2</span> A ______ check re-derives the correct facts independently of whatever the draft claims, rather than trusting the draft's own wording.</label>
+      <div class="fib-row">
+        <input type="text" id="q2" class="fib-blank" data-answers="grounded,Grounded" aria-label="Answer for question 2">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q3"><span class="q-num">3</span> Re-asking the model the exact same question a second time, with no independent check run against anything, is called "retry is not ______."</label>
+      <div class="fib-row">
+        <input type="text" id="q3" class="fib-blank" data-answers="reflection" aria-label="Answer for question 3">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q4"><span class="q-num">4</span> A ______ bound (mirroring Chapter 1's max_iterations) stops a reflection loop after a fixed number of correction attempts and escalates rather than looping forever.</label>
+      <div class="fib-row">
+        <input type="text" id="q4" class="fib-blank" data-answers="max_reflections,iteration" aria-label="Answer for question 4">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q5"><span class="q-num">5</span> This chapter's own live self-critique call correctly diagnosed a draft as INCOMPLETE, but its REVISED text still never stated the correct dollar total -- proving right ______ doesn't guarantee a correct fix.</label>
+      <div class="fib-row">
+        <input type="text" id="q5" class="fib-blank" data-answers="diagnosis" aria-label="Answer for question 5">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q6"><span class="q-num">6</span> Reflection should run selectively, not on every request regardless of stakes -- running it on a trivial, unambiguous request like "what are your hours" trades latency and ______ for no real benefit.</label>
+      <div class="fib-row">
+        <input type="text" id="q6" class="fib-blank" data-answers="cost" aria-label="Answer for question 6">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q7"><span class="q-num">7</span> Deciding a draft can't be fixed by rewording, and a different tool or more information is needed instead, is "gather-more-evidence" correction -- distinct from "revise-the-______" correction.</label>
+      <div class="fib-row">
+        <input type="text" id="q7" class="fib-blank" data-answers="answer" aria-label="Answer for question 7">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q8"><span class="q-num">8</span> Reflection revises what an agent ______ -- it cannot undo a tool call (like CareBot's schedule_followup) that already fired before reflection ran.</label>
+      <div class="fib-row">
+        <input type="text" id="q8" class="fib-blank" data-answers="says" aria-label="Answer for question 8">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q9"><span class="q-num">9</span> This chapter replaced Chapter 4's CareBot reflect_on_response() no-op with a real check for "blocking" ______ (like unresolved chest pain) combined with a booked follow-up, revising the draft to require clinical review.</label>
+      <div class="fib-row">
+        <input type="text" id="q9" class="fib-blank" data-answers="conditions,condition" aria-label="Answer for question 9">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q10"><span class="q-num">10</span> This chapter's BikeBot agent was built for the fictional shop ______ Bike Rentals.</label>
+      <div class="fib-row">
+        <input type="text" id="q10" class="fib-blank" data-answers="briarcliff,Briarcliff" aria-label="Answer for question 10">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div id="check-all-wrap">
+      <button type="button" id="check-all-btn" class="check-btn">Check All Answers</button>
+      <span id="quiz-score"></span>
+    </div>
+
+    <div class="quiz-celebration" id="quiz-celebration" aria-live="polite">
+      Perfect score. Chapter complete.
+    </div>
+  </form>
+
+  <div class="chapter-nav">
+    <a href="lesson.html">&larr; Back to Lesson</a>
+    <a href="exercises/index.html">Exercises &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/quiz-engine.js"></script>
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

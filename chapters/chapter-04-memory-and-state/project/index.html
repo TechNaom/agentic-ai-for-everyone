@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chapter 4 Project: CareBot — Agentic AI for Everyone</title>
-<meta name="description" content="L2 Assisted project (partial scaffold): build a multi-tool agent with persisted memory for Hollowridge Wellness Clinic's CareBot, with a labeled Chapter 5 reflection extension point.">
+<meta name="description" content="L2 Assisted project, now extended by Chapter 5: a multi-tool agent with persisted memory AND a real reflection step for Hollowridge Wellness Clinic's CareBot, with a labeled Chapter 6 guardrail extension point.">
 <link rel="stylesheet" href="../../../assets/style.css">
 </head>
 <body data-active-chapter="chapter-04">
@@ -26,19 +26,22 @@
   <p><a href="../interview-questions.html">&larr; Back to interview questions</a></p>
 
   <div class="page-meta">
-    <span class="chapter-badge">Chapter 4 Project &middot; L2 Assisted (partial scaffold)</span>
+    <span class="chapter-badge">Chapter 4 Project &middot; L2 Assisted (extended by Ch. 5)</span>
     <span class="reading-time">~50 min</span>
   </div>
-  <h1>Project: Multi-Tool Memory Agent for CareBot</h1>
+  <h1>Project: Multi-Tool Memory + Reflection Agent for CareBot</h1>
   <p>
     <strong>Hollowridge Wellness Clinic</strong> wants <strong>CareBot</strong>,
     a scheduling and intake assistant combining <strong>multi-tool
     dispatch</strong> (checking appointment availability and booking a
-    follow-up) with <strong>persisted long-term memory</strong> (a
+    follow-up), <strong>persisted long-term memory</strong> (a
     patient's conditions and preferences, correctly merged into a
-    LATER, separate visit's working context). Complete the
-    three-<code>TODO</code> scaffold in <code>starter.py</code> so both
-    halves work correctly and compose into one end-to-end visit flow.
+    LATER, separate visit's working context), and now a real
+    <strong>reflection step</strong> that catches a draft response that
+    misrepresents a serious, unresolved condition as routine. Complete
+    the four-<code>TODO</code> scaffold in <code>starter.py</code> so
+    all three halves work correctly and compose into one end-to-end
+    visit flow.
   </p>
 
   <div class="what-is">
@@ -46,19 +49,21 @@
     Per <code>docs/curriculum/CURRICULUM_MAP.md</code>'s project
     ladder, this is the <strong>L2 Assisted</strong> project — "build a
     multi-tool agent with memory and a reflection step... ships after
-    Ch. 4, extended through Ch. 5-6." Chapter 4 ships the multi-tool-
-    plus-memory half in full. The reflection half is a clearly labeled
-    no-op passthrough (<code>reflect_on_response()</code>), already
-    wired into the call path, waiting for Chapter 5 to fill in its body
-    — see <code>README.md</code> for exactly why that's the honest
-    approach rather than building reflection early or faking it.
+    Ch. 4, extended through Ch. 5-6." Chapter 4 shipped the multi-tool-
+    plus-memory half in full, with <code>reflect_on_response()</code>
+    wired in as a labeled no-op. <strong>Chapter 5 has now filled that
+    body in for real</strong> (TODO 4 below) — see
+    <code>README.md</code> for exactly what changed. Chapter 6 will
+    extend this same project a third time with a guardrail around the
+    tool-dispatch step.
   </div>
 
-  <h2>The three TODOs</h2>
+  <h2>The four TODOs</h2>
   <ol>
     <li><strong>TODO 1</strong> &mdash; <code>build_working_context()</code>: merge a patient's persisted conditions/preferences into a fresh session's working memory.</li>
     <li><strong>TODO 2</strong> &mdash; <code>promote_worthy_and_persist()</code>: classify and persist promote-worthy facts stated during the visit, via read-modify-write.</li>
-    <li><strong>TODO 3</strong> &mdash; <code>run_visit_session()</code>: compose the merge, tool dispatch, and promotion into one visit flow, calling the given <code>reflect_on_response()</code> at its labeled call site.</li>
+    <li><strong>TODO 3</strong> &mdash; <code>run_visit_session()</code>: compose the merge, tool dispatch, and promotion into one visit flow, calling <code>reflect_on_response()</code> at its labeled call site.</li>
+    <li><strong>TODO 4 (new, Chapter 5)</strong> &mdash; <code>reflect_on_response()</code>: check the draft against the blocking-condition policy and revise it when a serious condition was booked without review; otherwise leave it unchanged.</li>
   </ol>
 
   <div class="code-window">
@@ -66,7 +71,7 @@
     <pre><code>python3 starter.py</code></pre>
   </div>
 
-  <p>Full instructions in <code>README.md</code>, self-grading criteria in <code>RUBRIC.md</code>, and the fully filled-in reference in <code>solution.py</code> (passes all 7 self-checks).</p>
+  <p>Full instructions in <code>README.md</code>, self-grading criteria in <code>RUBRIC.md</code>, and the fully filled-in reference in <code>solution.py</code> (passes all 8 self-checks).</p>
 
   <div class="chapter-nav">
     <a href="ai-paired.html">Now Pair With an AI &rarr;</a>

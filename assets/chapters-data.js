@@ -7,9 +7,10 @@
   set it to null until that module's written exam actually exists in
   assessments/written-exams/.
 
-  Chapters 1-4 are live as of this build (Module 1 and Module 2 both
-  complete) -- see PROJECT_STATE.md for status. Chapters 5-13 are
-  planned, `.gitkeep`'d, not yet built.
+  Chapters 1-5 are live as of this build (Module 1 and Module 2 both
+  complete; Module 3 in progress -- Chapter 5 live, Chapter 6 still
+  needed to close it) -- see PROJECT_STATE.md for status. Chapters
+  6-13 are planned, `.gitkeep`'d, not yet built.
 */
 
 window.AAFE_MODULES = [
@@ -64,7 +65,8 @@ window.AAFE_MODULES = [
         id: "chapter-05",
         num: 5,
         title: "Reflection and Self-Correction",
-        description: "An agent noticing and fixing its own mistakes, as a designed architectural component."
+        description: "An agent noticing and fixing its own mistakes, as a designed architectural component.",
+        path: "chapters/chapter-05-reflection-and-self-correction/lesson.html"
       },
       {
         id: "chapter-06",

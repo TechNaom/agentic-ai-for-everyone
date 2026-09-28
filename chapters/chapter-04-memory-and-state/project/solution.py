@@ -6,11 +6,16 @@ This is this course's numbered L2 Assisted project (per
 docs/curriculum/CURRICULUM_MAP.md's project ladder: "Build a multi-tool
 agent with memory and a reflection step for a provided scenario, partial
 scaffold, ships after Ch. 4, extended through Ch. 5-6's reflection/
-guardrail material"). Chapter 4 ships the multi-tool-plus-memory half of
-that description in full; the reflection half is a clearly labeled,
-no-op extension point (see reflect_on_response below) that Chapter 5
-will fill in for real -- this file does NOT pretend to implement
-reflection early.
+guardrail material"). Chapter 4 shipped the multi-tool-plus-memory half
+of that description in full, with reflect_on_response() wired in as a
+labeled no-op. THIS FILE HAS NOW BEEN EXTENDED BY CHAPTER 5
+("Reflection and Self-Correction"): reflect_on_response()'s body below
+is a real, deterministic self-critique-and-revise step -- see the
+CHAPTER 5 EXTENSION comment block for exactly what changed and why
+TODOs 1-3 (build_working_context, promote_worthy_and_persist,
+run_visit_session) were NOT touched. Chapter 6 will extend this file a
+second time, adding guardrails around the tool-dispatch step (see the
+CHAPTER 6 EXTENSION POINT comment near run_visit_session below).
 
 Scenario: Hollowridge Wellness Clinic wants CareBot, a scheduling and
 intake assistant with three tools plus a persisted long-term memory
@@ -21,8 +26,10 @@ scenario.
 
 How to run:
     python3 solution.py
-It prints a structural self-check: 7 checks across memory merge,
-promote-before-persist, and the composed end-to-end visit flow.
+It prints a structural self-check: 8 checks across memory merge,
+promote-before-persist, the composed end-to-end visit flow, and (new
+this chapter) the reflection step actually catching and revising an
+unsafe draft response.
 """
 
 import json
@@ -32,7 +39,7 @@ import os
 MEMORY_PATH = "carebot_memory_solution.json"
 
 APPOINTMENT_SLOTS = {"2026-10-05": True, "2026-10-06": False}
-PATIENTS = {"pt-88": {"name": "Jordan"}}
+PATIENTS = {"pt-88": {"name": "Jordan"}, "pt-99": {"name": "Sam"}}
 
 
 def check_appointment_slot(date):
@@ -95,20 +102,71 @@ def is_promote_worthy(message_text):
 
 
 # ---------------------------------------------------------------------------
-# CHAPTER 5 EXTENSION POINT -- reflection step.
+# CHAPTER 5 EXTENSION -- blocking-condition policy check, new this chapter.
 # ---------------------------------------------------------------------------
-# This function is intentionally a no-op passthrough in Chapter 4. Reflection
-# and self-correction (noticing that a draft response is wrong or incomplete
-# and revising it before it's returned) is this course's Chapter 5 subject in
-# full, not Chapter 4's. Wiring the CALL SITE in now, with a clearly labeled
-# no-op, is what "partial scaffold, extended through Ch. 5-6" means on the
-# project ladder -- Chapter 5 will replace this function's body (not its call
-# site) with a real self-critique-and-revise step.
+# A condition is "blocking" if it's serious/unresolved enough that a routine
+# scheduling confirmation would misrepresent it -- the exact class of mistake
+# Chapter 5's lesson (fresh scenario: Briarcliff Bike Rentals) demonstrated
+# with a real, un-scripted BikeBot failure, applied here to CareBot's own
+# domain.
+BLOCKING_CONDITION_PHRASES = [
+    "chest pain", "can't breathe", "cannot breathe", "severe allergic reaction",
+    "unresolved", "suicidal", "difficulty breathing",
+]
+
+
+def is_blocking_condition(text):
+    t = text.lower()
+    return any(p in t for p in BLOCKING_CONDITION_PHRASES)
+
+
+# ---------------------------------------------------------------------------
+# CHAPTER 5 EXTENSION -- reflection step, filled in for real this chapter.
+# ---------------------------------------------------------------------------
+# Chapter 4 shipped this function as a labeled no-op passthrough. Chapter 5
+# ("Reflection and Self-Correction") replaces ONLY this function's body --
+# not its call site inside run_visit_session(), and not TODOs 1-3 -- with a
+# real self-critique-and-revise step: a second, deliberate check that
+# evaluates the draft response against a policy (a blocking condition must
+# never be presented as a routine, confirmed booking) and revises it if that
+# policy is violated.
+#
+# Note the honest limit this function demonstrates, previewing Chapter 6:
+# by the time reflect_on_response() runs, run_visit_session() has ALREADY
+# called schedule_followup() if a slot was available -- reflection can only
+# fix what CareBot SAYS, not undo a tool call that already executed. Stopping
+# an unsafe tool call from firing in the first place is a guardrail's job,
+# not reflection's -- which is exactly what Chapter 6 (CHAPTER 6 EXTENSION
+# POINT, below, inside run_visit_session) will add: a check BEFORE
+# schedule_followup() is dispatched, not just a revised message after it.
 def reflect_on_response(draft_response, context):
-    """CH5 EXTENSION POINT: currently returns draft_response unchanged.
-    Chapter 5 will replace this body with a real reflection step that can
-    revise draft_response based on `context` before it's returned to the
-    patient."""
+    """Deterministic self-critique-and-revise step (Chapter 5).
+
+    Checks the draft against one concrete policy: if any persisted
+    condition for this visit is "blocking" (see is_blocking_condition)
+    AND a follow-up was actually booked this visit, a routine-sounding
+    confirmation misrepresents the situation -- the draft is revised to
+    flag it for mandatory clinical review instead. Otherwise, the draft
+    is returned unchanged (reflection that finds nothing wrong is not a
+    failure of reflection -- most drafts should pass through untouched;
+    see the lesson's own Section 6 on when reflection is worth its cost).
+    """
+    facts = context.get("facts", {})
+    tool_trace = context.get("tool_trace", [])
+    conditions = facts.get("conditions", [])
+
+    blocking = [c for c in conditions if is_blocking_condition(c)]
+    booked = any(name == "schedule_followup" and result.get("scheduled") for name, result in tool_trace)
+
+    if blocking and booked:
+        flagged = "; ".join(blocking)
+        return (
+            f"I've noted a new, unresolved concern ({flagged}) in your file. "
+            "Your requested follow-up has been provisionally scheduled, but "
+            "it needs clinical review before it's finalized -- our care team "
+            "will reach out if it needs to move sooner. Please do not treat "
+            "this as a confirmed routine visit."
+        )
     return draft_response
 
 
@@ -156,6 +214,13 @@ def run_visit_session(patient_id, store, user_messages, requested_date=None):
     if requested_date:
         slot = check_appointment_slot(requested_date)
         tool_trace.append(("check_appointment_slot", slot))
+        # CHAPTER 6 EXTENSION POINT: schedule_followup() dispatches here with
+        # no guardrail check at all -- any available slot gets booked,
+        # regardless of what's in current_facts["conditions"]. Chapter 6
+        # ("Guardrails and Safety") is expected to add a bounds/approval
+        # check right here, BEFORE dispatch, so a blocking condition can
+        # stop the booking (or require human approval) instead of only
+        # being caught after the fact by reflect_on_response() below.
         if slot["available"]:
             booking = schedule_followup(patient_id, requested_date)
             tool_trace.append(("schedule_followup", booking))
@@ -208,8 +273,23 @@ def self_check():
     ok = visit2["tool_trace"][0][1]["available"] is False and not any(t[0] == "schedule_followup" for t in visit2["tool_trace"])
     results.append(("visit 2 correctly does not book an unavailable slot", ok))
 
-    ok = reflect_on_response("draft text", {"anything": True}) == "draft text"
-    results.append(("reflect_on_response is a labeled no-op passthrough (Ch5 extension point)", ok))
+    # --- Chapter 5 additions: reflection actually catches and revises. ---
+    ok = reflect_on_response("plain text", {"facts": {"conditions": []}, "tool_trace": []}) == "plain text"
+    results.append(("reflect_on_response leaves a benign draft unchanged (Ch5)", ok))
+
+    store3 = MemoryStore()
+    visit3 = run_visit_session(
+        "pt-99", store3,
+        ["I have a new condition: chest pain that hasn't been evaluated yet."],
+        requested_date="2026-10-05",
+    )
+    final_reply = visit3["working_memory"][-1]["content"]
+    ok = (
+        any(t[0] == "schedule_followup" for t in visit3["tool_trace"])
+        and "clinical review" in final_reply
+        and final_reply != f"Noted your history (I have a new condition: chest pain that hasn't been evaluated yet.) -- I'll flag this for your provider."
+    )
+    results.append(("reflect_on_response revises the draft when a blocking condition was booked (Ch5)", ok))
 
     print("Chapter 4 Project -- Structural Self-Check")
     print("=" * 60)

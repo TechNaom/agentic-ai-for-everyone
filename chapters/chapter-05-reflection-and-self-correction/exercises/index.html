@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reflection and Self-Correction Exercises — Agentic AI for Everyone</title>
+<meta name="description" content="Hands-on exercises for Reflection and Self-Correction.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-05">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../quiz.html">&larr; Back to the quiz</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 5 Exercises</span>
+    <span class="reading-time">~40 min, hands-on</span>
+  </div>
+  <h1>Exercises: Reflection and Self-Correction</h1>
+  <p>
+    These exercises use a second scenario, deliberately different from
+    the lesson's Briarcliff Bike Rentals/BikeBot hook:
+    <strong>Fenwick Home Repair Co-op</strong>, a fictional handyman
+    referral service. Its estimate agent, <strong>RepairBot</strong>,
+    drafts a price quote for a repair job and must flag jobs that need
+    a licensed technician instead of quoting them as ordinary handyman
+    work. Applying this chapter's concepts to a fresh scenario is the
+    point.
+  </p>
+
+  <div class="what-is">
+    <span class="label">Exercise standard</span>
+    Eight tasks total, worth 18 points. Five are marked production-gear
+    — a real grounded price verifier, a real licensed-referral policy
+    check, a real <code>reflect_and_revise</code> composition,
+    diagnosing a real "retry is not reflection" trace, and a real
+    bounded reflect loop, not just concept recall.
+  </div>
+
+  <h2>Tasks</h2>
+  <ol>
+    <li><strong>Map facts to reflection concepts</strong> — assign first-pass draft, reflection step, grounded verification criteria, revise-the-answer correction, or iteration bound to five RepairBot facts.</li>
+    <li><strong>Dependency reasoning</strong> — does reflecting on every request regardless of stakes make unnecessary cost more or less likely?</li>
+    <li><strong>(Production-gear) Grounded price verifier</strong> — check a stated price against an independently recomputed one.</li>
+    <li><strong>(Production-gear) Licensed-referral policy check</strong> — detect a job that needs a licensed technician, and whether a draft says so.</li>
+    <li><strong>(Production-gear) <code>reflect_and_revise</code> composition</strong> — combine both checks, revising only when actually wrong.</li>
+    <li><strong>(Production-gear) Failure diagnosis</strong> — correctly name "retry is not reflection" from a trace.</li>
+    <li><strong>(Production-gear) Bounded reflect loop</strong> — stop after a fixed number of attempts and escalate to a human.</li>
+    <li><strong>Completeness check</strong> — confirm all five reflection concepts were actually used.</li>
+  </ol>
+
+  <p>Full instructions and the scoring rubric are in <code>README.md</code> alongside <code>starter.py</code> (fill in the <code>TODO</code>s) and <code>solution.py</code> (the reference, scores 18/18).</p>
+
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+
+  <div class="chapter-nav">
+    <a href="ai-paired.html">Now Pair With an AI &rarr;</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

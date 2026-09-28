@@ -1,10 +1,10 @@
 # Chapter 4 Project Rubric: CareBot for Hollowridge Wellness Clinic (L2 Assisted)
 
-This project is a build-and-verify task (see `README.md` for why
-deterministic fixtures are used instead of a live model, and why
-reflection is a labeled no-op this chapter). Grade your own completed
-`starter.py` against the four criteria below, each worth up to 5
-points (20 points total).
+**Updated by Chapter 5.** This project is a build-and-verify task (see
+`README.md` for why deterministic fixtures are used instead of a live
+model). Grade your own completed `starter.py` against the five
+criteria below (four from Chapter 4, one new this chapter), each worth
+up to 5 points (25 points total).
 
 ## 1. Working-context merge (TODO 1) (0-5)
 
@@ -46,25 +46,43 @@ points (20 points total).
 
 ## 4. Self-check completeness (0-5)
 
-- **5:** All 7 structural self-checks pass when `python3 starter.py`
+- **5:** All 8 structural self-checks pass when `python3 starter.py`
   is run, with no modifications to the self-check code itself.
-- **3:** 4-6 of the 7 checks pass.
-- **0:** 0-3 checks pass.
+- **3:** 5-7 of the 8 checks pass.
+- **0:** 0-4 checks pass.
 
-## A fifth thing to check, worth noting but not scored numerically
+## 5. Reflection self-critique-and-revise (TODO 4, new this chapter) (0-5)
 
-Confirm you did **not** implement real reflection logic inside
-`reflect_on_response()`. That function's body must stay exactly as
-given — this project's job is to have the *call site* correctly wired
-so Chapter 5 can drop a real implementation in without touching
-`run_visit_session()`'s own structure. A learner who "gets ahead" and
-implements reflection early has actually broken the scaffold's
-extension contract, even if their code happens to work.
+- **5:** `reflect_on_response()` leaves a benign draft (no blocking
+  condition, or a condition but no booking) unchanged, AND correctly
+  revises the draft (mentioning the blocking condition and "clinical
+  review") when a blocking condition was persisted this visit AND a
+  follow-up was actually booked — matching `solution.py`'s behavior on
+  both the pass-through and revision cases.
+- **3:** Revises the draft in the blocking case but also incorrectly
+  revises (or fails to revise) at least one non-blocking case, or the
+  revised text doesn't clearly communicate the review requirement.
+- **0:** Still a no-op passthrough (TODO 4 left unfilled), or revises
+  every draft regardless of whether a blocking condition was actually
+  booked.
+
+## A sixth thing to check, worth noting but not scored numerically
+
+Confirm `reflect_on_response()` only revises the *text* CareBot
+returns — it must not, and cannot from this call site, undo an
+already-dispatched `schedule_followup()` call. That's an intentional,
+honest limit: reflection fixes what the agent *says*, not what a tool
+already *did*. Preventing an unsafe booking from firing in the first
+place is Chapter 6's job (see the `CHAPTER 6 EXTENSION POINT` comment
+inside `run_visit_session()`), not this chapter's.
 
 ## Passing bar
 
-15/20 (75%) with **zero** criteria scoring 0 is the bar for "solid
-first pass." Criterion 2 (fact promotion via read-modify-write) is the
-one most worth getting to a full 5, since the blind-overwrite bug it
-guards against is invisible on a patient's first-ever visit and only
-surfaces on their second.
+19/25 (76%) with **zero** criteria scoring 0 is the bar for "solid
+first pass." Criterion 2 (fact promotion via read-modify-write) and
+Criterion 5 (reflection) are the two most worth getting to a full 5 —
+Criterion 2 because the blind-overwrite bug it guards against is
+invisible on a patient's first-ever visit and only surfaces on their
+second, and Criterion 5 because a reflection step that revises
+*everything* (or *nothing*) is exactly as useless as no reflection
+step at all.

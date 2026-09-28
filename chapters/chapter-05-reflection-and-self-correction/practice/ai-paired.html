@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 5 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose RenewBot's layered reflection bug yourself, then critique an AI's plausible-but-flawed answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-05">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 5 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, not in the eight above: <strong>"RenewBot"</strong>, a subscription-renewal assistant at a fictional software service (left unnamed on purpose, the same way Chapter 4's MemoBot scenario did — a small scenario doesn't need an invented company). RenewBot drafts a renewal-price quote and checks it with a reflection step before sending it. Two real, layered problems were observed in the same trace. First: RenewBot's reflection step re-asked the model "does this price look right?" with no access to the customer's actual plan or the price table — the model said "looks right" both times, and the price was wrong both times. Second, in a completely different case: reflection correctly caught a wrong discount code applied to a quote and revised the QUOTE TEXT — but the discount had already been applied to the customer's account and an email confirming it had already gone out five seconds earlier, before reflection ran.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>Before reading further: name the two distinct problems here using this chapter's vocabulary (one is about a reflection check with nothing real to compare against; the other is about reflection revising text after a real action already happened) and write your own fix for each. There's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> this scenario has two layered problems (ungrounded self-check AND reflection-after-the-action), so the prompt needs to ask the AI to identify both, not just one — a shallow prompt like "why doesn't my agent's reflection work" invites a single, incomplete answer.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here's how my agent RenewBot drafts and reflects on a price quote... identify every distinct reflection problem in this description, not just one..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice and compare its answer against the critique below.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Here's my agent RenewBot, which drafts a subscription-renewal price quote and runs a reflection step before sending it: [paste the scenario above]. Identify EVERY distinct reflection problem in this description, not just the first one you notice -- there are two -- and name each using this chapter's vocabulary (a reflection check with no grounded criteria to compare against, versus reflection running AFTER an action has already been taken so it can only fix the text, not the action). Propose a concrete, specific fix for each.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <div class="what-is">
+    <span class="label">What a complete diagnosis catches</span>
+    <ul>
+      <li><strong>Problem 1 (ungrounded self-check):</strong> asking a model "does this look right?" with no access to the actual price table or plan data is not reflection — it's the model reviewing its own guess with no ground truth to check against, so a confidently wrong "looks right" is not a surprising outcome, it's the expected one. The fix is to pass the actual, independently-looked-up correct price into the check, not ask the model to vouch for itself.</li>
+      <li><strong>Problem 2 (reflection after the action already fired):</strong> revising the quote TEXT doesn't undo the discount already applied to the account or the email already sent — reflection can only change what the agent says going forward, not what already happened. The fix isn't a better reflection step; it's moving the check (or a guardrail) BEFORE the account-modifying action, not just before the message is displayed.</li>
+      <li>A shallow AI answer often catches only Problem 1 (the more obviously "wrong" behavior) and misses that Problem 2 is a structural ordering issue that no amount of smarter reflection text can fix on its own.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's answer against your own Step 1 notes and the two-problem breakdown above. Did it catch both? Did it propose the right fix for each — grounded criteria, and moving the check earlier in the pipeline — or did it conflate the two into one vague "make reflection smarter" suggestion?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice Bank</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

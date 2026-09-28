@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 5: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design DentalBot's reflection step yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-05">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the exercises</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 5 &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked the exercises yourself on Fenwick Home Repair Co-op's RepairBot. Now a third scenario, <strong>Mossgate Dental Group</strong> (a fictional dental practice) and its treatment-estimate agent <strong>DentalBot</strong>, gets built a second way: by prompting an AI assistant for a reflection step, and reviewing what it hands back with the same skepticism you'd bring to a coworker's pull request before it ships to Mossgate's real patients.</p>
+  </div>
+
+  <h2>Step 1: Design it yourself, first</h2>
+  <p>DentalBot drafts a cost estimate for a procedure (a flat fee per procedure code, e.g. cleaning $120, filling $220, root canal $900) and must also flag any procedure that requires pre-authorization from the patient's insurer before it can be scheduled (currently: root canals and crowns). Before reading further, sketch your own <code>reflect_on_estimate(draft_text, procedure_code, requires_preauth)</code> function: what does it check the draft against, and what does it do when a check fails? There's no grading here, just your own design to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant to build the same thing</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to state BOTH checks explicitly (price correctness AND pre-authorization flagging) and make clear that a draft passing one check can still fail the other — otherwise a rushed AI answer tends to implement only whichever check is mentioned first and treat the function as done.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write a Python function reflect_on_estimate(draft_text, procedure_code, requires_preauth) that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this chapter's own lesson pattern.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write a Python function reflect_on_estimate(draft_text, procedure_code, actual_price) for a dental office's estimate bot. It should check TWO independent things about draft_text (a natural-language estimate the bot already drafted): (1) does draft_text state a dollar amount, and does it match actual_price exactly -- if not, the draft is wrong and must be corrected; (2) if procedure_code is "root_canal" or "crown" (procedures that require insurer pre-authorization before scheduling), does draft_text actually mention pre-authorization/approval -- if the procedure needs it and the draft doesn't mention it, that's a separate, independent problem, even if the price is correct. The function should return a (revised_text, was_changed) tuple: if both checks pass, return the original draft unchanged; otherwise return a corrected version that fixes whichever check(s) failed, and explain why in a comment. Do not use any agent framework, and do not assume checking one thing means the other is also fine.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated reflection function tends to get wrong</span>
+    <ul>
+      <li><strong>Only implementing one of the two checks.</strong> A shallow reading of the prompt often produces a function that verifies the price but silently ignores the pre-authorization requirement (or vice versa) — does the generated code genuinely check both, independently, or does getting one right make it look done at a glance?</li>
+      <li><strong>Treating "the draft mentions a dollar sign" as equivalent to "the draft states the correct price."</strong> A function that only checks <em>whether</em> a price is stated, not whether it's the <em>right</em> one, would have let this chapter's own real BikeBot bug (Section 6's live self-critique call correctly named the gap but its own suggested revision still never actually computed the number) sail straight through — extracting a number is not the same as verifying it.</li>
+      <li><strong>Letting a live model call "confirm" the fix instead of grounding it in an independently computed value.</strong> This chapter's own lesson demonstrated a real case where a second model call correctly diagnosed a problem but produced a revision that still didn't fix it — the reliable check is always <code>actual_price</code>, computed in plain Python, not a second round of the model's own judgment.</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against this chapter's own lesson pattern (Sections 4 and 12) and against <code>solution.py</code> in the exercises folder. Where do they differ? Is the AI's version genuinely equivalent, or does it lean on the model's own say-so somewhere this chapter's own pattern instead uses a grounded, independently-computed check?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Exercises</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

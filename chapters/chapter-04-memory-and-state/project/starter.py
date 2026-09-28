@@ -6,10 +6,13 @@ This is this course's numbered L2 Assisted project (per
 docs/curriculum/CURRICULUM_MAP.md's project ladder: "Build a multi-tool
 agent with memory and a reflection step for a provided scenario, partial
 scaffold, ships after Ch. 4, extended through Ch. 5-6's reflection/
-guardrail material"). Chapter 4 ships the multi-tool-plus-memory half of
-that description in full; the reflection half is a clearly labeled,
-no-op extension point (see reflect_on_response below) that Chapter 5
-will fill in for real.
+guardrail material"). Chapter 4 shipped the multi-tool-plus-memory half
+of that description in full. NOW that Chapter 5 ("Reflection and
+Self-Correction") has taught the general mechanism, TODO 4 below asks
+you to apply it here: replace reflect_on_response()'s no-op body with a
+real self-critique-and-revise step, using the same deterministic
+pattern Chapter 5's own lesson built for a fresh scenario (Briarcliff
+Bike Rentals/BikeBot).
 
 Scenario: Hollowridge Wellness Clinic wants CareBot, a scheduling and
 intake assistant with three tools plus a persisted long-term memory
@@ -18,7 +21,7 @@ LATER, separate visit.
 
 How to run:
     python3 starter.py
-It prints a structural self-check: 7 checks. Fill in the 3 # TODOs and
+It prints a structural self-check: 8 checks. Fill in the 4 # TODOs and
 watch checks pass.
 """
 
@@ -29,7 +32,7 @@ import os
 MEMORY_PATH = "carebot_memory_starter.json"
 
 APPOINTMENT_SLOTS = {"2026-10-05": True, "2026-10-06": False}
-PATIENTS = {"pt-88": {"name": "Jordan"}}
+PATIENTS = {"pt-88": {"name": "Jordan"}, "pt-99": {"name": "Sam"}}
 
 
 def check_appointment_slot(date):
@@ -91,13 +94,40 @@ def is_promote_worthy(message_text):
 
 
 # ---------------------------------------------------------------------------
-# Given -- CHAPTER 5 EXTENSION POINT. Do NOT implement reflection here --
-# that is this course's Chapter 5 subject. Leave this exactly as it is;
-# Chapter 5 will replace its body (not its call site in TODO 3) with a
-# real self-critique-and-revise step.
+# Given -- a blocking-condition policy check. Not a TODO: this is the same
+# helper Chapter 5's own lesson built for a fresh scenario (Briarcliff Bike
+# Rentals/BikeBot); reuse it rather than re-deriving keyword matching here.
+# ---------------------------------------------------------------------------
+BLOCKING_CONDITION_PHRASES = [
+    "chest pain", "can't breathe", "cannot breathe", "severe allergic reaction",
+    "unresolved", "suicidal", "difficulty breathing",
+]
+
+
+def is_blocking_condition(text):
+    t = text.lower()
+    return any(p in t for p in BLOCKING_CONDITION_PHRASES)
+
+
+# ---------------------------------------------------------------------------
+# TODO 4 (new this chapter): implement reflection for real.
 # ---------------------------------------------------------------------------
 def reflect_on_response(draft_response, context):
-    """CH5 EXTENSION POINT: currently returns draft_response unchanged."""
+    """
+    context is {"facts": <patient's current facts dict>, "tool_trace": [...]}.
+
+    1. Get context["facts"]["conditions"] and context["tool_trace"].
+    2. blocking = the subset of conditions where is_blocking_condition(c) is
+       True.
+    3. booked = True if tool_trace contains a ("schedule_followup", result)
+       entry where result["scheduled"] is True.
+    4. If blocking is non-empty AND booked is True, return a revised
+       response that mentions the blocking condition(s) (joined with "; ")
+       and the phrase "clinical review" instead of a routine confirmation --
+       do NOT just return draft_response unchanged in this case.
+    5. Otherwise, return draft_response unchanged.
+    """
+    # TODO 4: implement the self-critique-and-revise logic described above.
     return draft_response
 
 
@@ -202,8 +232,22 @@ def self_check():
     ok = visit2["tool_trace"] and visit2["tool_trace"][0][1]["available"] is False and not any(t[0] == "schedule_followup" for t in visit2["tool_trace"])
     results.append(("visit 2 correctly does not book an unavailable slot", ok))
 
-    ok = reflect_on_response("draft text", {"anything": True}) == "draft text"
-    results.append(("reflect_on_response is a labeled no-op passthrough (Ch5 extension point)", ok))
+    # --- Chapter 5 additions: TODO 4, reflection actually catches and revises. ---
+    ok = reflect_on_response("plain text", {"facts": {"conditions": []}, "tool_trace": []}) == "plain text"
+    results.append(("reflect_on_response leaves a benign draft unchanged (Ch5)", ok))
+
+    store3 = MemoryStore()
+    visit3 = run_visit_session(
+        "pt-99", store3,
+        ["I have a new condition: chest pain that hasn't been evaluated yet."],
+        requested_date="2026-10-05",
+    )
+    final_reply = visit3["working_memory"][-1]["content"] if visit3["working_memory"] else ""
+    ok = (
+        any(t[0] == "schedule_followup" for t in visit3["tool_trace"])
+        and "clinical review" in final_reply
+    )
+    results.append(("reflect_on_response revises the draft when a blocking condition was booked (Ch5)", ok))
 
     print("Chapter 4 Project -- Structural Self-Check")
     print("=" * 60)
