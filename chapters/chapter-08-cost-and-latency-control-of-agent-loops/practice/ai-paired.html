@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 8 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose a layered cost-reporting bug yourself, then critique an AI's plausible-but-flawed answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-08">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 8 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, not in the eight above: a team's agent, <strong>"QuoteBot"</strong>, generates pricing quotes for a service request (the specific company is left unnamed on purpose, the same way Chapter 7's "ClaimBot" scenario did). Two real, layered problems were found in the same cost report. First: QuoteBot's dashboard reported "cost cut by 65%" after the team added model routing -- but that number was computed from raw cost-per-run only; nobody rechecked whether the redesign's success rate also dropped, and it turned out roughly a third of QuoteBot's routed-to-cheap-tier lookups were now silently producing slightly wrong quotes that a human had to fix later. Second, in the same rollout: the team's new cache had NO invalidation, and it was applied to a "current promotional discount" lookup that legitimately changes every week -- so after the first week, every quote using that cached value was quietly wrong, with no error or warning anywhere.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>Before reading further: name the two distinct problems here using this chapter's vocabulary (one is about which metric was checked before calling the change a "win"; the other is about a specific, named limitation this chapter disclosed about caching) and write your own fix for each. There's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> this scenario has two layered problems (a missing success-rate check AND a caching-staleness bug), so the prompt needs to ask the AI to find both, not just the more obviously dramatic one -- a shallow prompt like "why did QuoteBot's quotes go wrong?" invites an answer that fixates on the cache bug (the one with a visible, dramatic consequence) and never questions whether the reported "65% cheaper" cost number was ever validated against success rate at all.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here's QuoteBot's cost-control rollout... identify every distinct problem in this report, not just one..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice and compare its answer against the critique below.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Here's my agent QuoteBot's cost-control rollout report: [paste the scenario above]. Identify EVERY distinct problem in this report, not just the first one you notice -- there are two -- and name each using this chapter's vocabulary (a raw cost-reduction number reported without a success-rate-aware recheck, versus a cache with no invalidation applied to a value that legitimately changes over time). Propose a concrete, specific fix for each, including exactly what should have been measured or built differently before this rollout shipped.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <div class="what-is">
+    <span class="label">What a complete diagnosis catches</span>
+    <ul>
+      <li><strong>Problem 1 (cost cut reported without a success-rate recheck):</strong> a "65% cheaper" headline computed from raw cost-per-run says nothing about whether the routed-to-cheap-tier steps got LESS accurate -- exactly the honest trade-off this chapter's own Section 13 disclosed and then verified with <code>cost_per_success</code> before calling its own result a real win. The fix is a standing rule: no cost-reduction claim ships without a paired success-rate (or cost-per-success) check.</li>
+      <li><strong>Problem 2 (caching with no invalidation on a volatile value):</strong> this chapter's own Section 8 explicitly disclosed that its minimal cache never expires and is only safe for genuinely stable lookups -- QuoteBot's promotional-discount value is the exact opposite case. The fix is either a TTL on that specific cache entry or excluding that lookup from caching entirely, not a blanket "add more caching" answer.</li>
+      <li>A shallow AI answer often catches only Problem 2 (the more dramatic, visible bug) and misses that Problem 1 is a process gap -- the team never built the success-rate check at all, not just chose not to look at it this one time.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's answer against your own Step 1 notes and the two-problem breakdown above. Did it catch both? Did it propose the right fix for each -- a standing success-rate-recheck rule, and a cache-staleness fix -- or did it conflate the two into one vague "be more careful with optimizations" suggestion?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice Bank</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

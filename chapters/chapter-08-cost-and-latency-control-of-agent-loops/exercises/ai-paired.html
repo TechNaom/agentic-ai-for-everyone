@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 8: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design a cost/latency-control layer yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-08">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the exercises</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 8 &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked the exercises yourself on Brambleford Analytics' InsightScout. Now a third scenario, <strong>Caldwell Ridge Observatory</strong> (a fictional astronomical research station) and its scheduling agent <strong>SkyScout</strong>, gets built a second way: by prompting an AI assistant for a cost/latency-control layer, and reviewing what it hands back with the same skepticism you'd bring to a coworker's pull request before trusting its reported savings.</p>
+  </div>
+
+  <h2>Step 1: Design it yourself, first</h2>
+  <p>SkyScout can check telescope availability, compute an observation window, validate weather conditions, or escalate a scheduling conflict to a human astronomer. Before reading further, sketch your own plan: which of SkyScout's steps are cheap/decisive enough to route to a cheaper model tier, which need to stay on a stronger tier, and which two steps (if any) could safely run in parallel because neither depends on the other's result? There's no grading here, just your own design to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant to build the same thing</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to state explicitly that the budget must be FAIL-CLOSED (deny the next step, don't just warn) and that cost savings must be re-measured with a success-rate-aware metric -- otherwise a rushed AI answer tends to produce a budget that only logs a warning past the cap, and a "before/after" comparison that reports a raw cost delta with no check on whether success rate also changed, exactly the shortcut this chapter's own Section 13 explicitly ran cost_per_success to rule out.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write a Python cost/latency-control layer for SkyScout that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this chapter's own lesson pattern.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write Python stdlib-only cost/latency-control code for an agent, SkyScout, with tools check_telescope_availability(telescope_id), compute_observation_window(target), validate_weather(site_id), and escalate_to_astronomer(reason). I need: (1) a per-step accounting function that estimates token cost per step tagged by a model tier ("cheap" or "strong"); (2) a FAIL-CLOSED BudgetGuard class that tracks running steps, tokens, wall-clock seconds, and dollar cost, and RAISES an exception before allowing a step that would exceed any configured cap -- it must not just log a warning and continue; (3) a model-routing function that sends only a named allowlist of cheap-eligible steps to the cheap tier; (4) a (tool_name, args)-keyed cache with hit/miss counters; (5) a percentile function for p50/p95 latency over a batch of runs. Then write a before/after harness that runs a small task set 20 times each way and reports the SAME success-rate-aware cost metric (cost divided by successful runs, not total runs) for both the before and after version, not just a raw cost or latency percentage. Use only the Python standard library -- no agent framework, no numpy or pandas.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated cost/latency layer tends to get wrong</span>
+    <ul>
+      <li><strong>A budget that warns instead of denying.</strong> A shallow reading of "budget" often produces a class that logs <code>print("warning: over budget")</code> and keeps running anyway -- does the generated <code>BudgetGuard</code>-equivalent actually raise/return a hard denial BEFORE the over-budget step executes, the same fail-closed discipline this chapter's own Section 5 and Chapter 6's guardrails both insist on?</li>
+      <li><strong>Reporting a raw cost or latency delta with no success-rate check.</strong> "It's 60% cheaper now" sounds like a finished answer -- but does the AI's before/after report actually recompute a cost-per-success-style metric, or does it silently assume success rate stayed the same without checking?</li>
+      <li><strong>Routing every step to the cheap tier indiscriminately.</strong> An AI answer optimizing purely for "make it cheaper" may route <em>everything</em> to the cheap tier, including a step that clearly needs real judgment (<code>validate_weather</code>'s safety-relevant call, for instance) -- does the routing function have a deliberate, named allowlist of cheap-eligible steps, or does it just route by "is this the first/simplest-looking step"?</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against this chapter's own lesson pattern (Sections 5-13) and against <code>solution.py</code> in the exercises folder. Where do they differ? Does the AI's version actually re-measure with a success-rate-aware cost metric before claiming a win, or does it stop at a raw percentage that this chapter's own Section 13 would have flagged as incomplete?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Exercises</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

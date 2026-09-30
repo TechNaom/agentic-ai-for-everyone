@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cost and Latency Control of Agent Loops Exercises — Agentic AI for Everyone</title>
+<meta name="description" content="Hands-on exercises for Cost and Latency Control of Agent Loops.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-08">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../quiz.html">&larr; Back to the quiz</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 8 Exercises</span>
+    <span class="reading-time">~40 min, hands-on</span>
+  </div>
+  <h1>Exercises: Cost and Latency Control of Agent Loops</h1>
+  <p>
+    These exercises use a second scenario, deliberately different from
+    the lesson's Greywick Dispatch/FactScout hook:
+    <strong>Brambleford Analytics</strong>, a fictional
+    business-intelligence office. Its query agent,
+    <strong>InsightScout</strong>, can fetch a dataset, validate its
+    freshness, compute a summary, flag an anomaly, or escalate to a
+    human analyst. Applying this chapter's cost/latency-control
+    concepts to a fresh scenario is the point.
+  </p>
+
+  <h2>How to run</h2>
+  <p>You'll need Python 3 installed. Check with:</p>
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 --version</code></pre>
+  </div>
+  <p>Then run the starter file:</p>
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+  <p>It prints a score report. Fill in each <code># TODO</code>, re-run, and watch your score climb toward the total (19 points across 7 tasks).</p>
+
+  <h2>The seven tasks</h2>
+  <ol>
+    <li><strong>Map facts to cost/latency-control concepts</strong> &mdash; assign the correct concept (model routing, caching, early termination, fail-closed budget, latency percentile) to five InsightScout facts.</li>
+    <li><strong>Staleness/dependency reasoning</strong> &mdash; decide whether a cache with no invalidation stays safe for a value that changes over time.</li>
+    <li><strong>(Production-gear) <code>step_cost</code></strong> &mdash; per-step token/cost accounting against a model-rate table.</li>
+    <li><strong>(Production-gear) <code>is_within_budget</code></strong> &mdash; a fail-closed check that denies a step if EITHER a step cap or a cost cap is exceeded.</li>
+    <li><strong>(Production-gear) <code>percentile</code></strong> &mdash; the standard linear-interpolation percentile estimator, for p50/p95 latency.</li>
+    <li><strong>(Production-gear) <code>classify_cost_control_gap</code></strong> &mdash; classify a cost-control setup's biggest blind spot from a capability dict.</li>
+    <li><strong>(Production-gear) <code>cache_hit_rate</code></strong> &mdash; hits divided by total lookups, guarded against division by zero.</li>
+  </ol>
+
+  <h2>Files</h2>
+  <ul>
+    <li><code>starter.py</code> &mdash; the scaffold with 11 <code># TODO</code>s and the score report.</li>
+    <li><code>solution.py</code> &mdash; the fully filled-in reference; scores 19/19.</li>
+    <li><code>ai-paired.html</code> &mdash; a solo-build-then-critique exercise using a third scenario.</li>
+  </ul>
+
+  <div class="chapter-nav">
+    <a href="../quiz.html">&larr; Back to Quiz</a>
+    <a href="ai-paired.html">AI-Paired Exercise &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

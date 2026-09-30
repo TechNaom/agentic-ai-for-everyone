@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 8 Project: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Build a cost-controlled harness yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-08">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the project</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 8 Project &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">25 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already built the project yourself on Portage Grain Cooperative's YieldScout. Now a fourth scenario, <strong>Marrowvale Textile Mill</strong> (a fictional fabric-production facility) and its quality-control agent <strong>LoomScout</strong>, gets built a second way: by prompting an AI assistant for a cost-controlled harness, and reviewing what it hands back with the same skepticism you'd bring to a coworker's pull request before trusting its reported budget enforcement.</p>
+  </div>
+
+  <h2>Step 1: Design it yourself, first</h2>
+  <p>LoomScout can inspect a fabric roll's tension reading, check a dye-batch record, flag a defect, or escalate a borderline call to a human quality inspector. Before reading further, sketch your own design: which two steps are cheap/decisive enough to route to the cheap tier, and what should happen to a run that hits the budget cap exactly between the second and third step -- does the run report a partial success, a hard failure, or something else? There's no grading here, just your own design to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant to build the same thing</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to state explicitly that the budget check must run PER STEP, before each step is allowed, not once at the end of a completed run -- otherwise a rushed AI answer tends to compute total cost after the fact and only report "over budget: yes/no" as a label, which never actually stops a run from spending past the cap in the first place, defeating the entire point of a fail-closed budget.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write a Python cost-controlled harness for LoomScout that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this chapter's own lesson pattern.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write a Python stdlib-only cost-controlled harness for an agent, LoomScout, with tools inspect_tension(roll_id), check_dye_batch(batch_id), flag_defect(reason), and escalate_to_inspector(reason). I need: (1) a task_success(trace, task) function that is deliberately forgiving -- checks only that inspect_tension and one outcome-producing tool are present, regardless of order; (2) an is_within_budget(steps_used, cost_used, max_steps, max_cost) function that returns False if EITHER cap is exceeded; (3) a harness that, for each of at least 3 tasks, runs a seeded simulated trace N times and WALKS EACH TRACE STEP BY STEP, checking is_within_budget BEFORE allowing each individual step -- once a step would exceed the budget, stop walking that run's trace right there, and score task_success against only the steps that were actually allowed. Return a results dict with task_success_rate and total_cost per task. Use only the Python standard library -- no agent framework, no numpy or pandas. Do not check the budget only once at the end of a completed trace.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated cost-controlled harness tends to get wrong</span>
+    <ul>
+      <li><strong>Checking the budget only after a run completes.</strong> A shallow reading of "budget" often produces code that sums a full trace's cost and THEN checks if it's over -- does the generated harness actually stop mid-trace, denying the specific step that would exceed the cap, or does it let the full (possibly over-budget) run happen and just label it afterward?</li>
+      <li><strong>Treating any single exceeded cap as equivalent to a "successful" truncated run.</strong> Does the harness correctly recompute <code>task_success</code> against the TRUNCATED trace (the steps actually allowed), or does it still credit success based on the full, un-truncated trajectory even though some of those steps were denied?</li>
+      <li><strong>Routing by "position in the trajectory" instead of by a named allowlist.</strong> An AI answer might route "the first two steps" to the cheap tier regardless of which tools they are -- does it instead use an explicit, named cheap-eligible set, the way this chapter's own <code>CHEAP_ELIGIBLE</code> does, so a task with a different step order still routes correctly?</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against this chapter's own lesson pattern (Sections 5, 7, 12-13) and against <code>solution.py</code> in the project folder. Where do they differ? Does the AI's version genuinely enforce the budget per step, or does it quietly check the total only at the end -- the exact gap this chapter's own Section 5 warns a fail-closed budget must avoid?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Project</a>
+    <a href="../../../index.html">All Chapters &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

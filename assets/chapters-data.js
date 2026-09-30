@@ -92,7 +92,8 @@ window.AAFE_MODULES = [
         id: "chapter-08",
         num: 8,
         title: "Cost and Latency Control of Agent Loops",
-        description: "Iteration bounding, model tiering, caching, and early exit for a bounded, affordable agent loop."
+        description: "Iteration bounding, model tiering, caching, and early exit for a bounded, affordable agent loop.",
+        path: "chapters/chapter-08-cost-and-latency-control-of-agent-loops/lesson.html"
       }
     ]
   },

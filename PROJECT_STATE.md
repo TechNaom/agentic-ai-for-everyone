@@ -1,21 +1,15 @@
 # PROJECT_STATE.md — Agentic AI for Everyone
 
-Last updated: 2026-09-30 (Session 7 — Chapter 7, "Evaluating Agent
-Reliability," complete and live, **opening Module 4 — Measuring and
-Controlling Agents** (In Progress, not Complete — Chapter 8 still has
-to ship). Modules 1, 2, and 3 (Chapters 1-6) remain fully complete.
-This session also closed a pre-existing gap flagged but never built by
-any prior session: `assessments/module-assessments/` was empty across
-the entire repo despite Modules 1-3 being complete for several
-sessions; Modules 1-3's own combined assessments were built this
-session, reusing each module's real, already-tested chapter functions.
-Module 4's own combined assessment is explicitly NOT built yet — it
-spans Chapters 7 AND 8, and is scheduled for Chapter 8's own session
-below, following the exact precedent of building a multi-chapter
-module assessment at the module's closing chapter. Chapters 8-13 are
-scaffolded (`.gitkeep`'d directories), not yet built. Nothing has been
-pushed to GitHub — all work is local-only, matching every prior
-session's explicit instructions and this session's own.)
+Last updated: 2026-09-30 (Session 8 — Chapter 8, "Cost and Latency
+Control of Agent Loops," complete and live, **closing Module 4 —
+Measuring and Controlling Agents** (now Complete). Modules 1, 2, 3, and
+4 (Chapters 1-8) are all fully complete. This session also built
+Module 4's own combined assessment (`reliability-plan + cost-control
+exercise`, spanning Chapters 7 AND 8), following the exact precedent
+Chapter 7's session set when it deliberately deferred this build.
+Chapters 9-13 are scaffolded (`.gitkeep`'d directories), not yet built.
+Nothing has been pushed to GitHub — all work is local-only, matching
+every prior session's explicit instructions and this session's own.)
 
 ## Course Objective
 
@@ -1025,94 +1019,247 @@ any prior session.
   functions those modules' chapters already built and tested. Module
   4's own assessment remains unbuilt, scheduled below.
 
-## Next Recommended Task: Chapter 8 — "Cost and Latency Control of Agent Loops"
+## Session 8 — Chapter 8, "Cost and Latency Control of Agent Loops" (2026-09-30)
+
+Built cold, from this file's own "Next Recommended Task" brief, with
+zero memory of Session 7.
+
+1. Read `PROJECT_STATE.md`'s Chapter 8 brief, `AI_HANDOFF.md`,
+   `docs/curriculum/CURRICULUM_MAP.md`, `quality-audits/chapter-07-
+   audit.md`'s org-exclusion list, and Chapter 7's full file set as
+   the structural/density template before writing anything.
+2. Pre-warmed Ollama in the background (`curl .../api/generate ...
+   keep_alive: "120m"`, empty prompt). The warm-up call itself
+   reported no duration fields (empty prompt, load-only); the first
+   REAL generation call after that still took 48.99s, disclosed
+   honestly. Once warm, every subsequent call was fast (4.76s-94.45s,
+   with that range itself becoming the chapter's own central live
+   result).
+3. **Reused Chapter 7's own FactScout/Greywick Dispatch directly as
+   this chapter's scenario**, per the brief's own stated preference,
+   rather than a new disconnected agent — `trajectory_covers_goal` and
+   `trajectory_correctness` are the literal Chapter 7 functions, and
+   `cost_per_success` is re-run before and after this chapter's own
+   five techniques to produce a real measured delta.
+4. **Three genuine, unscripted live-model results became this
+   chapter's own central worked examples**: a capped one-word
+   tool-selection call (4.76s, correct answer) vs. an open-ended
+   reasoning call (94.45s) for the identical model and task — a real
+   ~20x latency gap; two real Ollama calls run sequentially (5.14s)
+   vs. concurrently via `ThreadPoolExecutor` (1.61s) — a real ~3.2x
+   speedup; and the 48.99s first-generation timing disclosed above.
+5. **A real bug was found and fixed during this session's own scratch
+   testing**: the before/after harness's first `BudgetGuard`
+   configuration (`max_cost=0.01`) denied the controlled version's
+   very first strong-tier step on every single task, driving its
+   measured success rate to a false 0.0% — caught before it reached
+   the lesson, corrected to `max_cost=0.05`; the corrected numbers are
+   what the lesson reports.
+6. Built `lesson.html` around: per-step token/cost accounting, the
+   naive/unbounded baseline, fail-closed step/token/time/cost budgets
+   (`BudgetGuard`), early termination, model routing (cheap vs.
+   strong, calibrated against the live ~20x latency result), caching
+   (with a disclosed no-invalidation limitation), parallel tool calls
+   (calibrated against the live ~3.2x speedup), latency percentiles
+   (p50/p95), timeouts/retries with exponential backoff, OpenRouter/
+   Groq named conceptually only (no live paid calls), all five
+   techniques assembled and applied to FactScout, and a real before/
+   after re-run of a Chapter-7-shaped harness (51.0% cost reduction,
+   92.3% latency reduction, with an honestly disclosed small per-task
+   success-rate dip that `cost_per_success` still showed as a net win
+   on every task).
+7. Verified lesson density: **61 lines** match `<pre\|<code` via
+   `grep -c '<pre\|<code' lesson.html` (matching Chapter 7's own 61
+   exactly), **114 total occurrences** via `grep -o '<pre\|<code' |
+   wc -l`.
+8. Built the full file set matching Chapter 7's exactly: `quiz.html`
+   (10 fill-in-the-blank), `interview-questions.html` + `.md` (10
+   questions across 4 levels), `exercises/` (Brambleford Analytics/
+   InsightScout, 7 tasks, 19 points, `ai-paired.html` using a third
+   scenario, Caldwell Ridge Observatory/SkyScout), `practice/` (8
+   scenarios, `ai-paired.html` using a ninth, unnamed "QuoteBot"
+   scenario).
+9. Built Chapter 8's own `project/` as a REAL, standalone chapter
+   mini-project (matching Chapter 7's own pattern, NOT the L3
+   Independent project) — Portage Grain Cooperative/YieldScout, three
+   TODOs (`task_success`, `is_within_budget`,
+   `run_cost_controlled_harness`) mirroring the lesson's own
+   budget-enforcement pillar. `solution.py` verified 9/9;
+   `starter.py` verified 2/9 with no crash. `ai-paired.html` uses a
+   fourth scenario, Marrowvale Textile Mill/LoomScout.
+10. **Built Module 4's own combined assessment**
+    (`assessments/module-assessments/module-4-reliability-plan-and-
+    cost-control-exercise/`), per the exact precedent set at Chapter 7
+    — reuses Chapter 7's `trajectory_correctness`/`task_success` AND
+    Chapter 8's `is_within_budget`/`step_cost`, loaded via `importlib`
+    directly from both chapters' real `project/solution.py` files.
+    `solution.py` verified 3/3 objectively-checkable parts;
+    `starter.py` verified 0/3, no crash. See
+    `quality-audits/chapter-08-audit.md`'s Module 5 gap-audit
+    decision: Module 5's own assessment should wait until Chapter 11
+    (its closing chapter), not be built at Chapter 9.
+11. Wrote `quality-audits/chapter-08-audit.md`, extending (not
+    restarting) `chapter-07-audit.md`'s fictional-org exclusion list.
+    Four new orgs this chapter: **Brambleford Analytics** (exercises;
+    InsightScout), **Caldwell Ridge Observatory** (exercises
+    `ai-paired.html`; SkyScout), **Portage Grain Cooperative**
+    (project; YieldScout), **Marrowvale Textile Mill** (project
+    `ai-paired.html`; LoomScout) — plus "QuoteBot"'s unnamed employer
+    (practice `ai-paired.html`). Greywick Dispatch/FactScout was
+    deliberately reused (not a new org), per the brief's own
+    instruction to continue Chapter 7's agent.
+12. Wired Chapter 8 into `assets/chapters-data.js` (real `path` added,
+    Chapters 9-13 confirmed still without one), `docs/curriculum/
+    index.html` (Chapter 8 card converted to a live link, Module 4
+    feature card marked "Complete" — closing the module), and root
+    `index.html` (`hero-stats` updated to 8/13 chapters, 4/6 modules;
+    the chapter-map section intro paragraph, found stale from before
+    this session in the same spot Chapters 4 and 6's sessions once
+    found one, was also corrected to reflect Chapters 1-8 live).
+13. Ran `bash scripts/local_check.sh < /dev/null` for the whole repo —
+    all 6 checks passed clean.
+14. Re-ran `chapters/chapter-04-memory-and-state/project/solution.py`
+    (L2 regression, still 10/10) and `chapters/chapter-07-evaluating-
+    agent-reliability/project/solution.py` (Ch7 project regression,
+    still 8/8), both unchanged from Chapter 7's session.
+15. Committed Chapter 8, the Module 4 assessment, and all
+    wiring/audit/state changes locally — no remote added, nothing
+    pushed, matching every prior session's explicit local-only
+    instructions and this session's own.
+
+## Chapter 8 — COMPLETE
+
+- `lesson.html`: 61 lines match `<pre\|<code` (114 total tag
+  occurrences via `-o`), matching Chapter 7's own 61 exactly. Built as
+  a direct continuation of Chapter 7's FactScout: per-step token/cost
+  accounting, a naive/unbounded baseline, a fail-closed `BudgetGuard`
+  (steps/tokens/time/cost, distinct from Chapter 1's `max_iterations`
+  and Chapter 6's action budget), early termination, model routing
+  (cheap vs. strong, backed by a real live ~20x latency gap between a
+  capped and an open-ended call for the identical model/task), caching
+  (with a disclosed no-invalidation limitation), parallel tool calls
+  (backed by a real live ~3.2x speedup on two concurrent Ollama
+  calls), latency percentiles (p50/p95), retries with exponential
+  backoff, OpenRouter/Groq named conceptually only, all five
+  techniques assembled onto FactScout, and a real before/after re-run
+  of a Chapter-7-shaped harness (51.0% cost reduction, 92.3% latency
+  reduction, with an honestly disclosed small per-task success-rate
+  dip that `cost_per_success` still showed as a net win everywhere).
+- `quiz.html`: 10 fill-in-the-blank questions covering the fail-closed
+  budget, early termination, model routing, the live latency/speedup
+  results, p95, exponential backoff, and the real before/after delta.
+- `interview-questions.html` + `.md`: 10 questions across
+  beginner/intermediate/senior/architect.
+- `exercises/`: Brambleford Analytics/InsightScout scenario, 7 tasks
+  (5 production-gear), 19 points total. `solution.py` verified 19/19;
+  `starter.py` verified 0/19 with no crash. `ai-paired.html` uses a
+  third scenario (Caldwell Ridge Observatory/SkyScout).
+- `practice/`: 8 independent diagnostic scenarios, 8 points.
+  `solution.py` verified 8/8; `starter.py` verified 0/8 with no crash.
+  `ai-paired.html` uses a ninth scenario ("QuoteBot", org left
+  unnamed).
+- `project/` (a REAL, standalone chapter mini-project, not the L3
+  project and not a signpost — matching Chapter 7's own pattern):
+  Portage Grain Cooperative/YieldScout, three TODOs across task
+  success, the fail-closed budget check, and the cost-controlled
+  harness. `solution.py` verified 9/9; `starter.py` verified 2/9 with
+  no crash. `RUBRIC.md` has 3 criteria (20 points). `ai-paired.html`
+  uses a fourth scenario (Marrowvale Textile Mill/LoomScout).
+- Wired into `assets/chapters-data.js` with a real `path`;
+  `docs/curriculum/index.html` and root `index.html` both reflect
+  Chapter 8 live, Module 4 **Complete**.
+- **New this session**: Module 4's own combined assessment, under
+  `assessments/module-assessments/`, reusing Chapter 7's AND Chapter
+  8's own already-tested chapter-mini-project functions.
+
+## Next Recommended Task: Chapter 9 — "Multi-Agent Orchestration Patterns"
 
 This is written so a fresh session, with zero memory of this one, can
 pick it up cold.
 
-**Where it sits:** Module 4 — Measuring and Controlling Agents,
-*closing* the module (per `docs/curriculum/CURRICULUM_MAP.md`, Module 4
-covers Chapters 7-8). Chapters 1-7 (Modules 1-3, plus Module 4's
-opening chapter) are all complete. Chapter 8 owns the control half of
-Module 4's outcome: "apply cost- and latency-control techniques to a
-running agent loop." Chapter 7 (evaluation) already shipped the
-measurement half. Difficulty: Advanced, same tier as Chapters 5-7.
-**This chapter closes Module 4** — once Chapter 8 ships, Module 4's
-own feature-card status in `docs/curriculum/index.html` should be
-updated from "In Progress" to "Complete," and root `index.html`'s
-module-complete hero stat should increment from 3/6 to 4/6 (do NOT
-increment it before Chapter 8 actually ships).
+**Where it sits:** Module 5 — Multi-Agent Systems, *opening* the
+module (per `docs/curriculum/CURRICULUM_MAP.md`, Module 5 covers
+Chapters 9, 10, and 11). Chapters 1-8 (Modules 1-4) are all complete.
+Difficulty: Advanced, same tier as Chapters 5-8. **This chapter does
+NOT close Module 5** — Module 5's own feature-card status in
+`docs/curriculum/index.html` should move from "Planned" to "In
+Progress," NOT "Complete" (Chapters 10 and 11 still have to ship), and
+root `index.html`'s module-complete hero stat stays at **4/6** (do NOT
+increment it this session).
 
 **What it must teach:** per `docs/curriculum/CURRICULUM_MAP.md`'s own
-outcome and lab language: iteration bounding (distinct from Chapter
-1's `max_iterations` reasoning-step cap and Chapter 6's action budget —
-this chapter's own angle is bounding cost/latency specifically, not
-safety), model tiering (routing cheap/easy sub-tasks to a smaller or
-cheaper model, reserving a larger one for genuinely hard steps),
-caching (avoiding a repeat call for a repeat question/state), and early
-exit (stopping a loop as soon as a confident-enough answer exists,
-rather than always running to the iteration cap). The module's own
-stated lab: "add iteration bounding, model tiering, and caching to a
-loop and measure the before/after cost and latency" — this chapter
-should produce a REAL before/after measurement, not just describe the
-techniques.
+outcome and lab language: choosing and implementing a multi-agent
+coordination pattern — specifically a **supervisor/worker** pattern
+this chapter's own lab calls for ("build a supervisor/worker
+multi-agent system"). This is a genuinely new architectural unit, not
+a bigger single loop: a supervisor agent that decomposes a goal and
+dispatches sub-tasks to one or more worker agents, each with its own
+tool surface, context, and (per Chapter 8) its own cost/latency
+profile, with the supervisor aggregating worker results back into one
+outcome. New failure modes this chapter should name and demonstrate,
+not just describe: a worker returning a plausible-but-wrong result the
+supervisor has no way to catch without its own verification step
+(directly building on Chapter 7's task-success/trajectory-correctness
+vocabulary, now applied ACROSS agents, not just within one loop), a
+supervisor mis-routing a sub-task to the wrong worker, and duplicated
+or wasted work if the supervisor dispatches redundantly (directly
+building on Chapter 8's own cost-accounting vocabulary — a
+multi-agent system has a cost-control problem too, worse than a single
+loop's, since redundant dispatch multiplies it worker-by-worker).
 
-**Hand-off point from Chapter 7:** Chapter 7's own eval harness
-(`task_success`, `trajectory_correctness`, `pass_at_k`, and especially
-`cost_per_success`) is Chapter 8's ready-made measurement layer — this
-chapter should explicitly open by pointing at that continuity (you
-cannot responsibly say a cost-control technique "worked" without the
-measurement layer Chapter 7 just built to prove it, particularly
-`cost_per_success`, which already treats a cheaper-but-lower-success
-change correctly instead of just looking at cost-per-run). A natural
-structure: apply Chapter 8's own cost/latency techniques to Chapter 7's
-own FactScout (or a close variant), and re-run Chapter 7's own harness
-before and after to report a REAL, measured cost/latency delta — not a
-new, disconnected agent from scratch.
+**Hand-off point from Chapters 7-8:** this chapter should NOT rebuild
+single-agent measurement or cost control from scratch — it should
+explicitly point out that EACH worker agent in a supervisor/worker
+system is itself a Chapter-7/8-measurable-and-controllable loop, and
+that the genuinely NEW problem this chapter adds is coordination:
+decomposition correctness (did the supervisor break the goal into the
+right sub-tasks), routing correctness (did each sub-task go to the
+right worker), and aggregation correctness (did the supervisor combine
+worker results into a correct final outcome) — three new dimensions
+that don't exist for a single-agent loop at all. A natural structure:
+build a supervisor that dispatches to 2-3 worker agents (each a
+small, Chapter-1-style loop with its own tool surface), demonstrate a
+correct run, then demonstrate and diagnose at least one of the three
+new failure modes above with a REAL constructed example (following
+every prior chapter's own "genuine bug becomes the honest example"
+pattern where testing surfaces one).
 
-**No L2 project work this chapter.** The L2 Assisted project closed at
-Chapter 6. **The L3 Independent project ships AFTER this chapter, not
-during it** — per `docs/curriculum/CURRICULUM_MAP.md`'s project ladder,
-L3 is "design and implement a reliability-instrumented, cost-bounded
-agent for a given problem, no scaffold," and explicitly needs BOTH
-Chapter 7's reliability instrumentation AND Chapter 8's cost-bounding
-techniques to exist first. Chapter 8's own `project/` directory should
-therefore still be a **chapter mini-project** (matching Chapter 7's own
-pattern: a real, standalone scaffold, not the L3 project and not a
-signpost) — the L3 project itself should be scheduled as a SEPARATE,
-later piece of work (either its own dedicated session after Chapter 8
-ships, or explicitly folded into whichever session builds Chapter 9,
-if that session's own brief says so) — do not build the L3 project
-during the Chapter 8 session itself unless a future revision of this
-file explicitly says otherwise.
+**No project-ladder work this chapter.** The L2 Assisted project
+closed at Chapter 6; the L3 Independent project was explicitly
+deferred past Chapter 8 (per Chapter 8's own brief) and has NOT yet
+been built as of this hand-off — **a future session (either a
+dedicated one, or this Chapter 9 session itself if its own judgment
+calls for folding it in) still owes the repo an L3 Independent
+project** ("design and implement a reliability-instrumented,
+cost-bounded agent for a given problem, no scaffold," per the
+curriculum map). This hand-off does NOT mandate building L3 during
+the Chapter 9 session — it is flagged here explicitly so it is not
+silently forgotten, matching this file's own standing discipline of
+naming a deferred decision rather than letting it disappear. Whichever
+session builds L3, it should use Chapter 7's reliability
+instrumentation AND Chapter 8's cost-bounding techniques together,
+with NO starter scaffold (per L3's own "independent" definition),
+just a README + RUBRIC + one reference `solution.py`. Chapter 9's own
+`project/` directory should be a **chapter mini-project** (matching
+Chapters 7-8's own pattern), not the L3 project, unless a future
+revision of this file explicitly folds L3 into Chapter 9's session.
 
-**Module 4 assessment — build it THIS session, per the precedent set
-at Chapter 7:** `docs/curriculum/CURRICULUM_MAP.md` states Module 4's
-own assessment is "reliability-plan + cost-control exercise," spanning
-BOTH Chapter 7 and Chapter 8. Chapter 7's own session deliberately did
-NOT build this (see `quality-audits/chapter-07-audit.md`'s decision
-section) precisely so it could be built for real, once, at Chapter 8's
-own closing session — the same pattern `ai-engineering-for-everyone`
-used for its own Module 4 (built at Chapter 10, that module's closing
-chapter, not at Chapter 8, its opening one). Build
-`assessments/module-assessments/module-4-reliability-plan-and-cost-
-control-exercise/` (README + RUBRIC + starter.py + solution.py)
-reusing Chapter 7's own `task_success`/`trajectory_correctness`/
-`pass_at_k`/`cost_per_success` functions AND Chapter 8's own new
-cost/latency-control functions, applied to one combined scenario —
-follow `ai-engineering-for-everyone`'s own `module-4-cost-latency-
-reliability-engineering-exercise/` format exactly (read it directly,
-don't assume its shape from this description). Once Module 4's
-assessment ships, do the SAME gap-audit `ai-engineering-for-everyone`'s
-own session did: check whether Module 5's assessment (multi-agent
-coordination-pattern exercise, Chapters 9-11) can reasonably wait until
-that module closes, and say so explicitly in this file's own next
-hand-off rather than silently deferring again.
+**Module 5 assessment — do NOT build it this session.** Per
+`quality-audits/chapter-08-audit.md`'s own gap-audit decision: Module
+5's assessment ("multi-agent coordination-pattern exercise," spanning
+Chapters 9-11) needs Chapter 9's coordination-pattern code, Chapter
+10's communication code, AND Chapter 11's production-operating code
+all to exist first, following the exact precedent Module 4's own
+assessment set (built at Chapter 8, its closing chapter, not at
+Chapter 7, its opening one). Schedule Module 5's assessment build for
+whichever session ships Chapter 11 (Module 5's closing chapter), and
+say so again, explicitly, in that session's own hand-off — do not
+silently let this decision disappear.
 
 **Concrete build steps:**
 
 1. Pick a fresh fictional scenario, distinct from every org in
-   `quality-audits/chapter-07-audit.md`'s running exclusion list
+   `quality-audits/chapter-08-audit.md`'s running exclusion list
    (currently: Northbeam Outdoors, Summit Gear Co-op, Fernbrook Ski
    Patrol, Wavecrest Marina, Alderleaf Research Group, Pinehurst Realty
    Group, Thistlewood Veterinary Group, Cobblestone Courier Co.,
@@ -1122,60 +1269,67 @@ hand-off rather than silently deferring again.
    Wellness Clinic, Briarcliff Bike Rentals, Fenwick Home Repair
    Co-op, Mossgate Dental Group, Millbrook Credit Union, Amberlock
    Self-Storage, Cascadia Home Security, Greywick Dispatch, Larkmoor
-   Archive Service, Thornmere Public Transit, Emberlyn Underwriting) —
-   extend that list, don't restart it. A natural fit: an agent whose
-   loop currently calls a model on every single step/turn with no
-   caching or tiering, so the "before" measurement is genuinely
-   expensive/slow and the "after" measurement is a real, honest
-   improvement — OR (per the hand-off point above) reuse Chapter 7's
-   own FactScout/Greywick Dispatch directly.
+   Archive Service, Thornmere Public Transit, Emberlyn Underwriting,
+   Brambleford Analytics, Caldwell Ridge Observatory, Portage Grain
+   Cooperative, Marrowvale Textile Mill) — extend that list, don't
+   restart it. This chapter needs a scenario that genuinely
+   decomposes into 2-3 independent sub-domains a supervisor can
+   dispatch to separate workers (e.g., a trip-planning supervisor
+   dispatching to a flights worker, a hotels worker, and an
+   activities worker) — a single-tool-surface scenario like prior
+   chapters' won't motivate a real supervisor/worker split.
 2. Re-warm and test every code example for real (local Ollama,
    `llama3.2:latest`, `base_url="http://localhost:11434/v1"`) before
-   writing it into `lesson.html`, exactly like Chapters 1-7's own
+   writing it into `lesson.html`, exactly like Chapters 1-8's own
    scratchpad-first discipline. Budget up to 450s per live call, never
-   idle-wait past that. Chapter 7's own cold-load took 348.7s once;
-   Chapter 6's session never exceeded 15.8s — pre-warm anyway and
-   disclose honestly whatever actually happens this session.
+   idle-wait past that. This session's own cold-load disclosed no
+   duration fields (empty-prompt warm-up); the first real call still
+   took 48.99s — pre-warm anyway and disclose honestly whatever
+   actually happens next session.
 3. Build `lesson.html` to the same 60+ `<pre>`/`<code>`-block density
    bar, verified with `grep -c '<pre\|<code' lesson.html` before
    calling it done.
-4. Build the full file set matching Chapter 7's exactly: `quiz.html`
+4. Build the full file set matching Chapter 8's exactly: `quiz.html`
    (10 fill-in-the-blank), `interview-questions.html` + `.md` (10
    questions across 4 levels), `exercises/` (7+ tasks, production-gear
    items, `starter.py`/`solution.py` both run and verified), `practice/`
    (8+ scenarios, same file set), and a **chapter mini-project**
-   `project/` (real scaffold — see above, NOT the L3 project).
-5. `assets/chapters-data.js`: add Chapter 8's real `path` only once
-   `lesson.html` exists. Chapters 9-13 stay without a `path`. Module
-   4's `examPath` stays `null` until a written exam actually exists.
-6. Update `docs/curriculum/index.html`'s Chapter 8 card from a
+   `project/` (real scaffold, NOT the L3 project — see above).
+5. `assets/chapters-data.js`: add Chapter 9's real `path` only once
+   `lesson.html` exists. Chapters 10-13 stay without a `path`. Module
+   5's `examPath` stays `null` until a written exam actually exists.
+6. Update `docs/curriculum/index.html`'s Chapter 9 card from a
    non-linked "Planned" `<div>` to a linked `<a class="chapter-card">`.
-   Module 4 ("Measuring and Controlling Agents") goes to **"Complete"**
-   — this is the chapter that actually closes it.
-7. Update root `index.html`'s `hero-stats`: chapter count to 8 of 13
-   live, module-complete count to **4 of 6** (this IS the session that
-   should increment it).
-8. Write `quality-audits/chapter-08-audit.md` following
-   `chapter-07-audit.md`'s exact format, including the Module 4
-   assessment build and the Module 5 gap-audit decision.
+   Module 5 ("Multi-Agent Systems") goes to **"In Progress"**, NOT
+   "Complete" — Chapters 10-11 still have to ship.
+7. Update root `index.html`'s `hero-stats`: chapter count to 9 of 13
+   live, module-complete count STAYS at **4 of 6** (do not increment
+   it this session).
+8. Write `quality-audits/chapter-09-audit.md` following
+   `chapter-08-audit.md`'s exact format, including the L3-project
+   deferral flag and the Module 5 assessment deferral (both carried
+   forward, not resolved, this session).
 9. Run `bash scripts/local_check.sh < /dev/null` before considering the
    chapter done — fix anything it flags.
 10. Re-run `chapters/chapter-04-memory-and-state/project/solution.py`
-    as the standing L2 regression check — must still be 10/10.
-11. Update this file's "Last updated" line, add a new "Session 8"
-    section documenting what was built, move Chapter 8 from "Next
-    Recommended Task" into a "Chapter 8 — COMPLETE" section (and mark
-    Module 4 complete), and rewrite "Next Recommended Task" for
-    Chapter 9 ("Multi-Agent Orchestration Patterns," opening Module 5)
-    with the same concrete, cold-pickup detail as this section,
-    including the Module 5 assessment gap-audit decision, before
-    ending the session.
+    (L2 regression, must still be 10/10) and `chapters/chapter-07-
+    evaluating-agent-reliability/project/solution.py` (Ch7 project
+    regression, must still be 8/8), and `chapters/chapter-08-cost-and-
+    latency-control-of-agent-loops/project/solution.py` (Ch8 project
+    regression, must still be 9/9).
+11. Update this file's "Last updated" line, add a new "Session 9"
+    section documenting what was built, move Chapter 9 from "Next
+    Recommended Task" into a "Chapter 9 — COMPLETE" section, and
+    rewrite "Next Recommended Task" for Chapter 10 ("Multi-Agent
+    Coordination and Communication") with the same concrete,
+    cold-pickup detail as this section — including, if this session
+    did NOT build the L3 Independent project, restating that flag so
+    it doesn't silently disappear — before ending the session.
 
-**Do not** re-teach Chapters 1-7's own mechanics (the agent loop, tool
-selection, memory, reflection/self-correction, guardrails, or the
-task-success/trajectory-correctness/pass@k measurement layer) from
-scratch — assume the reader can already build a working, measurable
-agent and already knows how to tell whether it's reliable; Chapter 8's
-job is making that already-measurable agent affordable and fast, using
-the measurement layer Chapter 7 just built to prove any claimed
-improvement is real.
+**Do not** re-teach Chapters 1-8's own mechanics (the agent loop, tool
+selection, memory, reflection/self-correction, guardrails, the
+task-success/trajectory-correctness/pass@k measurement layer, or
+cost/latency control) from scratch — assume the reader can already
+build one working, measurable, affordable agent loop; Chapter 9's job
+is introducing what changes when there is MORE THAN ONE of them
+working together on the same goal.

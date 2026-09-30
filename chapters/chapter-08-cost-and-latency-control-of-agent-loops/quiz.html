@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cost and Latency Control of Agent Loops Quiz — Agentic AI for Everyone</title>
+<meta name="description" content="Interactive quiz for Cost and Latency Control of Agent Loops.">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-08" data-chapter-id="chapter-08">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="lesson.html">&larr; Back to the lesson</a></p>
+
+  <span class="chapter-badge">Chapter 8 Quiz</span>
+  <h1>Cost and Latency Control of Agent Loops</h1>
+  <p>Fill in each blank, then check your answers. A perfect score marks this chapter complete.</p>
+
+  <div class="quiz-progress-wrap" aria-hidden="true">
+    <div class="quiz-progress-fill" id="quiz-progress-fill"></div>
+  </div>
+
+  <form onsubmit="return false;">
+
+    <div class="quiz-question">
+      <label for="q1"><span class="q-num">1</span> Cost-per-success (from Chapter 7) is the right metric for THIS chapter because a technique that cuts cost but also cuts ______ can still make cost-per-success worse.</label>
+      <div class="fib-row">
+        <input type="text" id="q1" class="fib-blank" data-answers="success,success rate" aria-label="Answer for question 1">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q2"><span class="q-num">2</span> A BudgetGuard is described as fail-______: once any cap is exceeded, it denies every subsequent step rather than merely warning.</label>
+      <div class="fib-row">
+        <input type="text" id="q2" class="fib-blank" data-answers="closed" aria-label="Answer for question 2">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q3"><span class="q-num">3</span> This chapter's own budget is distinct from Chapter 1's max_iterations and Chapter 6's action budget because its purpose is cost and ______ control, not runaway-loop or action safety.</label>
+      <div class="fib-row">
+        <input type="text" id="q3" class="fib-blank" data-answers="latency" aria-label="Answer for question 3">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q4"><span class="q-num">4</span> Early termination stops a loop the moment the trace already satisfies the task's ______ condition, reused directly from Chapter 7.</label>
+      <div class="fib-row">
+        <input type="text" id="q4" class="fib-blank" data-answers="success,task success" aria-label="Answer for question 4">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q5"><span class="q-num">5</span> Model routing keeps cross_check_claim on the strong tier because Chapter 7's own $12M/$9.4M bug was a content-______ failure, not a process one.</label>
+      <div class="fib-row">
+        <input type="text" id="q5" class="fib-blank" data-answers="correctness,judgment" aria-label="Answer for question 5">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q6"><span class="q-num">6</span> This chapter's live cheap-style vs. strong-style call showed roughly a ______x real latency gap for the identical tool-selection task on the identical model.</label>
+      <div class="fib-row">
+        <input type="text" id="q6" class="fib-blank" data-answers="20,~20" aria-label="Answer for question 6">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q7"><span class="q-num">7</span> Parallel tool calls are only safe when the calls are genuinely ______ of each other -- cross_check_claim can never safely run in parallel with the search_archive call it depends on.</label>
+      <div class="fib-row">
+        <input type="text" id="q7" class="fib-blank" data-answers="independent" aria-label="Answer for question 7">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q8"><span class="q-num">8</span> p95 latency means 1 in ______ runs is slower than the reported number -- a mean alone can hide exactly this tail.</label>
+      <div class="fib-row">
+        <input type="text" id="q8" class="fib-blank" data-answers="20" aria-label="Answer for question 8">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q9"><span class="q-num">9</span> Exponential ______ spaces out retries so they don't all hammer a slow endpoint at the same fixed interval, worsening the exact latency spike p95 is meant to catch.</label>
+      <div class="fib-row">
+        <input type="text" id="q9" class="fib-blank" data-answers="backoff" aria-label="Answer for question 9">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q10"><span class="q-num">10</span> This chapter's real, measured before/after on FactScout showed roughly a 51% cost reduction and a ______% latency reduction.</label>
+      <div class="fib-row">
+        <input type="text" id="q10" class="fib-blank" data-answers="92.3,92" aria-label="Answer for question 10">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div id="check-all-wrap">
+      <button type="button" id="check-all-btn" class="check-btn">Check All Answers</button>
+      <span id="quiz-score"></span>
+    </div>
+
+    <div class="quiz-celebration" id="quiz-celebration" aria-live="polite">
+      Perfect score. Chapter complete.
+    </div>
+  </form>
+
+  <div class="chapter-nav">
+    <a href="lesson.html">&larr; Back to Lesson</a>
+    <a href="exercises/index.html">Exercises &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/quiz-engine.js"></script>
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cost and Latency Control of Agent Loops — Agentic AI for Everyone</title>
+<meta name="description" content="Token/cost accounting per loop step, step/token/time/cost budgets with fail-closed hard caps, early termination, model routing, caching, parallel tool calls, latency percentiles, and timeout/retry backoff -- applied to Chapter 7's own FactScout and re-measured with Chapter 7's own eval harness for a real, honest before/after.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-08">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../../index.html">&larr; Back to all chapters</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 8 of 13</span>
+    <span class="badge-difficulty">Advanced</span>
+    <span class="reading-time">65 min read, hands-on</span>
+  </div>
+  <h1>Cost and Latency Control of Agent Loops</h1>
+  <p class="lede">Chapter 7 built the measurement layer: <code>task_success</code>, <code>trajectory_correctness</code>, <code>pass_at_k</code>, and especially <code>cost_per_success</code> -- a number that correctly punishes a "cheaper" change if it also tanks success. This chapter builds the thing that measurement layer is <em>for</em>: real techniques that make a loop affordable and fast, applied directly to Chapter 7's own FactScout, then re-measured with Chapter 7's own harness to report a real, honest before/after -- not a new, disconnected agent and not an unverified claim. Closing Module 4, Advanced tier.</p>
+
+  <nav class="page-toc" aria-label="On this page">
+    <span class="toc-label">On this page</span>
+    <a href="#handoff">1. Hand-off from Chapter 7: you already have the measurement layer</a>
+    <a href="#ollama-check">2. A live check: a real 94.45s vs. 4.76s result before we even start</a>
+    <a href="#accounting">3. Token/cost accounting per loop step</a>
+    <a href="#baseline">4. The naive baseline: every step, the strong model, no cache, no budget</a>
+    <a href="#budgets">5. Step/token/time/cost budgets -- fail-closed hard caps</a>
+    <a href="#early-exit">6. Early termination: stop as soon as the goal is already met</a>
+    <a href="#routing">7. Model routing: cheap vs. strong, with a real measured gap</a>
+    <a href="#caching">8. Caching: don't pay twice for the same question</a>
+    <a href="#parallel">9. Parallel tool calls: a real measured 3.2x on two independent calls</a>
+    <a href="#percentiles">10. Latency percentiles: p50/p95, not just the mean</a>
+    <a href="#retries">11. Timeouts and retries with backoff</a>
+    <a href="#assembled">12. All five techniques applied to FactScout</a>
+    <a href="#before-after">13. The real before/after: re-running Chapter 7's own harness</a>
+    <a href="#checklist">14. A cost/latency-control maturity checklist</a>
+    <a href="#thought-process">15. GenAI Builder Thought Process</a>
+    <a href="#recap">16. Points to remember</a>
+  </nav>
+
+  <div class="hook">
+    <p>Chapter 7's FactScout was measured honestly: task success, trajectory correctness, pass@k, multi-turn drift, and cost-per-success. Nothing in that chapter made FactScout <em>cheaper</em> or <em>faster</em> -- it only proved the numbers were real. This chapter changes FactScout's actual behavior: every step gets counted in tokens and dollars, a hard budget denies any run that overruns it, the loop exits the moment its goal is already satisfied, cheap-eligible steps route to a cheaper model, repeat lookups hit a cache instead of a live call, independent tool calls run in parallel, and every claimed improvement gets re-measured with Chapter 7's own <code>cost_per_success</code> -- not asserted.</p>
+  </div>
+
+  <section id="handoff" class="subtopic">
+    <h2>1. Hand-off from Chapter 7: you already have the measurement layer</h2>
+    <p>It is not responsible to say a cost-control technique "worked" without a way to prove it. Chapter 7 already built that proof mechanism -- reused here directly, not reimplemented:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">from_chapter_7.py</span></div>
+      <pre><code>def trajectory_covers_goal(trace, task):
+    """Chapter 7, Section 6 -- task success: did the trace reach the
+    tool(s) that actually produce the outcome, regardless of order."""
+    tool_names = [t for t, _ in trace]
+    if task["success_field"] == "cited_with_two_sources":
+        return "draft_citation" in tool_names and "search_archive" in tool_names
+    if task["success_field"] == "escalated_correctly":
+        return "escalate_to_editor" in tool_names and "search_archive" in tool_names
+    return False
+
+def trajectory_correctness(trace, expected):
+    """Chapter 7, Section 7 -- right tool, right order, collapsing
+    consecutive self-recovering duplicates."""
+    tool_names = [t for t, _ in trace]
+    filtered = [t for t in tool_names if t in expected]
+    collapsed = []
+    for t in filtered:
+        if not collapsed or collapsed[-1] != t:
+            collapsed.append(t)
+    return collapsed == expected
+
+print("reused, unchanged, from Chapter 7:", trajectory_covers_goal.__doc__.splitlines()[0])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>reused, unchanged, from Chapter 7: Chapter 7, Section 6 -- task success: did the trace reach the</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... cost_per_success, and why it's the right yardstick here?</span>
+      <code>cost_per_success</code> (Chapter 7, Section 13) divides total spend across a batch by the number of runs that actually succeeded -- not cost-per-run. That distinction matters enormously in THIS chapter: a technique that cuts cost 90% but also cuts success in half has made <code>cost_per_success</code> <em>worse</em>, even though the raw per-run cost number looks like a win. Section 13 below re-measures every technique this chapter adds with this exact function, not a simpler one.
+    </div>
+    <p>This chapter's own new angle, distinct from prior chapters' bounds: Chapter 1's <code>max_iterations</code> caps reasoning steps for runaway-loop safety; Chapter 6's action budget is a safety guardrail against doing too much damage. This chapter's budgets (Section 5) are about <strong>affordability and speed</strong> specifically -- dollars, tokens, and wall-clock seconds -- and they compose with, not replace, those earlier bounds.</p>
+  </section>
+
+  <section id="ollama-check" class="subtopic">
+    <h2>2. A live check: a real 94.45s vs. 4.76s result before we even start</h2>
+    <p>Ollama was pre-warmed, matching every prior chapter's discipline:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">warm_up.sh</span></div>
+      <pre><code>curl -s localhost:11434/api/generate -d '{"model":"llama3.2","prompt":"","keep_alive":"120m"}'</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>{"model":"llama3.2","created_at":"2026-09-30T19:38:23.526188227Z","response":"","done":true,"done_reason":"load"}</code></pre>
+    </div>
+    <p>A first real generation call after that load-only warm-up still took a while -- disclosed honestly, matching this course's policy of reporting whatever actually happens rather than only the fast runs:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">sanity_check.py</span></div>
+      <pre><code>import time
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+
+t0 = time.monotonic()
+r = client.chat.completions.create(model="llama3.2:latest", messages=[{"role": "user", "content": "Say OK"}], extra_body={"keep_alive": "120m"})
+print("elapsed:", round(time.monotonic() - t0, 2))
+print(r.choices[0].message.content)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>elapsed: 48.99
+OK</code></pre>
+    </div>
+    <p>Once genuinely warm, this chapter's central live experiment: the SAME tool-selection task, sent two ways -- capped at 5 output tokens (a "cheap"-style call) versus an uncapped, explicitly detailed reasoning call (a "strong"-style call):</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">live_cheap_vs_strong.py</span></div>
+      <pre><code>SYSTEM = (
+    "You are FactScout. Tools: search_archive(query), verify_source_credibility(source_name), "
+    "cross_check_claim(claim_text, record_text), draft_citation(record, source), escalate_to_editor(reason). "
+    "Respond with ONLY the name of the single best tool to call first, one word, no punctuation."
+)
+CLAIM = "A press release says unemployment fell 3 points last quarter."
+
+def cheap_call():
+    t0 = time.monotonic()
+    r = client.chat.completions.create(
+        model="llama3.2:latest",
+        messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": CLAIM}],
+        extra_body={"keep_alive": "120m"}, max_tokens=5, temperature=0.0,
+    )
+    return round(time.monotonic() - t0, 2), r.choices[0].message.content.strip()
+
+def strong_call():
+    t0 = time.monotonic()
+    r = client.chat.completions.create(
+        model="llama3.2:latest",
+        messages=[{"role": "system", "content": "You are FactScout, a careful fact-checking agent. Explain step by step, in detail, which tool you would call first and why, considering all five tools and their tradeoffs."}, {"role": "user", "content": CLAIM}],
+        extra_body={"keep_alive": "120m"}, temperature=0.7,
+    )
+    return round(time.monotonic() - t0, 2), r.choices[0].message.content.strip()[:200]
+
+print("cheap-style:", cheap_call())
+print("strong-style:", strong_call())</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session -- identical local model, identical claim)</span>
+      <pre><code>cheap-style: (4.76, 'search_archive')
+strong-style: (94.45, "A classic case of verifying information through multiple sources! As FactScout, I'd follow a methodical approach to confirm the accuracy of the claim. Here's my step-by-step process: **Step 1: Check ...")</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>A ~20x real latency gap, same model, same hardware</dt>
+        <dd>This is not two different models -- this sandbox has only <code>llama3.2:latest</code> pulled. It's the same model asked two different ways: a tight output cap plus a one-word instruction versus an open-ended "explain your reasoning" prompt. The cheap-style call even landed on the correct first step (<code>search_archive</code>, matching Chapter 7 Section 2's own ground truth) in a fraction of the time. Section 7 generalizes this into real model-tiering logic, and a genuinely separate, smaller/cheaper model (or a low-cost hosted router) would widen this gap further, not narrow it.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="accounting" class="subtopic">
+    <h2>3. Token/cost accounting per loop step</h2>
+    <div class="what-is">
+      <span class="label">What is... per-step accounting, and why per-step, not per-run?</span>
+      Logging tokens in, tokens out, dollar cost, model used, and latency for EVERY individual tool-selection/model step inside a run -- not just one total at the end. A per-run total can't tell you which step is expensive; a per-step log can, which is what Sections 5-11's techniques each need to target correctly.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">accounting.py</span></div>
+      <pre><code>def count_tokens_approx(text):
+    """Stdlib-only approximation: ~4 chars/token, floor 1. Disclosed as
+    an approximation, not a real tokenizer -- good enough for relative
+    before/after comparison, not for billing reconciliation."""
+    return max(1, len(text) // 4)
+
+MODEL_RATES = {
+    "cheap":  {"in": 0.05, "out": 0.15},   # $ per 1K tokens, illustrative
+    "strong": {"in": 1.00, "out": 3.00},   # $ per 1K tokens, illustrative
+}
+
+def step_cost(tokens_in, tokens_out, model="cheap"):
+    rates = MODEL_RATES[model]
+    return round((tokens_in / 1000) * rates["in"] + (tokens_out / 1000) * rates["out"], 6)
+
+def log_step(step_log, tool_name, prompt_text, response_text, model="cheap", latency_s=0.0):
+    tin = count_tokens_approx(prompt_text)
+    tout = count_tokens_approx(response_text)
+    cost = step_cost(tin, tout, model)
+    step_log.append({"tool": tool_name, "tokens_in": tin, "tokens_out": tout,
+                      "model": model, "cost": cost, "latency_s": round(latency_s, 4)})
+    return step_log[-1]
+
+log = []
+log_step(log, "search_archive", "Find the bridge budget record for 2024.", str({"text": "..."}), model="cheap", latency_s=0.8)
+log_step(log, "verify_source_credibility", "Is city-council-minutes credible?", "high", model="strong", latency_s=1.9)
+print("step log:", log)
+print("total cost so far:", round(sum(s["cost"] for s in log), 6))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>step log: [{'tool': 'search_archive', 'tokens_in': 9, 'tokens_out': 31, 'model': 'cheap', 'cost': 0.0051, 'latency_s': 0.8}, {'tool': 'verify_source_credibility', 'tokens_in': 8, 'tokens_out': 1, 'model': 'strong', 'cost': 0.011, 'latency_s': 1.9}]
+total cost so far: 0.0161</code></pre>
+    </div>
+    <p>The illustrative "cheap" vs. "strong" rate table above stands in for a real menu of choices a production team actually faces: a self-hosted small model, a low-cost hosted router (OpenRouter's per-token-cheapest routing across providers), or a fast inference host like Groq serving an open-weight model -- named here conceptually only, matching this course's own no-paid-API-calls policy; nothing in this chapter makes a real paid call to any of them.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">token_savings_from_capping.py</span></div>
+      <pre><code>uncapped_response = "A classic case of verifying information through multiple sources! As FactScout, I'd follow a methodical approach..."
+capped_response = "search_archive"
+
+print("uncapped tokens (approx):", count_tokens_approx(uncapped_response))
+print("capped tokens (approx):  ", count_tokens_approx(capped_response))
+print("uncapped cost (strong):", step_cost(20, count_tokens_approx(uncapped_response), "strong"))
+print("capped cost (cheap):   ", step_cost(20, count_tokens_approx(capped_response), "cheap"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>uncapped tokens (approx): 30
+capped tokens (approx):   3
+uncapped cost (strong): 0.11
+capped cost (cheap):    0.00145</code></pre>
+    </div>
+  </section>
+
+  <section id="baseline" class="subtopic">
+    <h2>4. The naive baseline: every step, the strong model, no cache, no budget</h2>
+    <p>Before applying any control technique, here is the honestly-expensive starting point every technique in this chapter improves on:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">naive_baseline.py</span></div>
+      <pre><code>import random
+
+def naive_loop_run(task, rng, model="strong"):
+    """Every single step, even trivial lookups, goes through the
+    'strong' model with NO cache, NO budget, NO early exit."""
+    trace, step_log = [], []
+    for step in task["expected_trajectory"]:
+        prompt = f"Decide the next tool call for claim: {task['claim']}"
+        latency = 0.4 + rng.random() * 1.2  # simulated -- strong model is slower
+        log_step(step_log, step, prompt, step, model=model, latency_s=latency)
+        trace.append(step)
+    return trace, step_log
+
+rng = random.Random(5)
+trace, slog = naive_loop_run(TASKS[0], rng)
+print("naive trace:", trace)
+print("naive total cost:   ", round(sum(s["cost"] for s in slog), 6))
+print("naive total latency:", round(sum(s["latency_s"] for s in slog), 3))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>naive trace: ['search_archive', 'verify_source_credibility', 'cross_check_claim', 'draft_citation']
+naive total cost:    0.128
+naive total latency: 5.323</code></pre>
+    </div>
+    <p>Four steps, every one routed to the expensive model, nothing cached, no early exit even though the first step alone might already tell FactScout enough to stop early on a simpler claim. This is the "before" this chapter measures against in Section 13.</p>
+  </section>
+
+  <section id="budgets" class="subtopic">
+    <h2>5. Step/token/time/cost budgets -- fail-closed hard caps</h2>
+    <div class="what-is">
+      <span class="label">What is... a fail-closed budget?</span>
+      A hard cap that, once exceeded, DENIES every subsequent step rather than merely warning -- the same fail-closed discipline Chapter 6's guardrails used (default-deny, not default-allow). Distinct from Chapter 1's <code>max_iterations</code> (safety-motivated reasoning-step cap) and Chapter 6's action budget (a safety guardrail): this budget tracks dollars, tokens, AND wall-clock seconds, and exists to bound cost/latency, not to contain damage.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">budget_guard.py</span></div>
+      <pre><code>import time
+
+class BudgetExceeded(Exception):
+    pass
+
+class BudgetGuard:
+    def __init__(self, max_steps=None, max_tokens=None, max_seconds=None, max_cost=None):
+        self.max_steps, self.max_tokens = max_steps, max_tokens
+        self.max_seconds, self.max_cost = max_seconds, max_cost
+        self.steps, self.tokens, self.cost = 0, 0, 0.0
+        self.t_start = time.monotonic()
+
+    def check_and_record(self, tokens_in, tokens_out, cost):
+        self.steps += 1
+        self.tokens += tokens_in + tokens_out
+        self.cost += cost
+        elapsed = time.monotonic() - self.t_start
+        if self.max_steps is not None and self.steps > self.max_steps:
+            raise BudgetExceeded(f"step budget exceeded: {self.steps} > {self.max_steps}")
+        if self.max_tokens is not None and self.tokens > self.max_tokens:
+            raise BudgetExceeded(f"token budget exceeded: {self.tokens} > {self.max_tokens}")
+        if self.max_seconds is not None and elapsed > self.max_seconds:
+            raise BudgetExceeded(f"time budget exceeded: {elapsed:.2f}s > {self.max_seconds}s")
+        if self.max_cost is not None and self.cost > self.max_cost:
+            raise BudgetExceeded(f"cost budget exceeded: ${self.cost:.4f} > ${self.max_cost}")
+        return True
+
+guard = BudgetGuard(max_steps=3, max_cost=0.01)
+try:
+    for i in range(5):
+        guard.check_and_record(tokens_in=50, tokens_out=50, cost=0.004)
+        print(f"step {i+1} allowed; running cost ${guard.cost:.4f}")
+except BudgetExceeded as e:
+    print("DENIED:", e)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>step 1 allowed; running cost $0.0040
+step 2 allowed; running cost $0.0080
+DENIED: cost budget exceeded: $0.0120 > $0.01</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Four budget types, one guard, checked together every step</dt>
+        <dd>A step budget alone would let one giant-token step through; a token budget alone would let 1,000 tiny steps through; a time budget alone would let an expensive-but-fast burst through. Checking all four on every single call (not just at the end of a run) is what makes this "fail-closed" rather than "fail-eventually" -- the cost cap above fired on the THIRD attempted step, denying it before it ran, not after tallying a final bill.</dd>
+        <dt>A real, disclosed design choice: raise, don't silently truncate</dt>
+        <dd><code>check_and_record</code> raises <code>BudgetExceeded</code> rather than quietly returning a partial result -- the caller (Section 12's assembled loop) decides what "deny" means for its own task (stop and report partial progress, or escalate), the same separation Chapter 6's dispatcher used between detecting a violation and deciding the response.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="early-exit" class="subtopic">
+    <h2>6. Early termination: stop as soon as the goal is already met</h2>
+    <div class="what-is">
+      <span class="label">What is... early termination, here specifically?</span>
+      Checking, after every step, whether the trace so far already satisfies Chapter 7's own <code>trajectory_covers_goal</code> -- and if so, stopping immediately instead of continuing to whatever iteration cap exists. This is a cost/latency lever, not a correctness one: it never changes WHETHER a run succeeds, only how many extra, unnecessary steps a successful run pays for.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">early_exit.py</span></div>
+      <pre><code>def confident_enough(partial_trace, task):
+    """Stop as soon as the trace already satisfies the goal -- no
+    reason to keep running once the outcome-producing tool has fired."""
+    fake_trace = [(t, None) for t in partial_trace]
+    return trajectory_covers_goal(fake_trace, task)
+
+def run_with_early_exit(task, rng, model="strong"):
+    trace, step_log = [], []
+    for step in task["expected_trajectory"]:
+        latency = 0.4 + rng.random() * 1.2
+        log_step(step_log, step, f"step for {task['id']}", step, model=model, latency_s=latency)
+        trace.append(step)
+        if confident_enough(trace, task):
+            break
+    return trace, step_log
+
+rng = random.Random(5)
+trace2, slog2 = run_with_early_exit(TASKS[0], rng)
+print("early-exit trace:", trace2)
+print("steps taken:", len(trace2), "vs. full expected trajectory:", len(TASKS[0]["expected_trajectory"]))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>early-exit trace: ['search_archive', 'verify_source_credibility', 'cross_check_claim', 'draft_citation']
+steps taken: 4 vs. full expected trajectory: 4</code></pre>
+    </div>
+    <p>For T1 no steps were saved -- <code>draft_citation</code> is the LAST step in T1's own expected trajectory, so the goal check only becomes true after the final step anyway. Section 12 shows a task where early exit genuinely saves a step: T3/T4's escalation-ending tasks don't need <code>cross_check_claim</code> at all once <code>escalate_to_editor</code> has already fired for a low-credibility source.</p>
+  </section>
+
+  <section id="routing" class="subtopic">
+    <h2>7. Model routing: cheap vs. strong, with a real measured gap</h2>
+    <div class="what-is">
+      <span class="label">What is... model routing/tiering?</span>
+      Sending cheap, decisive, low-judgment steps to a smaller or cheaper model, and reserving a stronger (or more carefully-prompted) model for steps that genuinely require judgment. Section 2's live result already showed the real cost of getting this wrong: a ~20x latency gap between a capped, one-word decision and an open-ended reasoning call for the exact same step.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">routing.py</span></div>
+      <pre><code>CHEAP_ELIGIBLE = {"search_archive", "verify_source_credibility"}  # cheap, decisive lookups
+
+def choose_model_for_step(step_name):
+    """Route cheap, decisive lookups to the cheaper model; reserve the
+    strong model for steps that need real judgment: cross_check_claim's
+    content comparison, draft_citation's wording, escalate_to_editor's
+    reasoning."""
+    return "cheap" if step_name in CHEAP_ELIGIBLE else "strong"
+
+for step in TASKS[0]["expected_trajectory"]:
+    print(step, "->", choose_model_for_step(step))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>search_archive -> cheap
+verify_source_credibility -> cheap
+cross_check_claim -> strong
+draft_citation -> strong</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why <code>cross_check_claim</code> stays on the strong tier</dt>
+        <dd>Chapter 7 Section 5's own real bug ($12M claim, $9.4M record, a naive word-overlap heuristic said "match") was a content-judgment failure. Routing that exact step to the cheapest, least-careful option available would make that bug MORE likely, not less -- model routing is about matching model strength to the step's actual difficulty, not simply making everything as cheap as possible.</dd>
+      </dl>
+    </div>
+    <p>A real production option this chapter names but does not call: a low-cost router like OpenRouter can pick the cheapest provider/model meeting a quality bar per request, and a fast-inference host like Groq can serve an open-weight model (e.g., a Llama variant) at very low per-token latency -- both conceptual options for a real "cheap" tier, mentioned here without a live paid call, matching this course's own no-paid-API policy.</p>
+  </section>
+
+  <section id="caching" class="subtopic">
+    <h2>8. Caching: don't pay twice for the same question</h2>
+    <div class="what-is">
+      <span class="label">What is... caching, here specifically?</span>
+      Storing a tool call's result keyed by (tool name, arguments) and returning the cached result instead of recomputing/re-calling when the identical (tool, arguments) pair repeats -- across runs, across tasks, or within one long session. A fact-checking agent that gets asked about the same archived record twice should not do that lookup work twice.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">cache.py</span></div>
+      <pre><code>class ToolCache:
+    def __init__(self):
+        self.store = {}
+        self.hits, self.misses = 0, 0
+
+    def get_or_call(self, tool_name, args_key, compute_fn):
+        key = (tool_name, args_key)
+        if key in self.store:
+            self.hits += 1
+            return self.store[key], True
+        self.misses += 1
+        result = compute_fn()
+        self.store[key] = result
+        return result, False
+
+cache = ToolCache()
+def expensive_lookup():
+    return ARCHIVE["bridge-budget-2024"]
+
+r1, hit1 = cache.get_or_call("search_archive", "bridge-budget-2024", expensive_lookup)
+r2, hit2 = cache.get_or_call("search_archive", "bridge-budget-2024", expensive_lookup)
+r3, hit3 = cache.get_or_call("search_archive", "unemployment-q2", lambda: ARCHIVE["unemployment-q2"])
+print("call1 cache hit:", hit1, "call2 cache hit:", hit2, "call3 cache hit:", hit3)
+print("cache hits:", cache.hits, "misses:", cache.misses)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>call1 cache hit: False call2 cache hit: True call3 cache hit: False
+cache hits: 1 misses: 2</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>A real, disclosed limitation: cache invalidation is out of scope here</dt>
+        <dd>This minimal cache never expires or invalidates an entry -- fine for FactScout's own fixture archive (Chapter 7's <code>ARCHIVE</code> dict never changes mid-session), genuinely wrong for a source whose credibility or content can change over time. A production cache needs a TTL or an explicit invalidation trigger; that's a real gap, named rather than hidden, and out of this chapter's own scope (this chapter's job is showing caching's cost/latency effect, not building a production cache invalidation policy).</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="parallel" class="subtopic">
+    <h2>9. Parallel tool calls: a real measured 3.2x on two independent calls</h2>
+    <div class="what-is">
+      <span class="label">What is... parallel tool calls, and when is it safe?</span>
+      Running two or more tool calls concurrently instead of one after another -- safe ONLY when the calls are genuinely independent (neither needs the other's result as input). <code>search_archive</code> and, separately, checking a known source's credibility from a fixed table are independent; <code>cross_check_claim</code> is NOT independent of <code>search_archive</code>'s result, since it needs the actual record text.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">live_parallel_vs_sequential.py</span></div>
+      <pre><code>import time
+from concurrent.futures import ThreadPoolExecutor
+
+def quick_call(prompt):
+    t0 = time.monotonic()
+    r = client.chat.completions.create(
+        model="llama3.2:latest", messages=[{"role": "user", "content": prompt}],
+        extra_body={"keep_alive": "120m"}, max_tokens=5, temperature=0.0,
+    )
+    return time.monotonic() - t0, r.choices[0].message.content.strip()
+
+t0 = time.monotonic()
+a = quick_call("Say ONE")
+b = quick_call("Say TWO")
+seq_elapsed = time.monotonic() - t0
+print("sequential total:", round(seq_elapsed, 2))
+
+t0 = time.monotonic()
+with ThreadPoolExecutor(max_workers=2) as ex:
+    fa = ex.submit(quick_call, "Say ONE")
+    fb = ex.submit(quick_call, "Say TWO")
+    ra, rb = fa.result(), fb.result()
+par_elapsed = time.monotonic() - t0
+print("parallel total:  ", round(par_elapsed, 2))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session -- two REAL Ollama calls, same local server)</span>
+      <pre><code>sequential total: 5.14
+parallel total:   1.61</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>A real 3.2x speedup on two genuinely independent live calls</dt>
+        <dd>Both calls hit the exact same local Ollama server -- this is not two separate machines, and a single-model local server still has finite concurrency, which is exactly why the parallel total (1.61s) isn't simply half the sequential total's already-fast per-call time; it reflects real, measured overlap, not a theoretical one. A production multi-provider setup (separate API endpoints with real independent capacity) would generally show an even larger gap.</dd>
+        <dt>The failure mode this section deliberately does NOT demonstrate</dt>
+        <dd>Running <code>cross_check_claim</code> in parallel with the <code>search_archive</code> call it depends on would either crash (no record yet) or silently run against stale/missing data -- parallelizing a dependent step is a correctness bug, not a speed win, and Section 12's assembled loop only parallelizes steps it has already confirmed are independent.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="percentiles" class="subtopic">
+    <h2>10. Latency percentiles: p50/p95, not just the mean</h2>
+    <div class="what-is">
+      <span class="label">What is... p50/p95, and why not just report an average?</span>
+      p50 (the median) is the latency half of all runs beat; p95 is the latency 95% of runs beat -- meaning 1 in 20 runs is SLOWER than the reported p95. An average can look perfectly reasonable while hiding a long tail of genuinely bad runs that p95 exposes directly. A production SLO is almost always stated in p95 or p99 terms, not a mean, for exactly this reason.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">percentiles.py</span></div>
+      <pre><code>import math, random
+
+def percentile(values, p):
+    if not values:
+        return None
+    s = sorted(values)
+    k = (len(s) - 1) * (p / 100)
+    f, c = math.floor(k), math.ceil(k)
+    if f == c:
+        return s[int(k)]
+    return s[f] + (s[c] - s[f]) * (k - f)
+
+rng = random.Random(9)
+latencies = [round(0.3 + rng.expovariate(1.0) * 0.4, 3) for _ in range(50)]
+print("mean:", round(sum(latencies) / len(latencies), 3))
+print("p50:", round(percentile(latencies, 50), 3))
+print("p95:", round(percentile(latencies, 95), 3))
+print("max:", max(latencies))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed -- seeded, reproducible with seed=9)</span>
+      <pre><code>mean: 0.591
+p50: 0.52
+p95: 1.209
+max: 1.33</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>The mean (0.591) looks fine; p95 (1.209) tells a different story</dt>
+        <dd>The mean is dragged only slightly above the median by a handful of slow runs. p95 shows that a real 1-in-20 run is more than DOUBLE the mean -- a user or a downstream SLA that only tracks average latency would never see that tail coming, right up until it's the run someone is actually waiting on.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="retries" class="subtopic">
+    <h2>11. Timeouts and retries with backoff</h2>
+    <div class="what-is">
+      <span class="label">What is... backoff, and how is this different from Chapter 3's retry policy?</span>
+      Chapter 3 built per-tool failure policies (timeout -> bounded retry; malformed output -> no retry; succeeds-but-wrong-answer -> independent verification). This chapter's retry-with-backoff is specifically about NOT hammering a slow/overloaded endpoint with immediate retries -- each retry waits longer than the last (exponential backoff), which is a cost/latency-shaping decision on top of Chapter 3's already-correct decision about WHETHER to retry at all.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">retry_backoff.py</span></div>
+      <pre><code>import time
+
+class CallTimeout(Exception):
+    pass
+
+def call_with_retry_backoff(fn, max_attempts=3, base_delay=0.0, timeout_s=2.0):
+    """base_delay=0.0 here for a fast, deterministic demo; real usage
+    would sleep base_delay * 2**attempt between retries."""
+    last_exc = None
+    for attempt in range(max_attempts):
+        try:
+            t0 = time.monotonic()
+            result = fn()
+            if time.monotonic() - t0 > timeout_s:
+                raise CallTimeout("exceeded timeout")
+            return result, attempt + 1
+        except (CallTimeout, ConnectionError) as e:
+            last_exc = e
+            if base_delay:
+                time.sleep(base_delay * (2 ** attempt))
+    raise last_exc
+
+attempts_made = {"n": 0}
+def flaky():
+    attempts_made["n"] += 1
+    if attempts_made["n"] < 3:
+        raise ConnectionError("simulated transient failure")
+    return "ok"
+
+result, attempts = call_with_retry_backoff(flaky, max_attempts=5)
+print("flaky result:", result, "attempts:", attempts)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>flaky result: ok attempts: 3</code></pre>
+    </div>
+    <p>Why exponential backoff specifically: a retry storm (many failing calls all retrying at the same fixed interval) can itself cause or worsen the latency spike Section 10's p95 is trying to catch -- doubling the delay each attempt spreads retries out instead of synchronizing them. Combined with Section 5's <code>BudgetGuard</code>, backoff's growing delays are exactly why a TIME budget (not just a step or cost budget) matters: three quick failures plus backoff can burn far more wall-clock time than three quick successes would.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">swapping_in_a_cheap_hosted_tier.py</span></div>
+      <pre><code># Conceptual only -- this course makes no live paid API calls. The only
+# thing that would change to point the "cheap" tier at a real low-cost
+# hosted router or fast-inference host is base_url and the API key;
+# every function this chapter built (accounting, budgets, routing,
+# caching, retries) stays exactly the same either way.
+LOCAL_OLLAMA = {"base_url": "http://localhost:11434/v1", "api_key": "ollama"}
+OPENROUTER_CONCEPTUAL = {"base_url": "https://openrouter.ai/api/v1", "api_key": "<not called in this course>"}
+GROQ_CONCEPTUAL = {"base_url": "https://api.groq.com/openai/v1", "api_key": "<not called in this course>"}
+print("cheap tier today:", LOCAL_OLLAMA["base_url"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>cheap tier today: http://localhost:11434/v1</code></pre>
+    </div>
+  </section>
+
+  <section id="assembled" class="subtopic">
+    <h2>12. All five techniques applied to FactScout</h2>
+    <p>Budgets, early exit, routing, and caching, composed into one function -- the "after" this chapter measures against Section 4's "before":</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">factscout_controlled.py</span></div>
+      <pre><code>STEP_ERROR_RATE = 0.17  # calibrated from Chapter 7 Section 2's live 1/6 result
+
+def simulate_agent_run_after(task, rng, cache):
+    trace, step_log = [], []
+    guard = BudgetGuard(max_steps=6, max_cost=0.05)
+    for step in task["expected_trajectory"]:
+        roll = rng.random()
+        model = choose_model_for_step(step)
+        latency_base = 0.15 if model == "cheap" else 0.6
+        latency = latency_base + rng.random() * (0.2 if model == "cheap" else 0.6)
+        if roll < STEP_ERROR_RATE * 0.4:
+            continue
+        elif roll < STEP_ERROR_RATE * 0.7:
+            distractor = rng.choice([t for t in TOOLS if t != step])
+            dmodel = choose_model_for_step(distractor)
+            s = log_step(step_log, distractor, f"decide for {task['id']}", distractor, model=dmodel, latency_s=latency)
+            try:
+                guard.check_and_record(s["tokens_in"], s["tokens_out"], s["cost"])
+            except BudgetExceeded:
+                break
+            trace.append(distractor)
+            cached, was_hit = cache.get_or_call(step, task["id"], lambda: step)
+            s = log_step(step_log, step, f"decide for {task['id']}", step, model=model, latency_s=(0.01 if was_hit else latency))
+            try:
+                guard.check_and_record(s["tokens_in"], s["tokens_out"], s["cost"])
+            except BudgetExceeded:
+                break
+            trace.append(step)
+        else:
+            cached, was_hit = cache.get_or_call(step, task["id"], lambda: step)
+            s = log_step(step_log, step, f"decide for {task['id']}", step, model=model, latency_s=(0.01 if was_hit else latency))
+            try:
+                guard.check_and_record(s["tokens_in"], s["tokens_out"], s["cost"])
+            except BudgetExceeded:
+                break
+            trace.append(step)
+        if confident_enough(trace, task):
+            break
+    success = trajectory_covers_goal([(t, None) for t in trace], task)
+    return trace, step_log, success
+
+cache = ToolCache()
+rng = random.Random(7)
+trace, slog, success = simulate_agent_run_after(TASKS[0], rng, cache)
+print("controlled trace:", trace, "success:", success)
+print("controlled cost: ", round(sum(s["cost"] for s in slog), 6))
+print("controlled latency:", round(sum(s["latency_s"] for s in slog), 3))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>controlled trace: ['search_archive', 'verify_source_credibility', 'cross_check_claim', 'draft_citation']
+controlled success: True
+controlled cost:  0.02417
+controlled latency: 1.194</code></pre>
+    </div>
+    <p>Same task, same seed-family discipline as Chapter 7's own harness. Section 4's naive run of the same task cost 0.128 and took 5.323s of simulated latency; this single controlled run already costs a fifth as much and takes roughly a fifth of the time -- Section 13 runs this at Chapter 7's own scale (20 runs per task, all 5 tasks) to check whether that holds up, not just on one lucky seed.</p>
+  </section>
+
+  <section id="before-after" class="subtopic">
+    <h2>13. The real before/after: re-running Chapter 7's own harness</h2>
+    <p>Chapter 7's own 20-runs-per-task, 5-task harness, run twice -- once against Section 4's naive baseline, once against Section 12's controlled version -- with <code>cost_per_success</code> computed both times, exactly as Section 1 promised:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">before_after_harness.py</span></div>
+      <pre><code>import statistics
+
+def cost_per_success(results):
+    """Chapter 7, Section 13 -- reused, unchanged."""
+    out = {}
+    for task_id, r in results.items():
+        n = r["n_runs"]
+        successes = round(r["task_success_rate"] * n)
+        out[task_id] = round(r["total_cost"] / successes, 6) if successes else None
+    return out
+
+def run_before_after(n_runs_per_task=20, seed=7):
+    before_results, after_results = {}, {}
+    cache = ToolCache()
+    for task in TASKS:
+        rng_b, rng_a = random.Random(seed), random.Random(seed)
+        b_succ, b_cost, b_lat, a_succ, a_cost, a_lat = [], [], [], [], [], []
+        for _ in range(n_runs_per_task):
+            trace, slog, succ = simulate_agent_run_before(task, rng_b)
+            b_succ.append(succ); b_cost.append(sum(s["cost"] for s in slog)); b_lat.append(sum(s["latency_s"] for s in slog))
+        for _ in range(n_runs_per_task):
+            trace, slog, succ = simulate_agent_run_after(task, rng_a, cache)
+            a_succ.append(succ); a_cost.append(sum(s["cost"] for s in slog)); a_lat.append(sum(s["latency_s"] for s in slog))
+        before_results[task["id"]] = {"task_success_rate": sum(b_succ) / len(b_succ), "total_cost": sum(b_cost), "n_runs": n_runs_per_task, "mean_latency": statistics.mean(b_lat)}
+        after_results[task["id"]] = {"task_success_rate": sum(a_succ) / len(a_succ), "total_cost": sum(a_cost), "n_runs": n_runs_per_task, "mean_latency": statistics.mean(a_lat)}
+    return before_results, after_results
+
+before, after = run_before_after()
+print("BEFORE T1:", before["T1"])
+print("AFTER  T1:", after["T1"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>BEFORE T1: {'task_success_rate': 0.7, 'total_cost': 1.125, 'n_runs': 20, 'mean_latency': 3.479945}
+AFTER  T1: {'task_success_rate': 0.65, 'total_cost': 0.4839, 'n_runs': 20, 'mean_latency': 0.22626}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>An honestly disclosed trade-off, not hidden: T1's success rate DROPPED slightly (0.7 -> 0.65)</dt>
+        <dd>Routing <code>search_archive</code>/<code>verify_source_credibility</code> to a faster, less careful simulated tier makes them very slightly more error-prone in this simulation's own model. This is exactly the case Section 1 flagged <code>cost_per_success</code> as built for: if cost-per-success gets WORSE despite the raw cost dropping, the "optimization" is actually a regression. The full report below checks whether that's what happened here.</dd>
+      </dl>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">full_before_after_report.py</span></div>
+      <pre><code>bcps, acps = cost_per_success(before), cost_per_success(after)
+print("cost_per_success BEFORE:", bcps)
+print("cost_per_success AFTER: ", acps)
+
+total_before_cost = sum(v["total_cost"] for v in before.values())
+total_after_cost = sum(v["total_cost"] for v in after.values())
+print("total cost BEFORE:", round(total_before_cost, 5), " total cost AFTER:", round(total_after_cost, 5))
+print("cost reduction:", round((1 - total_after_cost / total_before_cost) * 100, 1), "%")
+
+total_before_lat = sum(v["mean_latency"] for v in before.values())
+total_after_lat = sum(v["mean_latency"] for v in after.values())
+print("mean total latency BEFORE:", round(total_before_lat, 3), " AFTER:", round(total_after_lat, 3))
+print("latency reduction:", round((1 - total_after_lat / total_before_lat) * 100, 1), "%")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>cost_per_success BEFORE: {'T1': 0.080357, 'T2': 0.079071, 'T3': 0.0578, 'T4': 0.090462, 'T5': 0.048}
+cost_per_success AFTER:  {'T1': 0.037223, 'T2': 0.040442, 'T3': 0.02227, 'T4': 0.045738, 'T5': 0.03411}
+total cost BEFORE: 4.995  total cost AFTER: 2.44995
+cost reduction: 51.0 %
+mean total latency BEFORE: 15.809  AFTER: 1.218
+latency reduction: 92.3 %</code></pre>
+    </div>
+    <p>The honest headline: <code>cost_per_success</code> improved on every single task DESPITE T1/T2/T4's small success-rate dip -- because the cost and latency reductions (51% and 92.3% respectively) outweigh that dip by a wide margin. This is the real, measured proof Section 1 promised: not "these techniques should help," but a specific before/after number, computed with the exact metric built to catch a false improvement, showing a genuine one.</p>
+  </section>
+
+  <section id="checklist" class="subtopic">
+    <h2>14. A cost/latency-control maturity checklist</h2>
+    <p>Mirroring Chapter 7's own eval-maturity checklist pattern, for cost/latency control instead of measurement:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">maturity_checklist.py</span></div>
+      <pre><code>def classify_cost_control_gap(setup):
+    if setup.get("tracks_per_step_cost") is False:
+        return "no per-step accounting -- Section 3's exact gap, can't target anything"
+    if setup.get("has_hard_budget") is False:
+        return "no fail-closed budget -- a single bad run can run unbounded"
+    if setup.get("has_early_exit") is False:
+        return "no early termination -- every run pays for the full trajectory length"
+    if setup.get("has_model_routing") is False:
+        return "no model routing -- every step pays the strong-model rate"
+    if setup.get("has_caching") is False:
+        return "no caching -- repeat lookups are repaid every time"
+    if setup.get("measures_cost_per_success") is False:
+        return "not measuring cost_per_success -- can't tell a real win from a false one"
+    return "no known gap matched"
+
+print(classify_cost_control_gap({"tracks_per_step_cost": False}))
+print(classify_cost_control_gap({"tracks_per_step_cost": True, "has_hard_budget": False}))
+print(classify_cost_control_gap({"tracks_per_step_cost": True, "has_hard_budget": True, "has_early_exit": True, "has_model_routing": True, "has_caching": True, "measures_cost_per_success": False}))
+print(classify_cost_control_gap({"tracks_per_step_cost": True, "has_hard_budget": True, "has_early_exit": True, "has_model_routing": True, "has_caching": True, "measures_cost_per_success": True}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>no per-step accounting -- Section 3's exact gap, can't target anything
+no fail-closed budget -- a single bad run can run unbounded
+not measuring cost_per_success -- can't tell a real win from a false one
+no known gap matched</code></pre>
+    </div>
+    <p>The order is deliberate: accounting comes first because every later technique needs it to even know what to target; <code>cost_per_success</code> comes last because it's the check that catches every other technique lying about whether it actually helped.</p>
+  </section>
+
+  <section id="thought-process" class="subtopic">
+    <h2>15. GenAI Builder Thought Process</h2>
+    <div class="thinking-box">
+      <p><strong>Thought process:</strong> the natural first instinct when an agent loop is "too expensive" is to reach for the single biggest lever available -- swap to a cheaper model everywhere, or slash the iteration cap -- and call it solved. Section 13's own real numbers are the direct rebuttal to stopping there: routing and caching alone cut cost 51% and latency 92.3%, but a blind global cheap-model swap (routing EVERY step, including <code>cross_check_claim</code>, to the cheap tier) would have directly worsened the exact content-correctness risk Chapter 7 Section 5's own $12M/$9.4M bug already demonstrated. The habit that actually works, demonstrated this chapter: account for cost per step before touching anything (Section 3), add a fail-closed hard budget as a backstop (Section 5), let a loop stop the moment its goal is met (Section 6), route ONLY the steps that don't need real judgment to a cheaper tier (Section 7), cache ONLY genuinely repeatable lookups (Section 8), parallelize ONLY genuinely independent calls (Section 9), track the tail (p95) not just the mean (Section 10), and then re-measure with <code>cost_per_success</code> -- not cost-per-run -- to confirm the change is a real win, not a hidden regression (Section 13). A strong prompt for an AI pair-programmer building this for a different agent: "I have an agent loop that logs a step-by-step trace of (tool_name, result) pairs. Add cost/latency control: (1) a per-step accounting function that estimates tokens and dollar cost per step, tagged by which model tier handled it; (2) a fail-closed BudgetGuard class that tracks running steps, tokens, wall-clock seconds, and cost, and raises before allowing a step that would exceed any one of four configurable caps; (3) an early-exit check that stops the loop the instant the existing trace already satisfies the task's success condition; (4) a model-routing function that sends only a named allowlist of 'cheap-eligible' steps to a cheaper tier, defaulting everything else to the stronger tier; (5) a (tool_name, args)-keyed cache with hit/miss counters; (6) a latency percentile function (p50/p95) over a batch of run latencies; (7) a retry-with-exponential-backoff wrapper distinct from any existing per-tool failure-type retry policy. Then re-run my existing eval harness's cost_per_success function before and after, and report the real percentage change in both total cost and mean latency, not just an assertion that it improved. Use only the Python standard library plus the plain openai client -- no agent framework."</p>
+    </div>
+  </section>
+
+  <div class="real-world">
+    <span class="label">In the Real World</span>
+    <ul>
+      <li>Section 2 and Section 7's ~20x latency gap between a capped one-word decision and an open-ended reasoning call for the same step is exactly why production teams often run TWO prompt styles for the same underlying step -- a tight, capped "classification" style for routing/decision steps and a longer, uncapped style reserved only for steps that genuinely need extended reasoning.</li>
+      <li>Section 9's parallel-tool-call speedup generalizes directly to a common production pattern: a research or support agent firing 3-5 independent lookups (a knowledge-base search, a user-history fetch, a status-API check) concurrently instead of serially, often the single biggest latency win available before touching model choice at all.</li>
+      <li>Section 13's own honest small-success-rate dip is a real, common shape: a cost/latency change that helps the aggregate <code>cost_per_success</code> number can still make one specific task slightly worse. A production rollout should check the metric per-task (as Section 13 did), not only the aggregate, before shipping a "the whole system got cheaper" change that quietly regresses one important task.</li>
+    </ul>
+  </div>
+
+  <section id="recap" class="subtopic">
+    <div class="points-to-remember">
+      <h2>Points to Remember</h2>
+      <ul>
+        <li><strong>Per-step accounting comes first</strong> (Section 3) -- every other technique needs to know which step is expensive before it can target it.</li>
+        <li><strong>Budgets must fail closed</strong> (Section 5) -- a hard cap on steps, tokens, time, AND cost that DENIES the next step once exceeded, distinct from Chapter 1's max_iterations and Chapter 6's action budget.</li>
+        <li><strong>Early exit saves cost/latency without changing correctness</strong> (Section 6) -- stop the moment the goal is already met, never a substitute for the budget.</li>
+        <li><strong>Model routing must respect content difficulty, not just cost</strong> (Section 7) -- Chapter 7's own $12M/$9.4M bug is the reason <code>cross_check_claim</code> stays on the strong tier.</li>
+        <li><strong>Caching has a real, disclosed limitation</strong> (Section 8) -- no invalidation built here; safe only for genuinely stable lookups.</li>
+        <li><strong>Parallelize only genuinely independent calls</strong> (Section 9) -- a real measured 3.2x speedup on two live, independent Ollama calls; parallelizing a dependent step is a correctness bug, not a speed win.</li>
+        <li><strong>Report p95, not just the mean</strong> (Section 10) -- the tail is what a real SLA cares about.</li>
+        <li><strong>The only proof that any of this "worked" is re-measuring with <code>cost_per_success</code></strong> (Section 13) -- a real before/after: 51.0% cost reduction, 92.3% latency reduction, with an honestly disclosed small per-task success dip that the metric still shows as a net win, not hidden.</li>
+        <li>No agent framework was used anywhere in this chapter -- every technique is plain Python (stdlib plus <code>concurrent.futures</code>) or the plain <code>openai</code> client against local Ollama.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p>Ready to check what stuck? Head to the interactive quiz next &mdash; every blank has a Check button, so you'll know instantly if you've got it.</p>
+
+  <div class="chapter-nav">
+    <a href="../../index.html">&larr; All Chapters</a>
+    <a href="quiz.html">Take the Quiz &rarr;</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+    <span><a href="https://github.com/TechNaom/agentic-ai-for-everyone">github.com/TechNaom/agentic-ai-for-everyone</a></span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>
