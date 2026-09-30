@@ -14,8 +14,8 @@ home of the L2 Assisted project (Hollowridge Wellness Clinic's
 CareBot). That is where all of the following live:
 
 - `README.md` — full project description, including "Why the
-  guardrail's default is `human_approved=True`" and "Reflection stays
-  on as a genuine defense-in-depth backstop."
+  guardrail fails closed: `human_approved` defaults to `False`" and
+  "Reflection stays on as a genuine defense-in-depth backstop."
 - `starter.py` / `solution.py` — now with **5 TODOs** (TODOs 1-3 from
   Chapter 4, TODO 4: reflection from Chapter 5, and **TODO 5: the
   guardrail**, added this chapter).

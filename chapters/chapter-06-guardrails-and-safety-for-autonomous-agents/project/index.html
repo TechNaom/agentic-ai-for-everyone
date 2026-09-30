@@ -62,8 +62,8 @@ python3 starter.py   # 10 structural self-checks</code></pre>
 
   <p>See <code>README.md</code> in this directory for exactly what
   Chapter 6 changed there, why <code>human_approved</code> defaults to
-  <code>True</code> (a disclosed trade-off to keep Chapters 4-5's own
-  regression checks passing unchanged), and why Chapter 5's reflection
+  <code>False</code> (the guardrail fails closed: forgetting the flag
+  means "denied," and approval is always passed explicitly), and why Chapter 5's reflection
   step was deliberately kept as a defense-in-depth backstop rather than
   removed now that the guardrail exists.</p>
 

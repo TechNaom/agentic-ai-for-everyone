@@ -95,12 +95,16 @@ root `index.html`'s hero stats, and rewriting `PROJECT_STATE.md`'s
   honestly scoped to this course?" box, matching the brief's own
   explicit instruction that full container orchestration is out of
   scope for this no-framework, plain-Python course.
-- The `human_approved=True` default (see above) is a real, disclosed
+- The `human_approved=True` default (see above) was a disclosed
   compromise driven by the need to keep Chapters 4-5's regression tests
-  passing unchanged -- a fresh implementation with no such constraint
-  would default to `False`. This is stated at least three times across
-  `project/README.md`, `RUBRIC.md`, and `lesson.html` so no reader
-  encounters it as a surprise.
+  passing unchanged. **Resolved in a follow-up commit:** reviewed as
+  contradicting the chapter's own fail-safe (default-deny) lesson, the
+  "unchanged checks" constraint was lifted. `human_approved` now
+  defaults to `False` in both `guardrail_check_booking()` and
+  `run_visit_session()`; Check 8 passes `human_approved=True`
+  explicitly. Solution still 10/10, starter still fails cleanly (2/10).
+  README, RUBRIC, the Ch6 project signpost, and lesson Section 17 now
+  present fail-closed as the teaching point rather than a caveat.
 - Exercises/practice scoring for free-text-style answers still relies
   on exact-string or keyword matching rather than fully semantic
   grading -- the same necessary, disclosed limitation as every prior

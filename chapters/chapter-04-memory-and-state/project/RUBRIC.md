@@ -93,7 +93,9 @@ genuine defense-in-depth backstop" section for the full reasoning. A
 correct implementation should make reflection's blocking-condition
 revision branch effectively unreachable for a held booking (since
 `booked` becomes `False`), while Check 8 still exercises reflection's
-original catch through the default `human_approved=True` path.
+original catch by passing `human_approved=True` explicitly. Confirm the
+guardrail **fails closed**: `human_approved` must default to `False`, so
+a caller that omits it is denied, not allowed.
 
 ## Passing bar
 

@@ -129,10 +129,14 @@ def is_blocking_condition(text):
 # not a message revised after the fact. See run_visit_session() above for
 # the call site.
 # ---------------------------------------------------------------------------
-def guardrail_check_booking(current_facts, human_approved=True):
+def guardrail_check_booking(current_facts, human_approved=False):
     """Returns {"allowed": bool, "blocking": [...]}. A blocking condition
     on file requires human_approved=True before the booking is allowed to
-    proceed; with no blocking condition, booking is always allowed."""
+    proceed; with no blocking condition, booking is always allowed.
+
+    Fails closed: human_approved defaults to False, so a caller that forgets
+    to pass it gets "denied", never "allowed". Approval must be an explicit,
+    recorded act at the call site -- never an assumed default."""
     conditions = current_facts.get("conditions", [])
     blocking = [c for c in conditions if is_blocking_condition(c)]
     if blocking and not human_approved:
@@ -223,7 +227,7 @@ def promote_worthy_and_persist(patient_id, user_messages, store):
 # TODO 3 (solved): the composed multi-tool + memory visit flow, with the
 # Chapter 5 reflection hook already wired in as a labeled no-op call.
 # ---------------------------------------------------------------------------
-def run_visit_session(patient_id, store, user_messages, requested_date=None, human_approved=True):
+def run_visit_session(patient_id, store, user_messages, requested_date=None, human_approved=False):
     working_memory, facts = build_working_context(patient_id, store)
     for text in user_messages:
         working_memory.append({"role": "user", "content": text})
@@ -241,13 +245,9 @@ def run_visit_session(patient_id, store, user_messages, requested_date=None, hum
             # not just the message describing it -- this is the hard,
             # enforced boundary Chapter 5's reflect_on_response() (below)
             # could not provide, because reflection only ever runs AFTER a
-            # tool call already fired. human_approved defaults to True to
-            # keep Chapter 4-5's own regression checks (1-8 below) passing
-            # unchanged, matching their original fixtures exactly -- a real
-            # production entry point would default new sessions to False
-            # ("not yet approved") instead; see project/README.md's "What
-            # Chapter 6 changed" section for why this default was chosen
-            # explicitly rather than silently.
+            # tool call already fired. human_approved defaults to False
+            # (fail closed): unless a caller explicitly records approval,
+            # a blocking condition holds the booking.
             gate = guardrail_check_booking(current_facts, human_approved=human_approved)
             tool_trace.append(("guardrail_check_booking", gate))
             if gate["allowed"]:
@@ -320,6 +320,7 @@ def self_check():
         "pt-99", store3,
         ["I have a new condition: chest pain that hasn't been evaluated yet."],
         requested_date="2026-10-05",
+        human_approved=True,  # Ch6: a blocking condition books only with explicit approval
     )
     final_reply = visit3["working_memory"][-1]["content"]
     ok = (

@@ -117,10 +117,14 @@ def is_blocking_condition(text):
 # schedule_followup() -- not a message revised after the fact the way
 # Chapter 5's reflect_on_response() (TODO 4 below) works.
 # ---------------------------------------------------------------------------
-def guardrail_check_booking(current_facts, human_approved=True):
+def guardrail_check_booking(current_facts, human_approved=False):
     """Returns {"allowed": bool, "blocking": [...]}. A blocking condition
     on file requires human_approved=True before the booking is allowed to
-    proceed; with no blocking condition, booking is always allowed."""
+    proceed; with no blocking condition, booking is always allowed.
+
+    Fails closed: human_approved defaults to False, so a caller that forgets
+    to pass it gets "denied", never "allowed". Approval must be an explicit,
+    recorded act at the call site -- never an assumed default."""
     conditions = current_facts.get("conditions", [])
     blocking = [c for c in conditions if is_blocking_condition(c)]
     if blocking and not human_approved:
@@ -188,7 +192,7 @@ def promote_worthy_and_persist(patient_id, user_messages, store):
 # do not modify the reflect_on_response call itself, only the rest of the
 # flow around it).
 # ---------------------------------------------------------------------------
-def run_visit_session(patient_id, store, user_messages, requested_date=None, human_approved=True):
+def run_visit_session(patient_id, store, user_messages, requested_date=None, human_approved=False):
     """
     1. working_memory, facts = build_working_context(patient_id, store)
     2. Append each text in user_messages to working_memory as a
@@ -272,6 +276,7 @@ def self_check():
         "pt-99", store3,
         ["I have a new condition: chest pain that hasn't been evaluated yet."],
         requested_date="2026-10-05",
+        human_approved=True,  # Ch6: a blocking condition books only with explicit approval
     )
     final_reply = visit3["working_memory"][-1]["content"] if visit3["working_memory"] else ""
     ok = (

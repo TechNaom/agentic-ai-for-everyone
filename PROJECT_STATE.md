@@ -779,12 +779,14 @@ instruction, completing the L2 project across Chapters 4-6.
    explicitly**: the brief requires both that the guardrail stop an
    unsafe booking automatically, and that the existing 8 self-checks
    (one of which requires `schedule_followup` to have fired for its own
-   blocking-condition test case) pass unchanged. `human_approved`
-   defaults to `True` to preserve every existing call site's behavior;
-   the guardrail's real enforcement is exercised via two brand-new
-   checks (9 and 10) that pass `human_approved=False` explicitly. This
-   trade-off, and the honest note that a production default should be
-   `False`, is stated in `project/README.md`, `RUBRIC.md`, and the
+   blocking-condition test case) pass unchanged. The first build
+   defaulted `human_approved` to `True` to satisfy both — **corrected in
+   a follow-up commit**: a fail-open guardrail contradicted the
+   chapter's own fail-safe lesson, so the "unchanged checks" constraint
+   was lifted. `human_approved` now defaults to `False` (fail closed);
+   Check 8 passes `human_approved=True` explicitly (approval as a
+   recorded act); Checks 9 and 10 exercise the gate. Still 10/10. The
+   fail-closed rationale is in `project/README.md`, `RUBRIC.md`, and the
    lesson's own Section 17. Per the brief's own stated preference,
    Chapter 5's `reflect_on_response()` was deliberately **kept**, not
    removed, as a defense-in-depth backstop — justified explicitly in

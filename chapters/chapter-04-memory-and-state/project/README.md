@@ -23,29 +23,29 @@ are untouched.
 now genuinely holds the booking (returns a "needs review" response and
 never calls the booking tool) unless `human_approved=True` is passed.
 See "TODO 5: the guardrail, filled in by Chapter 6" below. TODOs 1-4
-and their original self-checks (1-8) are untouched and still pass.
+are untouched and their original self-checks (1-8) still pass — with one
+deliberate edit, explained next.
 
-## Why the guardrail's default is `human_approved=True`, disclosed explicitly
+## Why the guardrail fails closed: `human_approved` defaults to `False`
 
-`run_visit_session()`'s new `human_approved` parameter defaults to
-`True`, not `False`. This is a deliberate, disclosed trade-off, not an
-oversight: Chapters 4 and 5 already shipped and locked in 8 self-checks
-against this file's exact behavior, including one (`"reflect_on_response
-revises the draft when a blocking condition was booked (Ch5)"`) that
-requires `schedule_followup()` to have actually fired for its own
-blocking-condition test case. The brief for this chapter requires those
-8 checks to **still pass unchanged**. Defaulting `human_approved=True`
-preserves that exact behavior for every existing call site, while the
-guardrail's real enforcement is fully exercised by two **new** checks
-(9 and 10, below) that call `run_visit_session()` with
-`human_approved=False` explicitly. **In a real production system, the
-safe default for a brand-new session would be `False`** ("not yet
-approved"), not `True` — this scaffold's default exists specifically so
-Chapters 4-5's regression tests don't have to be rewritten, and that
-reasoning is stated here plainly rather than left implicit. A stricter
-default is exactly the kind of change a real team would make in a
-follow-up revision once the regression suite itself was updated to
-match.
+Both `guardrail_check_booking()` and `run_visit_session()` default
+`human_approved` to `False`. A caller that forgets to pass it gets
+**"denied"**, never "allowed". This is the chapter's fail-safe rule
+applied to the project itself: a guardrail whose default is "approved"
+is not a guardrail — the one caller who forgets the flag silently
+bypasses it, and that caller is exactly the one nobody tested.
+
+The consequence is visible in the regression suite, on purpose. Check 8
+(`"reflect_on_response revises the draft when a blocking condition was
+booked (Ch5)"`) books a follow-up for a patient with unevaluated chest
+pain — a blocking condition. Under a fail-closed guardrail that booking
+must now be **explicitly approved**, so Check 8 passes
+`human_approved=True` at its call site. That one-line change is the
+pattern a real system uses: approval is a recorded, explicit act at the
+point of the action (a clinician signed off), never an assumed default.
+What Check 8 *verifies* is unchanged. Checks 9 and 10 exercise the gate
+itself: the same blocking condition is held without approval and
+allowed with it.
 
 ## What Chapter 4 shipped, and what Chapter 5 added
 
