@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 7 Project: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design TriageScout's trajectory-correctness function yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-07">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the project</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 7 Project &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already built TriageScout's <code>trajectory_correctness()</code> function yourself. Now try the reverse: describe the same task to an AI assistant without showing it your own solution, and review what it hands back with the same scrutiny you'd bring to a teammate's pull request before trusting the reliability numbers it would produce.</p>
+  </div>
+
+  <h2>Step 1: Have the AI build it independently</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to make explicit that a deliberate, consecutive re-check of the SAME tool should NOT count as an order violation -- otherwise the AI has no reason to add duplicate-collapsing logic at all, and will likely implement a naive list-equality check that fails a legitimately cautious trace, which is exactly the edge case this exercise is designed to surface.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write a Python function trajectory_correctness(trace, expected) that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this project's own solution.py.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write a Python function trajectory_correctness(trace, expected) for an agent-eval harness. `trace` is a list of tool-name strings representing every tool an agent actually called, in order (it may include tool names NOT in `expected` -- distractor calls that should be ignored, not treated as violations). `expected` is a list of tool-name strings representing the correct ground-truth order. The function must: (1) filter trace down to only the names that also appear in expected; (2) collapse consecutive DUPLICATE tool names in that filtered list down to a single occurrence (a deliberate, cautious re-check of the same tool immediately after itself should NOT count as an extra or out-of-order step); (3) return True only if the resulting collapsed list is EXACTLY equal to expected, including order; False otherwise. Do not use any agent framework or external library -- Python standard library only.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 2: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated trajectory check tends to get wrong</span>
+    <ul>
+      <li><strong>Skipping the consecutive-duplicate collapse entirely.</strong> A naive implementation often just filters and compares directly against `expected`, which fails a legitimate cautious-recheck trace (e.g. calling the same verification tool twice in a row on purpose) as if it were an error -- does the generated code actually collapse duplicates, or does it silently penalize careful behavior?</li>
+      <li><strong>Collapsing ALL duplicates, not just consecutive ones.</strong> A subtly different bug: removing every duplicate occurrence of a tool name anywhere in the trace (not just consecutive ones) would incorrectly treat a trace like <code>[A, B, A, C]</code> as equivalent to <code>[A, B, C]</code>, hiding a real, non-adjacent repeated-call problem that a stricter check should flag.</li>
+      <li><strong>Crashing or returning the wrong type on an empty trace.</strong> What does the generated code return for <code>trajectory_correctness([], expected)</code> when `expected` is non-empty -- a clean <code>False</code>, or an exception?</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against <code>solution.py</code> in this same folder. Where do they differ? Is the AI's version genuinely equivalent, or does it handle one of the three watch-outs above differently -- and is that difference actually a bug, or a legitimate different design choice?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Project</a>
+    <a href="../../../docs/curriculum/index.html">Back to Roadmap &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluating Agent Reliability Quiz — Agentic AI for Everyone</title>
+<meta name="description" content="Interactive quiz for Evaluating Agent Reliability.">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-07" data-chapter-id="chapter-07">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="lesson.html">&larr; Back to the lesson</a></p>
+
+  <span class="chapter-badge">Chapter 7 Quiz</span>
+  <h1>Evaluating Agent Reliability</h1>
+  <p>Fill in each blank, then check your answers. A perfect score marks this chapter complete.</p>
+
+  <div class="quiz-progress-wrap" aria-hidden="true">
+    <div class="quiz-progress-fill" id="quiz-progress-fill"></div>
+  </div>
+
+  <form onsubmit="return false;">
+
+    <div class="quiz-question">
+      <label for="q1"><span class="q-num">1</span> Task-success rate checks whether the outcome-producing tools were called at all; trajectory ______ checks whether they were called in the right order, with no unnecessary detours.</label>
+      <div class="fib-row">
+        <input type="text" id="q1" class="fib-blank" data-answers="correctness" aria-label="Answer for question 1">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q2"><span class="q-num">2</span> This chapter's live non-determinism test sent the IDENTICAL task to the same model six times; only ______ of the six runs picked the expected first tool.</label>
+      <div class="fib-row">
+        <input type="text" id="q2" class="fib-blank" data-answers="1,one" aria-label="Answer for question 2">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q3"><span class="q-num">3</span> pass@k estimates the probability that at least one of k randomly chosen runs, out of n total with c successes, is a ______.</label>
+      <div class="fib-row">
+        <input type="text" id="q3" class="fib-blank" data-answers="success" aria-label="Answer for question 3">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q4"><span class="q-num">4</span> Multi-turn ______ asks whether a long-running agent session's trajectory correctness gets worse as the session accumulates more turns.</label>
+      <div class="fib-row">
+        <input type="text" id="q4" class="fib-blank" data-answers="drift" aria-label="Answer for question 4">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q5"><span class="q-num">5</span> Cost-per-success divides total spend by the number of ______ runs, not the total number of runs -- so failed attempts still count toward the cost.</label>
+      <div class="fib-row">
+        <input type="text" id="q5" class="fib-blank" data-answers="successful" aria-label="Answer for question 5">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q6"><span class="q-num">6</span> This chapter's own live bug: cross_check_claim's word-overlap heuristic said a $12M claim "matched" a record that actually said $______.</label>
+      <div class="fib-row">
+        <input type="text" id="q6" class="fib-blank" data-answers="9.4M,9.4m" aria-label="Answer for question 6">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q7"><span class="q-num">7</span> Golden-set construction, LLM-as-judge design, and statistical significance testing are all deferred by name to the sibling course ______.</label>
+      <div class="fib-row">
+        <input type="text" id="q7" class="fib-blank" data-answers="llm-evaluation-for-everyone,llm evaluation for everyone" aria-label="Answer for question 7">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q8"><span class="q-num">8</span> Task T4 scored 100% task success but only 60% trajectory correctness -- proof a dashboard tracking only ______ would have rated it this agent's best-performing task.</label>
+      <div class="fib-row">
+        <input type="text" id="q8" class="fib-blank" data-answers="task success,task-success" aria-label="Answer for question 8">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q9"><span class="q-num">9</span> The bulk N-run harness in this chapter uses a seeded deterministic ______, disclosed honestly, because live calls at scale would exceed this course's per-session time budget.</label>
+      <div class="fib-row">
+        <input type="text" id="q9" class="fib-blank" data-answers="simulation" aria-label="Answer for question 9">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q10"><span class="q-num">10</span> This chapter's fact-checking agent was built for the fictional newsroom ______ Dispatch.</label>
+      <div class="fib-row">
+        <input type="text" id="q10" class="fib-blank" data-answers="greywick,Greywick" aria-label="Answer for question 10">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div id="check-all-wrap">
+      <button type="button" id="check-all-btn" class="check-btn">Check All Answers</button>
+      <span id="quiz-score"></span>
+    </div>
+
+    <div class="quiz-celebration" id="quiz-celebration" aria-live="polite">
+      Perfect score. Chapter complete.
+    </div>
+  </form>
+
+  <div class="chapter-nav">
+    <a href="lesson.html">&larr; Back to Lesson</a>
+    <a href="exercises/index.html">Exercises &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/quiz-engine.js"></script>
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

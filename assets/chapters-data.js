@@ -85,7 +85,8 @@ window.AAFE_MODULES = [
         id: "chapter-07",
         num: 7,
         title: "Evaluating Agent Reliability",
-        description: "What makes agent behavior measurable, and what to log -- the systems-design side of agent evaluation."
+        description: "What makes agent behavior measurable, and what to log -- the systems-design side of agent evaluation.",
+        path: "chapters/chapter-07-evaluating-agent-reliability/lesson.html"
       },
       {
         id: "chapter-08",

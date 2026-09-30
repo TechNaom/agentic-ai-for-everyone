@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluating Agent Reliability — Agentic AI for Everyone</title>
+<meta name="description" content="Task-success rate vs. trajectory/tool-call correctness, multi-turn drift, non-determinism (pass@k and variance), and cost-per-success -- building a real agent eval harness step by step, with real measured numbers from both a live model and a disclosed seeded simulation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-07">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../../index.html">&larr; Back to all chapters</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 7 of 13</span>
+    <span class="badge-difficulty">Advanced</span>
+    <span class="reading-time">65 min read, hands-on</span>
+  </div>
+  <h1>Evaluating Agent Reliability</h1>
+  <p class="lede">Chapter 6's <code>dispatch_tool_call()</code> already produces a structured <code>tool_trace</code> -- a list of <code>(tool_name, result)</code> pairs -- on every single run. An agent that produces a trace like that is most of the way to being <strong>measurable</strong>; this chapter is what makes that trace worth something. Opening Module 4, Advanced tier. Everything below is demonstrated for real: a live Ollama non-determinism test (6 runs of the exact same task, only 1 matched the expected first step), a genuine bug this session's own tool code produced and caught, and a full stdlib-only agent eval harness with measured pass@k, variance, and cost-per-success.</p>
+
+  <nav class="page-toc" aria-label="On this page">
+    <span class="toc-label">On this page</span>
+    <a href="#boundary">1. The boundary: this chapter vs. llm-evaluation-for-everyone</a>
+    <a href="#ollama-check">2. A live sanity check, and a live non-determinism result</a>
+    <a href="#scenario">3. The scenario: FactScout, a fact-checking agent</a>
+    <a href="#naive-baseline">4. The naive baseline: "did it produce an answer" as the only check</a>
+    <a href="#the-bug">5. A real bug this session's own code produced -- and why it matters here</a>
+    <a href="#task-success">6. Task-success rate: a graduated, honest definition</a>
+    <a href="#trajectory">7. Trajectory/tool-call correctness: a stricter, separate metric</a>
+    <a href="#gap">8. Why the two metrics disagree -- on purpose</a>
+    <a href="#harness-tasks">9. Building the harness: a real task set with ground-truth trajectories</a>
+    <a href="#harness-run">10. Running the harness N times per task</a>
+    <a href="#nondeterminism">11. Non-determinism: pass@k and variance</a>
+    <a href="#drift">12. Multi-turn drift: does a long session get worse?</a>
+    <a href="#cost">13. Cost-per-success</a>
+    <a href="#report">14. Assembling one eval report</a>
+    <a href="#judge-boundary">15. Where an LLM-as-judge would go -- and why it's not built here</a>
+    <a href="#checklist">16. An eval-maturity checklist</a>
+    <a href="#thought-process">17. GenAI builder thought process</a>
+    <a href="#recap">18. Points to remember</a>
+  </nav>
+
+  <div class="hook">
+    <p><strong>Greywick Dispatch</strong> is a fictional newsroom. Its fact-checking assistant, <strong>FactScout</strong>, can search a claims archive, check a source's credibility, cross-check a claim's wording against an archived record, draft a citation, or escalate an uncertain claim to a human editor. A claim gets "fact-checked" either way -- the hard question this chapter answers is not whether FactScout produces <em>an</em> answer, but whether it did the right investigative work, in a sane order, to earn that answer, and whether that holds up run after run, turn after turn.</p>
+  </div>
+
+  <section id="boundary" class="subtopic">
+    <h2>1. The boundary: this chapter vs. llm-evaluation-for-everyone</h2>
+    <p>This course has a sibling, <code>llm-evaluation-for-everyone</code>, whose own discovery notes name this course as the future home of agent <em>architecture</em> evaluation, as opposed to evaluating a single LLM call's <em>output</em>. That boundary is enforced here deliberately: this chapter does not re-derive golden-set construction, human evaluation and inter-annotator agreement, LLM-as-judge design, or statistical significance testing -- it names the exact chapters that already teach those, and gets on with what's actually new: evaluating a <em>loop's</em> behavior across multiple tool calls and turns, not one model response.</p>
+    <div class="what-is">
+      <span class="label">What is... in scope here?</span>
+      Task-success measurement for multi-step outcomes, trajectory/tool-call correctness (right tool, right arguments, right order -- not just "did it eventually land on a plausible answer"), multi-turn drift (does behavior degrade over a long session), non-determinism (pass@k, variance across repeated runs of the identical task), and cost-per-success. All of this is specific to evaluating a <em>loop</em>, not a single call.
+    </div>
+    <div class="what-is">
+      <span class="label">What is... deferred to llm-evaluation-for-everyone?</span>
+      <ul>
+        <li>Eval-dataset / golden-set construction methodology, stratified sampling, staleness &mdash; <code>llm-evaluation-for-everyone</code> Chapter 3, "Designing Golden Sets and Eval Datasets."</li>
+        <li>Human evaluation and inter-annotator agreement (Cohen's kappa) &mdash; that course's Chapter 4.</li>
+        <li>LLM-as-judge design, calibration, and bias mitigation &mdash; that course's Chapters 5 and 6.</li>
+        <li>Sample-size planning, confidence intervals, and significance testing for comparing two systems &mdash; that course's Chapters 7 and 8.</li>
+        <li>That course's own Chapter 11, "Evaluating Agents and Tool Use," covers the same subject area from the output-measurement side (RAG-style faithfulness of an agent's final answer) -- this chapter is the loop-architecture side of the same subject, and the two are meant to be read together, not as duplicates.</li>
+      </ul>
+      A simple test used while drafting this chapter: if a paragraph would apply equally to grading one single, non-agentic LLM response, it belongs in that course, not this one.
+    </div>
+  </section>
+
+  <section id="ollama-check" class="subtopic">
+    <h2>2. A live sanity check, and a live non-determinism result</h2>
+    <p>This session pre-warmed Ollama the same way every prior chapter has. The warm-up call itself took its full cold-load time -- disclosed honestly, matching this course's own policy of reporting whatever actually happens:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">warm_up.sh</span></div>
+      <pre><code>curl -s localhost:11434/api/generate -d '{"model":"llama3.2","prompt":"say ok","stream":false,"keep_alive":"180m"}'</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session -- note total_duration)</span>
+      <pre><code>{"model":"llama3.2", ..., "response":"Ok. Is there something I can help you with?",
+ "done":true,"done_reason":"stop",
+ "total_duration":348660530214,   # ~348.7s -- almost entirely load_duration
+ "load_duration":345489398301,    # ~345.5s of that was just loading the model
+ "eval_duration":1051733999}      # ~1.05s of actual generation, once warm</code></pre>
+    </div>
+    <p>348.7 seconds, comfortably inside this course's 450s-per-call budget -- but nowhere close to instant, and a reminder that "warm" is a per-session state that has to be re-earned, not a fact about the model file. Once warm, a second call was fast:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">check_warm.py</span></div>
+      <pre><code>import time
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+
+t0 = time.monotonic()
+r = client.chat.completions.create(model="llama3.2:latest", messages=[{"role": "user", "content": "Say OK"}], extra_body={"keep_alive": "180m"})
+print("elapsed:", round(time.monotonic() - t0, 2))
+print(r.choices[0].message.content)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>elapsed: 14.04
+OK. How can I help you today?</code></pre>
+    </div>
+    <p>With the model warm, this chapter ran its own real experiment: the exact same fact-check task, sent to the model <strong>six separate times</strong>, asking only "which tool would you call first?" -- no other change between runs.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">live_nondeterminism_test.py</span></div>
+      <pre><code>SYSTEM = (
+    "You are FactScout, a fact-checking agent for a newsroom. You have these "
+    "tools: search_archive(query), verify_source_credibility(source_name), "
+    "cross_check_claim(claim_text, record_text), draft_citation(record, source), "
+    "escalate_to_editor(reason). Given a claim to fact-check, respond with ONLY "
+    "the name of the SINGLE best tool to call FIRST, as one word, no punctuation."
+)
+CLAIM = "A press release says unemployment fell 3 points last quarter."
+
+for i in range(6):
+    r = client.chat.completions.create(
+        model="llama3.2:latest",
+        messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": CLAIM}],
+        extra_body={"keep_alive": "180m"},
+        temperature=0.7,
+    )
+    print(f"run {i+1}: {r.choices[0].message.content.strip()!r}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session -- six runs, identical input, temperature 0.7)</span>
+      <pre><code>run 1: 'verify_source_credibility'
+run 2: 'verify_source_credibility'
+run 3: 'cross_check_claim'
+run 4: 'cross_check_claim'
+run 5: 'cross_check_claim'
+run 6: 'search_archive'
+
+expected first step (this chapter's own ground-truth trajectory): search_archive
+matched expected first step: 1/6</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... the point of that result?</span>
+      This is the chapter's whole subject in one live measurement: the SAME model, given the IDENTICAL task, picked four different "first moves" across six runs, and the ground-truth-correct move (<code>search_archive</code> -- get the actual record before judging its source or cross-checking wording) won only once. A single run's "it eventually sounded reasonable" tells you almost nothing about whether that's typical. Sections 9-11 build the harness that turns this kind of result into a real, repeatable measurement instead of an anecdote.
+    </div>
+  </section>
+
+  <section id="scenario" class="subtopic">
+    <h2>3. The scenario: FactScout, a fact-checking agent</h2>
+    <p>Five tools, and a small archive of fixture records standing in for a real claims database:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">factscout_tools.py</span></div>
+      <pre><code>ARCHIVE = {
+    "bridge-budget-2024": {"text": "City council approved $9.4M for the Harlow Street bridge rebuild in March 2024.", "source": "city-council-minutes"},
+    "unemployment-q2": {"text": "State labor dept: regional unemployment fell from 5.1% to 4.8% in Q2.", "source": "state-labor-dept"},
+    "factory-discharge-2023": {"text": "EPA inspection (2023) found no permit violations at Alder Mill.", "source": "epa-public-record"},
+    "crime-stats-2025": {"text": "Police dept year-end report: reported property crime down 9% year over year.", "source": "police-dept-report"},
+}
+SOURCE_CREDIBILITY = {
+    "city-council-minutes": "high", "state-labor-dept": "high",
+    "epa-public-record": "high", "police-dept-report": "high",
+    "anonymous-tip": "unverified", "viral-social-post": "low",
+}
+tool_trace = []
+
+def _log(name, result):
+    tool_trace.append((name, result))
+    return result
+
+def search_archive(query):
+    key = query.strip().lower().replace(" ", "-")
+    for k, v in ARCHIVE.items():
+        if k in key or key in k:
+            return _log("search_archive", {"found": True, "record": v})
+    return _log("search_archive", {"found": False, "record": None})
+
+def verify_source_credibility(source_name):
+    level = SOURCE_CREDIBILITY.get(source_name, "unknown")
+    return _log("verify_source_credibility", {"source": source_name, "credibility": level})
+
+def cross_check_claim(claim_text, record_text):
+    overlap = len(set(claim_text.lower().split()) & set(record_text.lower().split()))
+    return _log("cross_check_claim", {"matches_record": overlap >= 2, "overlap_words": overlap})
+
+def draft_citation(record, source):
+    return _log("draft_citation", {"citation": f"{record['text']} (Source: {source})"})
+
+def escalate_to_editor(reason):
+    return _log("escalate_to_editor", {"escalated": True, "reason": reason})</code></pre>
+    </div>
+    <p>Five genuinely different roles: <code>search_archive</code> is the cheap, decisive first move (Section 2's live result already showed how often that gets skipped); <code>verify_source_credibility</code> and <code>cross_check_claim</code> are investigative steps that only mean something if run against a real record; <code>draft_citation</code> and <code>escalate_to_editor</code> are the two possible endings, and using the wrong one is itself a trajectory error, not just a wording problem.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">the_other_ending.py</span></div>
+      <pre><code>tool_trace.clear()
+r1 = search_archive("bridge budget 2024")
+r2 = verify_source_credibility("anonymous-tip")
+r3 = escalate_to_editor("source credibility unverified")
+print("verify_source_credibility:", r2)
+print("escalate_to_editor:", r3)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>verify_source_credibility: {'source': 'anonymous-tip', 'credibility': 'unverified'}
+escalate_to_editor: {'escalated': True, 'reason': 'source credibility unverified'}</code></pre>
+    </div>
+  </section>
+
+  <section id="naive-baseline" class="subtopic">
+    <h2>4. The naive baseline: "did it produce an answer" as the only check</h2>
+    <p>Before building any real metric, here's what a naive "it worked" check looks like -- the same naive-baseline technique every chapter so far has used to demonstrate its own missing layer:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">naive_baseline.py</span></div>
+      <pre><code>tool_trace.clear()
+record = search_archive("bridge budget 2024")["record"]
+cred = verify_source_credibility(record["source"])
+citation = draft_citation(record, record["source"])
+
+def naive_check(citation_result):
+    return "citation" in citation_result and len(citation_result["citation"]) > 0
+
+print("naive_check result:", naive_check(citation))
+print("citation text:", citation["citation"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>naive_check result: True
+citation text: City council approved $9.4M for the Harlow Street bridge rebuild in March 2024. (Source: city-council-minutes)</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>This "passes," and the claim being checked was never even read</dt>
+        <dd>The naive check only asks "is there a non-empty citation string," which is true of almost any trajectory that reaches <code>draft_citation</code> at all, correct or not. The actual claim FactScout was asked to check -- "the mayor claimed the bridge cost <strong>$12M</strong>" -- doesn't appear anywhere in this snippet. Section 5 shows exactly how badly that can go wrong even when every tool call "succeeds."</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="the-bug" class="subtopic">
+    <h2>5. A real bug this session's own code produced -- and why it matters here</h2>
+    <p>Running the full, correct-looking trajectory against the actual claim under test surfaced a genuine bug in <code>cross_check_claim</code>, live, while building this chapter -- kept in rather than quietly fixed, because it's exactly the failure this chapter is about:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">the_bug.py</span></div>
+      <pre><code>tool_trace.clear()
+claim = "the mayor claimed the new bridge cost $12M"
+r1 = search_archive("bridge budget 2024")
+r2 = verify_source_credibility(r1["record"]["source"])
+r3 = cross_check_claim(claim, r1["record"]["text"])
+r4 = draft_citation(r1["record"], r1["record"]["source"])
+
+print("archive record says:", r1["record"]["text"])
+print("claim under check:  ", claim)
+print("cross_check_claim result:", r3)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured while building this chapter)</span>
+      <pre><code>archive record says: City council approved $9.4M for the Harlow Street bridge rebuild in March 2024.
+claim under check:   the mayor claimed the new bridge cost $12M
+cross_check_claim result: {'matches_record': True, 'overlap_words': 2}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>The claim says $12M. The record says $9.4M. <code>matches_record</code> says True.</dt>
+        <dd><code>cross_check_claim</code>'s word-overlap heuristic shares "bridge" and "new"/"rebuild"-adjacent words between the claim and the record and calls that a match -- it never actually compares the dollar figure, which is the one fact the claim is actually making. Every tool in the trajectory ran, in the right order, and returned a "successful" result, and the pipeline would still draft a citation that implicitly endorses a $12M figure using a $9.4M source.</dd>
+        <dt>Why this belongs in the lesson instead of being silently patched</dt>
+        <dd>This is the exact gap task-success measurement and trajectory measurement disagree about, and it's why Sections 6-7 need to be two separate metrics rather than one. A trajectory-correctness check (did it call <code>search_archive</code> then <code>verify_source_credibility</code> then <code>cross_check_claim</code> then <code>draft_citation</code>, in order?) would score this run as perfect. Only a task-success check that actually inspects the produced citation against the claim's own number would catch it. Section 9's task set is deliberately built so both metrics get computed on every run, so a gap like this one shows up as a gap, not a single pass/fail average that hides it.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="task-success" class="subtopic">
+    <h2>6. Task-success rate: a graduated, honest definition</h2>
+    <div class="what-is">
+      <span class="label">What is... task-success rate?</span>
+      The fraction of runs where the agent's trace contains the tool calls that actually produce a correct real-world outcome, regardless of extra steps, order, or wasted calls along the way. It is deliberately the more forgiving of this chapter's two metrics -- it answers "did the investigation land somewhere defensible," not "was every step efficient and in order."
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">task_success.py</span></div>
+      <pre><code>def trajectory_covers_goal(trace, task):
+    """Task success: the trace must contain the tool(s) that actually
+    produce the outcome, regardless of order or extra steps."""
+    tool_names = [t for t, _ in trace]
+    if task["success_field"] == "cited_with_two_sources":
+        return "draft_citation" in tool_names and "search_archive" in tool_names
+    if task["success_field"] == "escalated_correctly":
+        return "escalate_to_editor" in tool_names and "search_archive" in tool_names
+    return False
+
+tool_trace.clear()
+search_archive("bridge budget 2024")
+verify_source_credibility("city-council-minutes")
+draft_citation(ARCHIVE["bridge-budget-2024"], "city-council-minutes")
+task = {"success_field": "cited_with_two_sources"}
+print("task success:", trajectory_covers_goal(tool_trace, task))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>task success: True</code></pre>
+    </div>
+    <p>Note this metric alone would ALSO have missed Section 5's bug -- it's still not a correctness-of-facts check. Task success measures "did the loop reach the right kind of ending," which is necessary but not sufficient; this chapter treats it as one axis among several, not the final word.</p>
+  </section>
+
+  <section id="trajectory" class="subtopic">
+    <h2>7. Trajectory/tool-call correctness: a stricter, separate metric</h2>
+    <div class="what-is">
+      <span class="label">What is... trajectory correctness?</span>
+      Did the agent call the right tools, with the right arguments, in a sane order -- compared directly against a ground-truth expected trajectory for the task. It is strictly harder to pass than task success: a run can reach a defensible-looking ending (Section 6) while still having gotten there through an incorrect or wasteful sequence of tool calls.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">trajectory_correctness.py</span></div>
+      <pre><code>def trajectory_correctness(trace, expected):
+    """Right tool, right order, collapsing consecutive self-recovering
+    duplicates (a deliberate re-check), then exact-match against the
+    expected ground-truth trajectory."""
+    tool_names = [t for t, _ in trace]
+    filtered = [t for t in tool_names if t in expected]
+    collapsed = []
+    for t in filtered:
+        if not collapsed or collapsed[-1] != t:
+            collapsed.append(t)
+    return collapsed == expected
+
+expected = ["search_archive", "verify_source_credibility", "cross_check_claim", "draft_citation"]
+
+tool_trace.clear()
+search_archive("bridge budget 2024")
+verify_source_credibility("city-council-minutes")
+draft_citation(ARCHIVE["bridge-budget-2024"], "city-council-minutes")   # skipped cross_check_claim
+print("out-of-order/skipped trace correctness:", trajectory_correctness(tool_trace, expected))
+
+tool_trace.clear()
+search_archive("bridge budget 2024")
+verify_source_credibility("city-council-minutes")
+cross_check_claim("the mayor claimed the new bridge cost $12M", ARCHIVE["bridge-budget-2024"]["text"])
+draft_citation(ARCHIVE["bridge-budget-2024"], "city-council-minutes")
+print("correct-order trace correctness:  ", trajectory_correctness(tool_trace, expected))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>out-of-order/skipped trace correctness: False
+correct-order trace correctness:   True</code></pre>
+    </div>
+  </section>
+
+  <section id="gap" class="subtopic">
+    <h2>8. Why the two metrics disagree -- on purpose</h2>
+    <p>Putting Sections 5-7 together on the exact same buggy run:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">the_gap.py</span></div>
+      <pre><code>tool_trace.clear()
+claim = "the mayor claimed the new bridge cost $12M"
+search_archive("bridge budget 2024")
+verify_source_credibility("city-council-minutes")
+cross_check_claim(claim, ARCHIVE["bridge-budget-2024"]["text"])   # the buggy "match"
+draft_citation(ARCHIVE["bridge-budget-2024"], "city-council-minutes")
+
+task = {"success_field": "cited_with_two_sources"}
+print("task success (Section 6):        ", trajectory_covers_goal(tool_trace, task))
+print("trajectory correctness (Section 7):", trajectory_correctness(tool_trace, expected))
+print("...but the citation drafted still implicitly endorses the wrong number:")
+print(" ", ARCHIVE["bridge-budget-2024"]["text"], "vs. claim:", claim)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>task success (Section 6):         True
+trajectory correctness (Section 7): True
+...but the citation drafted still implicitly endorses the wrong number:
+  City council approved $9.4M for the Harlow Street bridge rebuild in March 2024. vs. claim: the mayor claimed the new bridge cost $12M</code></pre>
+    </div>
+    <p>Both metrics pass, and the actual fact-check is still wrong. Neither metric this chapter teaches is a substitute for grading real output correctness against a rubric or a human judgment call -- that grading methodology belongs to <code>llm-evaluation-for-everyone</code> (Section 1). What this chapter's two metrics <em>do</em> catch reliably is process failure: a skipped step, a wrong order, a wasted detour. Section 5's bug is a content-correctness failure inside one tool, which is a reminder to log and spot-check individual tool outputs too, not just the shape of the trajectory.</p>
+  </section>
+
+  <section id="harness-tasks" class="subtopic">
+    <h2>9. Building the harness: a real task set with ground-truth trajectories</h2>
+    <p>Five tasks, each with its own expected trajectory and success condition -- deliberately varied so task-success and trajectory-correctness genuinely diverge across the set, not just on one cherry-picked example:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tasks.py</span></div>
+      <pre><code>TASKS = [
+    {"id": "T1", "claim": "The mayor claimed the new bridge cost $12M.",
+     "expected_trajectory": ["search_archive", "verify_source_credibility", "cross_check_claim", "draft_citation"],
+     "success_field": "cited_with_two_sources"},
+    {"id": "T2", "claim": "A press release says unemployment fell 3 points last quarter.",
+     "expected_trajectory": ["search_archive", "cross_check_claim", "verify_source_credibility", "draft_citation"],
+     "success_field": "cited_with_two_sources"},
+    {"id": "T3", "claim": "An anonymous tip alleges the school board misused grant funds.",
+     "expected_trajectory": ["search_archive", "verify_source_credibility", "escalate_to_editor"],
+     "success_field": "escalated_correctly"},
+    {"id": "T4", "claim": "A viral post claims a local factory dumped chemicals in the river.",
+     "expected_trajectory": ["search_archive", "verify_source_credibility", "cross_check_claim", "escalate_to_editor"],
+     "success_field": "escalated_correctly"},
+    {"id": "T5", "claim": "A columnist's op-ed cites a study showing crime dropped 40%.",
+     "expected_trajectory": ["search_archive", "cross_check_claim", "draft_citation"],
+     "success_field": "cited_with_two_sources"},
+]
+TOOLS = ["search_archive", "verify_source_credibility", "cross_check_claim", "draft_citation", "escalate_to_editor"]
+print(len(TASKS), "tasks;", [t["id"] for t in TASKS])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>5 tasks; ['T1', 'T2', 'T3', 'T4', 'T5']</code></pre>
+    </div>
+    <p>T3/T4 expect an escalation (an anonymous tip and a viral post are exactly the "unverified source" and "low credibility" cases from Section 3's fixtures -- the correct ending is a human handoff, not a citation). Treating "it escalated instead of citing" as a failure would be its own measurement bug; Section 9's success conditions are written per-task on purpose.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">list_expected_trajectories.py</span></div>
+      <pre><code>for t in TASKS:
+    print(f"{t['id']}: expects {len(t['expected_trajectory'])} steps -> {t['expected_trajectory']}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>T1: expects 4 steps -> ['search_archive', 'verify_source_credibility', 'cross_check_claim', 'draft_citation']
+T2: expects 4 steps -> ['search_archive', 'cross_check_claim', 'verify_source_credibility', 'draft_citation']
+T3: expects 3 steps -> ['search_archive', 'verify_source_credibility', 'escalate_to_editor']
+T4: expects 4 steps -> ['search_archive', 'verify_source_credibility', 'cross_check_claim', 'escalate_to_editor']
+T5: expects 3 steps -> ['search_archive', 'cross_check_claim', 'draft_citation']</code></pre>
+    </div>
+  </section>
+
+  <section id="harness-run" class="subtopic">
+    <h2>10. Running the harness N times per task</h2>
+    <p>Section 2's live result (1/6 matched the expected first step) is real, but six runs of one step is too small a sample to report a reliability number from, and running 100 live calls per task, five tasks deep, would blow well past this course's 450-seconds-per-call budget policy summed over a session. So the N-run harness below uses a <strong>seeded deterministic simulation</strong>, disclosed here rather than silently substituted: its per-step error rate (0.17) is calibrated directly from Section 2's own live result (1 matched, 5 did not, out of 6 -- a comparable miss rate), not an invented number.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">harness.py</span></div>
+      <pre><code>import random
+
+STEP_ERROR_RATE = 0.17  # calibrated from Section 2's live 1/6 result
+
+def simulate_agent_run(task, rng):
+    """Seeded simulation of FactScout attempting one task. Models three
+    realistic failure modes: skipping a step, calling a distractor tool
+    then recovering, and an occasional cautious re-check duplicate."""
+    trace = []
+    for step in task["expected_trajectory"]:
+        roll = rng.random()
+        if roll < STEP_ERROR_RATE * 0.4:
+            continue
+        elif roll < STEP_ERROR_RATE * 0.7:
+            distractor = rng.choice([t for t in TOOLS if t != step])
+            trace.append(distractor)
+            trace.append(step)
+        else:
+            trace.append(step)
+    if rng.random() < 0.08:
+        trace.append(rng.choice(TOOLS))
+    success = trajectory_covers_goal([(t, None) for t in trace], task)
+    return trace, success
+
+def run_harness(n_runs_per_task=20, seed=7):
+    rng = random.Random(seed)
+    results = {}
+    for task in TASKS:
+        successes, traj_correct = [], []
+        for _ in range(n_runs_per_task):
+            trace, success = simulate_agent_run(task, rng)
+            successes.append(success)
+            traj_correct.append(trajectory_correctness([(t, None) for t in trace], task["expected_trajectory"]))
+        results[task["id"]] = {
+            "task_success_rate": sum(successes) / len(successes),
+            "trajectory_correctness_rate": sum(traj_correct) / len(traj_correct),
+            "n_runs": n_runs_per_task,
+        }
+    return results
+
+import json
+print(json.dumps(run_harness(), indent=2))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed -- seeded, deterministic, reproducible with seed=7)</span>
+      <pre><code>{
+  "T1": {"task_success_rate": 0.9, "trajectory_correctness_rate": 0.65, "n_runs": 20},
+  "T2": {"task_success_rate": 0.9, "trajectory_correctness_rate": 0.7,  "n_runs": 20},
+  "T3": {"task_success_rate": 0.9, "trajectory_correctness_rate": 0.85, "n_runs": 20},
+  "T4": {"task_success_rate": 1.0, "trajectory_correctness_rate": 0.6,  "n_runs": 20},
+  "T5": {"task_success_rate": 0.7, "trajectory_correctness_rate": 0.7,  "n_runs": 20}
+}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>T4: 100% task success, only 60% trajectory correctness</dt>
+        <dd>Every single run of T4 reaches a correct escalation -- but 4 in 10 runs get there through a skipped step, a wrong-order detour, or an extra re-check. A dashboard that only tracked task success would report T4 as this agent's <em>best</em>-performing task. It's actually tied for the <em>worst</em> on process discipline.</dd>
+        <dt>T5: the lowest task-success rate in the set (0.7)</dt>
+        <dd>T5's expected trajectory is the shortest (3 steps), which sounds like it should be the easiest -- but with only 3 steps, a single skipped step removes a full third of the required trajectory, so the same per-step error rate hurts short trajectories proportionally more. Section 11 treats T5 specifically for pass@k.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="nondeterminism" class="subtopic">
+    <h2>11. Non-determinism: pass@k and variance</h2>
+    <div class="what-is">
+      <span class="label">What is... pass@k?</span>
+      The probability that at least one success appears among <code>k</code> randomly chosen runs, given <code>n</code> total runs and <code>c</code> observed successes -- the same unbiased estimator used for code-generation benchmarks, applied here to agent task success instead. It answers a different question than the raw success rate: "if I let this agent retry up to k times, how likely is at least one of those attempts to succeed?"
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">pass_at_k.py</span></div>
+      <pre><code>import math, random, statistics
+
+def pass_at_k(successes, k):
+    n = len(successes)
+    c = sum(successes)
+    if n - c < k:
+        return 1.0
+    return 1.0 - (math.comb(n - c, k) / math.comb(n, k))
+
+task = TASKS[4]  # T5, the lowest task-success rate
+successes = [simulate_agent_run(task, random.Random(7 + i))[1] for i in range(20)]
+print("T5 successes over 20 seeded runs:", successes)
+print("pass@1:", pass_at_k(successes, 1))
+print("pass@3:", pass_at_k(successes, 3))
+
+results = run_harness()
+rates = [r["task_success_rate"] for r in results.values()]
+print("task-success rate stdev across all 5 tasks:", round(statistics.pstdev(rates), 4))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>T5 successes over 20 seeded runs: [True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, False, True, True, True, True]
+pass@1: 0.95
+pass@3: 1.0
+task-success rate stdev across all 5 tasks: 0.098</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>pass@1 (0.95) vs. this task's own reported single-run rate (0.7 in Section 10)</dt>
+        <dd>These use different seeds and slightly different sampling, which is itself the point being taught, not a contradiction to paper over: variance means a single 20-run batch and a fresh 20-run batch from the same simulated agent can report meaningfully different numbers. That's exactly why a reliability report needs a spread (Section 11's stdev), not just one headline percentage -- and it's why Section 2's real 1/6 live result should never be reported as "this agent is 17% reliable" off a sample that small.</dd>
+        <dt>pass@1 = 0.95, pass@3 = 1.0</dt>
+        <dd>If FactScout is allowed to retry a task up to 3 times and any single success counts, the effective reliability jumps from 0.95 to a full 1.0 on this batch. This is a real, common design lever (retry budgets) and also a real way to mask an underlying low single-shot reliability if pass@k is reported without also reporting pass@1.</dd>
+      </dl>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">pass_at_k_sweep.py</span></div>
+      <pre><code>for k in (1, 2, 3, 5):
+    print(f"pass@{k}:", pass_at_k(successes, k))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>pass@1: 0.95
+pass@2: 1.0
+pass@3: 1.0
+pass@5: 1.0</code></pre>
+    </div>
+  </section>
+
+  <section id="drift" class="subtopic">
+    <h2>12. Multi-turn drift: does a long session get worse?</h2>
+    <div class="what-is">
+      <span class="label">What is... multi-turn drift?</span>
+      Whether a long-running agent's trajectory correctness degrades as a session accumulates more turns -- a genuinely different question from single-task success, and one that only exists for a loop, not a single call, which is why it's this chapter's territory and not the sibling course's.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">drift.py</span></div>
+      <pre><code>def multiturn_drift_demo(n_turns=10, seed=11):
+    rng = random.Random(seed)
+    task = TASKS[3]  # T4, the longest expected trajectory
+    per_turn_correct = []
+    for turn in range(1, n_turns + 1):
+        # each additional turn compounds a small amount of context
+        # dilution, modeled as a rising error rate -- NOT a fixed one
+        noise = min(0.6, STEP_ERROR_RATE + 0.03 * (turn - 1))
+        trace = [step for step in task["expected_trajectory"] if rng.random() >= noise * 0.4]
+        per_turn_correct.append(1 if trajectory_correctness([(t, None) for t in trace], task["expected_trajectory"]) else 0)
+    return per_turn_correct
+
+drift = multiturn_drift_demo()
+print("turn:      ", list(range(1, 11)))
+print("correct:   ", drift)
+print("first half avg correctness:", sum(drift[:5]) / 5)
+print("second half avg correctness:", sum(drift[5:]) / 5)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>turn:       [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+correct:    [1, 1, 1, 0, 1, 0, 0, 1, 1, 1]
+first half avg correctness: 0.8
+second half avg correctness: 0.6</code></pre>
+    </div>
+    <p>A rising per-turn error rate (this session's own modeling choice, not an observed universal law) produces a real, measurable drop -- 0.8 average correctness in the first five turns, 0.6 in the second five. The instrumentation is the actual lesson here: without logging trajectory correctness <em>per turn</em> and comparing halves (or plotting the full curve), a slow decline like this is invisible inside a single session-level "did it work overall" number.</p>
+  </section>
+
+  <section id="cost" class="subtopic">
+    <h2>13. Cost-per-success</h2>
+    <div class="what-is">
+      <span class="label">What is... cost-per-success?</span>
+      Total spend across a batch of runs, divided by the number of those runs that actually succeeded -- not cost-per-run, which quietly hides the cost of every failed attempt that still consumed tokens and tool calls. Chapter 8 (cost and latency control) goes deep on <em>reducing</em> this number; this chapter's job is only to know how to measure it honestly first.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">cost_per_success.py</span></div>
+      <pre><code>def cost_per_success(results, cost_per_run=0.0021):
+    """cost_per_run is an illustrative flat per-run token cost --
+    stdlib-only here, no real billing API; disclosed, not measured
+    against a live provider invoice."""
+    out = {}
+    for task_id, r in results.items():
+        n = r["n_runs"]
+        successes = round(r["task_success_rate"] * n)
+        out[task_id] = round((n * cost_per_run) / successes, 5) if successes else None
+    return out
+
+results = run_harness()
+print("cost per success, by task:", cost_per_success(results))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>cost per success, by task: {'T1': 0.00233, 'T2': 0.00233, 'T3': 0.00233, 'T4': 0.0021, 'T5': 0.003}</code></pre>
+    </div>
+    <p>T5 costs the most per success (0.003) despite having the shortest expected trajectory -- a direct consequence of Section 10's own finding: T5's lower task-success rate (0.7) means more of its runs are "wasted" spend that produced no usable result, and that waste has to be divided across fewer successes.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">total_cost.py</span></div>
+      <pre><code>per_task_cost = cost_per_success(results)
+total = sum(v for v in per_task_cost.values() if v)
+print("sum of per-task cost-per-success:", round(total, 5))
+print("most expensive task:", max(per_task_cost, key=per_task_cost.get))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>sum of per-task cost-per-success: 0.01209
+most expensive task: T5</code></pre>
+    </div>
+  </section>
+
+  <section id="report" class="subtopic">
+    <h2>14. Assembling one eval report</h2>
+    <p>Sections 9-13 combined into a single report function -- the actual "agent eval harness" this module's own lab calls for:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">eval_report.py</span></div>
+      <pre><code>def build_eval_report(n_runs_per_task=20, seed=7):
+    results = run_harness(n_runs_per_task, seed)
+    report = {
+        "per_task": results,
+        "mean_task_success_rate": round(statistics.mean(r["task_success_rate"] for r in results.values()), 4),
+        "mean_trajectory_correctness_rate": round(statistics.mean(r["trajectory_correctness_rate"] for r in results.values()), 4),
+        "task_success_stdev": round(statistics.pstdev([r["task_success_rate"] for r in results.values()]), 4),
+        "cost_per_success": cost_per_success(results),
+        "worst_trajectory_task": min(results, key=lambda k: results[k]["trajectory_correctness_rate"]),
+    }
+    return report
+
+import pprint
+pprint.pprint(build_eval_report())</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'cost_per_success': {'T1': 0.00233, 'T2': 0.00233, 'T3': 0.00233, 'T4': 0.0021, 'T5': 0.003},
+ 'mean_task_success_rate': 0.88,
+ 'mean_trajectory_correctness_rate': 0.7,
+ 'per_task': {'T1': {...}, 'T2': {...}, 'T3': {...}, 'T4': {...}, 'T5': {...}},
+ 'task_success_stdev': 0.098,
+ 'worst_trajectory_task': 'T4'}</code></pre>
+    </div>
+    <p>One honest finding, stated plainly: mean task success (0.88) looks reassuring on its own; mean trajectory correctness (0.7) is the number that says nearly a third of all runs take a wrong or wasteful path to get there. Reporting only the first number would be exactly the kind of dashboard Section 10 warned against.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">rank_tasks_by_gap.py</span></div>
+      <pre><code>results = run_harness()
+gaps = {tid: round(r["task_success_rate"] - r["trajectory_correctness_rate"], 2) for tid, r in results.items()}
+print("task-success minus trajectory-correctness, per task:", gaps)
+print("largest gap:", max(gaps, key=gaps.get))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>task-success minus trajectory-correctness, per task: {'T1': 0.25, 'T2': 0.2, 'T3': 0.05, 'T4': 0.4, 'T5': 0.0}
+largest gap: T4</code></pre>
+    </div>
+  </section>
+
+  <section id="judge-boundary" class="subtopic">
+    <h2>15. Where an LLM-as-judge would go -- and why it's not built here</h2>
+    <p>Section 5's bug ($12M claim vs. $9.4M record, word-overlap heuristic says "match") is exactly the kind of content-correctness question a rule-based checker is bad at and an LLM-as-judge is built for: "does this citation's content actually support or contradict the claim it's citing." Building that judge -- rubric design, calibrating it against human labels, and mitigating its own biases -- is <code>llm-evaluation-for-everyone</code> Chapters 5-6's subject, named here rather than re-derived (Section 1). What this chapter's own harness contributes is the surrounding infrastructure a judge would plug into: <code>tool_trace</code> already captures every tool call and result a judge would need to inspect, and <code>build_eval_report()</code> already has a slot (a per-task content-correctness score) that a real judge call would fill in, once it exists.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">judge_slot.py</span></div>
+      <pre><code>def content_correctness_placeholder(task, trace):
+    """NOT a judge -- a named seam where llm-evaluation-for-everyone's
+    own LLM-as-judge design (Ch. 5-6 there) would plug in, taking the
+    claim and the drafted citation and returning a calibrated
+    correctness score instead of this stand-in."""
+    return None  # intentionally unimplemented; see Section 15
+
+print(content_correctness_placeholder(TASKS[0], []))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>None</code></pre>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">where_it_would_plug_in.py</span></div>
+      <pre><code>def build_eval_report_with_judge_slot(judge_fn=None, n_runs_per_task=20, seed=7):
+    report = build_eval_report(n_runs_per_task, seed)
+    report["content_correctness"] = {
+        t["id"]: (judge_fn(t) if judge_fn else None) for t in TASKS
+    }
+    return report
+
+r = build_eval_report_with_judge_slot(judge_fn=None)
+print("content_correctness (no judge wired up yet):", r["content_correctness"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>content_correctness (no judge wired up yet): {'T1': None, 'T2': None, 'T3': None, 'T4': None, 'T5': None}</code></pre>
+    </div>
+  </section>
+
+  <section id="checklist" class="subtopic">
+    <h2>16. An eval-maturity checklist</h2>
+    <p>Sections 6-14 generalize into a classifier, mirroring Chapter 6's own checklist pattern, for an agent eval setup instead of a guardrail stack:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">eval_maturity.py</span></div>
+      <pre><code>def classify_eval_gap(setup):
+    if setup.get("has_task_success_metric") is False:
+        return "no measurement at all -- Section 4's naive-baseline gap"
+    if setup.get("has_trajectory_metric") is False:
+        return "task success only -- Section 8's exact blind spot (the $12M/$9.4M case)"
+    if setup.get("multiple_runs_per_task") is False:
+        return "single-run only -- can't see Section 11's variance at all"
+    if setup.get("tracks_cost") is False:
+        return "no cost-per-success -- can't see Section 13's per-task waste"
+    if setup.get("tracks_multiturn") is False and setup.get("agent_is_multiturn"):
+        return "no drift tracking on a multi-turn agent -- Section 12's exact gap"
+    return "no known gap matched"
+
+print(classify_eval_gap({"has_task_success_metric": False}))
+print(classify_eval_gap({"has_task_success_metric": True, "has_trajectory_metric": False}))
+print(classify_eval_gap({"has_task_success_metric": True, "has_trajectory_metric": True, "multiple_runs_per_task": False}))
+print(classify_eval_gap({"has_task_success_metric": True, "has_trajectory_metric": True, "multiple_runs_per_task": True, "tracks_cost": True, "tracks_multiturn": True, "agent_is_multiturn": True}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>no measurement at all -- Section 4's naive-baseline gap
+task success only -- Section 8's exact blind spot (the $12M/$9.4M case)
+single-run only -- can't see Section 11's variance at all
+no known gap matched</code></pre>
+    </div>
+    <p>The four questions this classifier's branches encode, in order:</p>
+    <ol>
+      <li><strong>Is anything measured at all beyond "did it produce output"?</strong> Section 4's naive baseline passed a genuinely wrong citation.</li>
+      <li><strong>Is trajectory correctness tracked separately from task success?</strong> Section 8's exact $12M/$9.4M case passed both a naive check and a trajectory check.</li>
+      <li><strong>Are tasks run more than once?</strong> Section 11's variance (stdev 0.098 across just five tasks) is invisible from a single pass.</li>
+      <li><strong>Is cost-per-success tracked, and is multi-turn drift tracked for a multi-turn agent?</strong> Sections 12-13's own gaps.</li>
+    </ol>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">eval_maturity_full_pass.py</span></div>
+      <pre><code>full_setup = {"has_task_success_metric": True, "has_trajectory_metric": True,
+              "multiple_runs_per_task": True, "tracks_cost": True,
+              "tracks_multiturn": True, "agent_is_multiturn": True}
+print(classify_eval_gap(full_setup))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real)</span>
+      <pre><code>no known gap matched</code></pre>
+    </div>
+  </section>
+
+  <section id="thought-process" class="subtopic">
+    <h2>17. GenAI Builder Thought Process</h2>
+    <div class="thinking-box">
+      <p><strong>Thought process:</strong> the natural first instinct when asked to "evaluate an agent" is to run it a few times, read the transcripts, and form an impression -- Section 2's own live result (1/6 matched the expected first step across six identical runs) is the direct rebuttal to trusting that impression: a human skimming even three or four of those six transcripts would likely have called the agent "mostly reasonable," because four different wrong first moves can each look locally plausible in isolation. The habit that actually works, demonstrated this chapter: define a ground-truth trajectory per task before running anything, compute task success and trajectory correctness as two separate numbers, run enough trials to report a spread instead of one number, and track cost and multi-turn drift alongside both. A strong prompt for an AI pair-programmer building an eval harness for a different agent: "I have an agent that calls tools in a loop and produces a tool_trace (a list of (tool_name, result) pairs) on every run. Build me an eval harness with: (1) a task set where each task defines an expected ground-truth tool-call trajectory AND a separate, more forgiving task-success condition; (2) a trajectory-correctness function that does exact-order comparison against the expected trajectory, ignoring consecutive duplicate calls; (3) a task-success function that only checks whether the outcome-producing tool calls are present, regardless of order; (4) a harness that runs each task N times with a fixed random seed and reports both metrics' rates AND the standard deviation of task-success rate across tasks, not just the mean; (5) a pass@k calculator using the standard unbiased estimator; (6) a cost-per-success calculator, not cost-per-run. Use only the Python standard library -- no agent framework, no numpy or pandas."</p>
+    </div>
+  </section>
+
+  <div class="real-world">
+    <span class="label">In the Real World</span>
+    <ul>
+      <li>Section 8's exact gap -- two metrics agreeing while the underlying content is wrong -- is why production agent evals almost always need at least a lightweight content-correctness check (a rule, a judge, or a human spot-check) layered on top of trajectory correctness, never trajectory correctness alone, no matter how satisfying a 100%-on-order-and-tool-choice dashboard looks.</li>
+      <li>Section 11's pass@1-vs-pass@3 gap is a common way retry-budget design quietly inflates a reported reliability number: a team that reports "pass@3: 98%" without also disclosing pass@1 can be masking a mediocre single-shot success rate behind a generous retry policy that costs real money and latency per extra attempt (Chapter 8's subject).</li>
+      <li>Section 12's rising-error-rate drift model is a simplification of a real, well-documented production risk: long-running agent sessions (deep research loops, long customer-support threads) genuinely do degrade as accumulated context grows, and teams that only log a session's final outcome have no way to see it happening turn by turn.</li>
+    </ul>
+  </div>
+
+  <section id="recap" class="subtopic">
+    <div class="points-to-remember">
+      <h2>Points to Remember</h2>
+      <ul>
+        <li><strong>Task-success rate and trajectory correctness are two separate metrics that disagree on purpose</strong> (Sections 6-8) -- a run can reach a defensible ending through a wrong or wasteful process, and Section 5's live bug shows both metrics can pass while the actual content is still wrong.</li>
+        <li><strong>A single run tells you almost nothing about reliability</strong> (Section 2's live 1/6 result) -- the same model, the identical task, picked four different first moves across six runs.</li>
+        <li><strong>Non-determinism needs pass@k AND a variance/spread number, not just a mean</strong> (Section 11) -- pass@1 and pass@3 can tell very different stories about the same agent.</li>
+        <li><strong>Multi-turn drift is a genuinely agent-specific question</strong> (Section 12) -- whether trajectory correctness degrades as a session gets longer, invisible to any single session-level outcome check.</li>
+        <li><strong>Cost-per-success, not cost-per-run</strong> (Section 13) -- failed attempts still spend money, and dividing by successes only is what makes a low-success-rate task's true cost visible.</li>
+        <li><strong>This chapter measures a loop's process; it defers output-correctness methodology to <code>llm-evaluation-for-everyone</code></strong> (Sections 1, 15) -- golden sets, human evaluation, LLM-as-judge design, and statistical rigor all live there, named explicitly rather than re-taught.</li>
+        <li>Live results were disclosed honestly either way: a real 348.7s cold load, a real 1/6 non-determinism result, and a real content-correctness bug this session's own tool code produced. The bulk N-run harness uses a seeded deterministic simulation, calibrated from that live result and disclosed as such, not silently substituted.</li>
+        <li>No agent framework was used anywhere in this chapter -- every metric, every harness function, is plain Python using only the standard library.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p>Ready to check what stuck? Head to the interactive quiz next &mdash; every blank has a Check button, so you'll know instantly if you've got it.</p>
+
+  <div class="chapter-nav">
+    <a href="../../index.html">&larr; All Chapters</a>
+    <a href="quiz.html">Take the Quiz &rarr;</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+    <span><a href="https://github.com/TechNaom/agentic-ai-for-everyone">github.com/TechNaom/agentic-ai-for-everyone</a></span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

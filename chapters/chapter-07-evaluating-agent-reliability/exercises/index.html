@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluating Agent Reliability Exercises — Agentic AI for Everyone</title>
+<meta name="description" content="Hands-on exercises for Evaluating Agent Reliability.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-07">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../quiz.html">&larr; Back to the quiz</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 7 Exercises</span>
+    <span class="reading-time">~40 min, hands-on</span>
+  </div>
+  <h1>Exercises: Evaluating Agent Reliability</h1>
+  <p>
+    These exercises use a second scenario, deliberately different from
+    the lesson's Greywick Dispatch/FactScout hook:
+    <strong>Larkmoor Archive Service</strong>, a fictional
+    historical-records office. Its research agent,
+    <strong>RecordScout</strong>, can search a property registry,
+    check a record's authenticity, cross-reference a deed, generate a
+    research report, or escalate to a human archivist. Applying this
+    chapter's eval concepts to a fresh scenario is the point.
+  </p>
+
+  <div class="what-is">
+    <span class="label">Exercise standard</span>
+    Seven tasks total, worth 19 points. Five are marked production-gear
+    — a real <code>trajectory_correctness</code> check, a real
+    <code>task_success</code> check, a real <code>pass_at_k</code>
+    estimator, a real eval-gap diagnosis function, and a real
+    <code>cost_per_success</code> calculator, not just concept recall.
+  </div>
+
+  <h2>Tasks</h2>
+  <ol>
+    <li><strong>Map facts to eval concepts</strong> — assign task success, trajectory correctness, pass@k, cost-per-success, or multi-turn drift to five RecordScout facts.</li>
+    <li><strong>Dependency reasoning</strong> — does a task-success check that only verifies tool presence catch a content error inside a tool's own output?</li>
+    <li><strong>(Production-gear) <code>trajectory_correctness</code></strong> — exact-order comparison against a ground-truth trajectory.</li>
+    <li><strong>(Production-gear) <code>task_success</code></strong> — a forgiving, order-independent tool-presence check.</li>
+    <li><strong>(Production-gear) <code>pass_at_k</code></strong> — the unbiased pass@k estimator.</li>
+    <li><strong>(Production-gear) <code>diagnose_eval_gap</code></strong> — classify an eval setup's biggest blind spot.</li>
+    <li><strong>(Production-gear) <code>cost_per_success</code></strong> — cost divided by successes, not total runs.</li>
+  </ol>
+
+  <p>Full instructions and the scoring rubric are in <code>README.md</code> alongside <code>starter.py</code> (fill in the <code>TODO</code>s) and <code>solution.py</code> (the reference, scores 19/19).</p>
+
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+
+  <div class="chapter-nav">
+    <a href="ai-paired.html">Now Pair With an AI &rarr;</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 7 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose a layered eval-reporting bug yourself, then critique an AI's plausible-but-flawed answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-07">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 7 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, not in the eight above: a team's agent, <strong>"ClaimBot"</strong>, processes insurance-adjustment requests (the specific company is left unnamed on purpose, the same way Chapter 6's EscrowBot scenario did). Two real, layered problems were found in the same eval report. First: ClaimBot's dashboard reported "94% success rate" from a batch of 50 runs, but that number was computed from a <em>task-success</em> check only (did a claim outcome get produced at all) -- nobody had ever measured trajectory correctness, so a large fraction of those "successful" runs had actually skipped the required fraud-flag check entirely and gotten lucky on claims that didn't need it. Second, in a completely different part of the same report: the team's pass@5 number (98%) was presented as "the reliability rate" in a leadership slide, with the underlying pass@1 (61%) never mentioned anywhere in the deck.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>Before reading further: name the two distinct problems here using this chapter's vocabulary (one is about which of two metrics was measured at all; the other is about which of two pass@k numbers was reported) and write your own fix for each. There's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> this scenario has two layered problems (a missing metric AND a misleading choice of which number to headline), so the prompt needs to ask the AI to identify both, not just one -- a shallow prompt like "is 94% success rate good?" invites an answer that takes the reported number at face value instead of questioning what it actually measured.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here's ClaimBot's eval report... identify every distinct measurement problem in this report, not just one..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice and compare its answer against the critique below.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Here's my agent ClaimBot's eval report: [paste the scenario above]. Identify EVERY distinct measurement problem in this report, not just the first one you notice -- there are two -- and name each using this chapter's vocabulary (task success vs. trajectory correctness being conflated into one number, versus reporting a high pass@k without also disclosing pass@1). Propose a concrete, specific fix for each, including exactly what new number should be added to the dashboard and the slide deck.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <div class="what-is">
+    <span class="label">What a complete diagnosis catches</span>
+    <ul>
+      <li><strong>Problem 1 (task success only, no trajectory correctness):</strong> a 94% "success rate" that only checks whether a claim outcome was produced says nothing about whether the fraud-flag check actually ran when it should have -- exactly the T4 pattern this chapter's own Section 10 demonstrated (100% task success, only 60% trajectory correctness). The fix is to compute and report both rates, separately, per task type.</li>
+      <li><strong>Problem 2 (pass@5 without pass@1):</strong> headlining "98% reliable" from pass@5 while a 61% pass@1 sits unreported in the raw data is exactly the masking risk this chapter's own Section 11 named directly. The fix is a standing reporting rule: pass@1 is always shown alongside any higher-k number, never replaced by it.</li>
+      <li>A shallow AI answer often catches only Problem 2 (the more obviously "misleading slide" issue) and misses that Problem 1 is a structural measurement gap -- the team never built a trajectory-correctness check at all, not just chose not to report it.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's answer against your own Step 1 notes and the two-problem breakdown above. Did it catch both? Did it propose the right fix for each -- adding the missing metric, and fixing the reporting rule -- or did it conflate the two into one vague "be more transparent with metrics" suggestion?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice Bank</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

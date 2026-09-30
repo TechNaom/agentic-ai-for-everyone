@@ -1,14 +1,18 @@
 # PROJECT_STATE.md — Agentic AI for Everyone
 
-Last updated: 2026-09-28 (Session 6 — Chapter 6, "Guardrails and Safety
-for Autonomous Agents," complete and live, **closing Module 3 — Making
-Agents Reliable**. Modules 1, 2, and 3 (Chapters 1-6) are now all fully
-complete. This session also extended Chapter 4's L2 Assisted project in
-place a third and final time: `run_visit_session()` in
-`chapters/chapter-04-memory-and-state/project/` now calls a real
-`guardrail_check_booking()` check immediately before
-`schedule_followup()` is dispatched — the L2 project is now complete
-across Chapters 4-6 (memory, reflection, guardrails). Chapters 7-13 are
+Last updated: 2026-09-30 (Session 7 — Chapter 7, "Evaluating Agent
+Reliability," complete and live, **opening Module 4 — Measuring and
+Controlling Agents** (In Progress, not Complete — Chapter 8 still has
+to ship). Modules 1, 2, and 3 (Chapters 1-6) remain fully complete.
+This session also closed a pre-existing gap flagged but never built by
+any prior session: `assessments/module-assessments/` was empty across
+the entire repo despite Modules 1-3 being complete for several
+sessions; Modules 1-3's own combined assessments were built this
+session, reusing each module's real, already-tested chapter functions.
+Module 4's own combined assessment is explicitly NOT built yet — it
+spans Chapters 7 AND 8, and is scheduled for Chapter 8's own session
+below, following the exact precedent of building a multi-chapter
+module assessment at the module's closing chapter. Chapters 8-13 are
 scaffolded (`.gitkeep`'d directories), not yet built. Nothing has been
 pushed to GitHub — all work is local-only, matching every prior
 session's explicit instructions and this session's own.)
@@ -868,100 +872,247 @@ instruction, completing the L2 project across Chapters 4-6.
   `docs/curriculum/index.html` and root `index.html` both reflect
   Chapter 6 live, Module 3 complete.
 
-## Next Recommended Task: Chapter 7 — "Evaluating Agent Reliability"
+
+## Session 7 — Chapter 7, "Evaluating Agent Reliability" (2026-09-30)
+
+Built cold, from this file's own "Next Recommended Task" brief, with
+one important extra: Modules 1-3's own combined assessments were built
+this session, closing a pre-existing gap flagged but never built by
+any prior session.
+
+1. Read `docs/discovery-notes.md` Section 1.4 first, confirming this
+   chapter's boundary against `llm-evaluation-for-everyone`: task
+   success, trajectory/tool-call correctness, multi-turn drift, and
+   non-determinism are this chapter's own territory; golden-set
+   construction, human evaluation, LLM-as-judge design, and
+   statistical rigor are named by chapter number and deferred to that
+   sibling course, confirmed against its own current
+   `docs/curriculum/CURRICULUM_MAP.md` rather than assumed from memory.
+2. Pre-warmed Ollama. The warm-up call itself took its full cold-load
+   time (348.7s total, ~345.5s of that just loading the model) —
+   disclosed exactly via the real `total_duration`/`load_duration`
+   fields, comfortably inside the 450s budget but far from instant.
+   Once warm, calls ranged 0.56s-14.04s.
+3. **A real, unscripted live-model non-determinism test became this
+   chapter's central worked example**: the identical fact-check task
+   was sent to `llama3.2:latest` six separate times, asking only which
+   tool it would call first. Results: `verify_source_credibility`,
+   `verify_source_credibility`, `cross_check_claim`, `cross_check_
+   claim`, `cross_check_claim`, `search_archive` — only the LAST run
+   matched the correct ground-truth first step. This single result
+   became Section 2's centerpiece and the calibration source for the
+   bulk N-run harness's error-rate parameter.
+4. **A real bug in this session's own tool code became a second,
+   unplanned teaching moment, kept in rather than quietly patched**:
+   `cross_check_claim()`'s word-overlap heuristic reported that a claim
+   saying "the bridge cost $12M" MATCHED an archive record that
+   actually said "$9.4M." Built into Sections 5-8 and 15 as the
+   concrete demonstration that task success and trajectory correctness
+   can both report a pass while the underlying content is still wrong
+   — and the exact seam where `llm-evaluation-for-everyone`'s own
+   LLM-as-judge methodology would need to take over.
+5. Built the fresh lesson scenario, Greywick Dispatch/FactScout (a
+   fact-checking agent: search an archive, verify source credibility,
+   cross-check a claim, draft a citation, or escalate to a human
+   editor), testing every deterministic code example for real in a
+   scratch directory before writing it into `lesson.html` — task
+   success (Section 6), trajectory correctness (Section 7), a seeded
+   N-run harness (Sections 9-10), pass@k and variance (Section 11),
+   multi-turn drift (Section 12), cost-per-success (Section 13), one
+   combined eval report (Section 14), a named seam for a future
+   LLM-as-judge (Section 15), and an eval-maturity checklist
+   (Section 16).
+6. Verified lesson density: **61 lines** match `<pre\|<code` via
+   `grep -c '<pre\|<code' lesson.html` (above the 60+ requirement,
+   comparable to Chapter 6's own 62), **121 total occurrences** via
+   `grep -o '<pre\|<code' | wc -l` (Chapter 6: 127).
+7. Built the full file set matching Chapter 6's exactly: `quiz.html`
+   (10 fill-in-the-blank), `interview-questions.html` + `.md` (10
+   questions across 4 levels), `exercises/` (Larkmoor Archive
+   Service/RecordScout, 7 tasks, 19 points, `ai-paired.html` using a
+   third scenario, Thornmere Public Transit/TransitScout), `practice/`
+   (8 scenarios, `ai-paired.html` using a ninth, unnamed "ClaimBot"
+   scenario).
+8. Built Chapter 7's own `project/` as a REAL, standalone chapter
+   mini-project (per the brief: Chapter 7 returns to a full scaffold,
+   unlike Chapters 5-6's signposts) — Emberlyn Underwriting/
+   TriageScout, three TODOs (`task_success`, `trajectory_correctness`,
+   `run_harness`) mirroring the lesson's own three pillars.
+   `solution.py` verified 8/8; `starter.py` verified 2/8 with no
+   crash. No L2/L3/L4 numbered project work was touched — the L2
+   project closed at Chapter 6, and the L3 Independent project ships
+   after Chapter 8, not this chapter.
+9. **Built Modules 1-3's combined module assessments**, closing a
+   pre-existing gap flagged but never built by any prior session (see
+   `quality-audits/chapter-07-audit.md`'s decision section for the
+   full reasoning). Each reuses the EXACT, already-tested functions
+   from that module's own two chapters, loaded directly from their
+   real `project/solution.py` files via `importlib`, applied to a
+   small combined scenario — following `ai-engineering-for-everyone`'s
+   own `module-4-cost-latency-reliability-engineering-exercise` format
+   (confirmed by reading that file directly, not assumed from memory).
+   Module 1: 4/4 on `solution.py`, 0/4 on `starter.py`. Module 2: 5/5
+   on `solution.py`, 0/5 on `starter.py` (and confirmed its scratch
+   memory file is cleaned up after each run). Module 3: 3/3 on
+   `solution.py`, 0/3 on `starter.py`. **Module 4's own assessment was
+   explicitly NOT built** — it spans Chapters 7 AND 8, and is
+   scheduled for Chapter 8's own session below.
+10. Wrote `quality-audits/chapter-07-audit.md`, extending (not
+    restarting) `chapter-06-audit.md`'s fictional-org exclusion list.
+    Four new orgs this chapter: **Greywick Dispatch** (lesson;
+    FactScout), **Larkmoor Archive Service** (exercises; RecordScout),
+    **Thornmere Public Transit** (exercises `ai-paired.html`;
+    TransitScout), **Emberlyn Underwriting** (project; TriageScout) —
+    plus "ClaimBot"'s unnamed employer (practice `ai-paired.html`).
+11. Wired Chapter 7 into `assets/chapters-data.js` (real `path` added,
+    Chapters 8-13 confirmed still without one), `docs/curriculum/
+    index.html` (Chapter 7 card converted to a live link, Module 4
+    feature card marked "In Progress," NOT "Complete" — Chapter 8
+    still has to ship), and root `index.html` (`hero-stats` updated to
+    7/13 chapters; module-complete count correctly held at 3/6, not
+    incremented).
+12. Ran `bash scripts/local_check.sh < /dev/null` for the whole repo —
+    all 6 checks passed clean. (Note: this script's own glob does not
+    cover `assessments/module-assessments/*/solution.py`; those three
+    were verified manually instead.)
+13. Re-ran `chapters/chapter-04-memory-and-state/project/solution.py`
+    as the L2 regression check — still 10/10, unchanged from Chapter 6.
+14. Committed Chapter 7, the three Module 1-3 assessments, and all
+    wiring/audit/state changes locally — no remote added, nothing
+    pushed, matching every prior session's explicit local-only
+    instructions and this session's own.
+
+## Chapter 7 — COMPLETE
+
+- `lesson.html`: 61 lines match `<pre\|<code` (121 total tag
+  occurrences via `-o`), above the 60+ requirement. Built around
+  Greywick Dispatch's FactScout: the boundary against
+  `llm-evaluation-for-everyone` (named by chapter number), a live
+  six-run non-determinism result (1/6 matched the correct first
+  step), a real live bug in `cross_check_claim`'s own word-overlap
+  heuristic (kept in as the chapter's own $12M/$9.4M running example),
+  task-success rate vs. trajectory/tool-call correctness as two
+  deliberately-disagreeing metrics, a seeded N-run harness calibrated
+  from the live result, pass@k and variance, multi-turn drift, cost-
+  per-success, one combined eval report, a named seam for a future
+  LLM-as-judge, and an eval-maturity checklist.
+- `quiz.html`: 10 fill-in-the-blank questions covering task success vs.
+  trajectory correctness, the live non-determinism result, pass@k,
+  multi-turn drift, cost-per-success, the $12M/$9.4M bug, the
+  llm-evaluation-for-everyone boundary, and the seeded-simulation
+  disclosure.
+- `interview-questions.html` + `.md`: 10 questions across
+  beginner/intermediate/senior/architect.
+- `exercises/`: Larkmoor Archive Service/RecordScout scenario, 7 tasks
+  (5 production-gear), 19 points total. `solution.py` verified 19/19;
+  `starter.py` verified 0/19 with no crash. `ai-paired.html` uses a
+  third scenario (Thornmere Public Transit/TransitScout).
+- `practice/`: 8 independent diagnostic scenarios, 8 points.
+  `solution.py` verified 8/8; `starter.py` verified 0/8 with no crash.
+  `ai-paired.html` uses a ninth scenario ("ClaimBot", org left
+  unnamed).
+- `project/` (a REAL, standalone chapter mini-project, not a signpost —
+  Chapter 7 returns to the full scaffold per the brief): Emberlyn
+  Underwriting/TriageScout, three TODOs across task success,
+  trajectory correctness, and the aggregate harness. `solution.py`
+  verified 8/8; `starter.py` verified 2/8 with no crash. `RUBRIC.md`
+  has 4 criteria (20 points).
+- Wired into `assets/chapters-data.js` with a real `path`;
+  `docs/curriculum/index.html` and root `index.html` both reflect
+  Chapter 7 live, Module 4 **In Progress** (not Complete).
+- **New this session**: Modules 1-3's own combined module assessments,
+  under `assessments/module-assessments/`, each reusing the exact
+  functions those modules' chapters already built and tested. Module
+  4's own assessment remains unbuilt, scheduled below.
+
+## Next Recommended Task: Chapter 8 — "Cost and Latency Control of Agent Loops"
 
 This is written so a fresh session, with zero memory of this one, can
 pick it up cold.
 
 **Where it sits:** Module 4 — Measuring and Controlling Agents,
-*opening* the module (per `docs/curriculum/CURRICULUM_MAP.md`, Module 4
-covers Chapters 7-8). Chapters 1-6 (Modules 1-3) are all complete.
-Chapter 7 owns the evaluation half of Module 4's outcome: "design an
-agent reliability/observability plan." Chapter 8 (cost/latency control)
-is the module's other half and is NOT this session's job. Difficulty:
-Advanced, same tier as Chapters 5-6. Module 4 does **not** become
-complete until Chapter 8 also ships — do not mark it "Complete" this
-session; "In Progress" is correct once Chapter 7 is live (following
-Chapter 3's own precedent for a module's first-of-two chapter).
+*closing* the module (per `docs/curriculum/CURRICULUM_MAP.md`, Module 4
+covers Chapters 7-8). Chapters 1-7 (Modules 1-3, plus Module 4's
+opening chapter) are all complete. Chapter 8 owns the control half of
+Module 4's outcome: "apply cost- and latency-control techniques to a
+running agent loop." Chapter 7 (evaluation) already shipped the
+measurement half. Difficulty: Advanced, same tier as Chapters 5-7.
+**This chapter closes Module 4** — once Chapter 8 ships, Module 4's
+own feature-card status in `docs/curriculum/index.html` should be
+updated from "In Progress" to "Complete," and root `index.html`'s
+module-complete hero stat should increment from 3/6 to 4/6 (do NOT
+increment it before Chapter 8 actually ships).
 
-**What it must teach, and — just as important — what it must NOT
-teach:** per `docs/discovery-notes.md` Section 1.4 (read this before
-starting), this course's own boundary against `llm-evaluation-for-
-everyone` was decided explicitly and confirmed from both sides: that
-sibling course's own discovery notes name THIS course
-(`agentic-ai-for-everyone`) as the future home for agent
-*architecture*, as opposed to evaluating agent *output*. Chapter 7
-teaches evaluation from the **systems-design side only**: what makes
-agent behavior measurable and observable, and how to reason about
-reliability while designing the loop. It must explicitly reference (by
-name, not re-derive) `llm-evaluation-for-everyone` for: golden-set/eval-
-dataset construction methodology, human evaluation and inter-annotator
-agreement, LLM-as-judge design and bias mitigation, and statistical
-rigor (sample size, confidence intervals, significance testing) — the
-same "defer, don't re-teach" pattern this course's own Chapter 4 used
-for `context-engineering-for-everyone`. What IS this chapter's own,
-non-duplicative territory, per the curriculum map's own outcome and lab
-language: **task success measurement, trajectory/tool-call correctness
-(did the agent call the right tools in a sane order, not just "did it
-eventually get the right answer"), and multi-turn drift** (does a
-long-running agent's behavior degrade across many turns/sessions) —
-instrumenting an agent with task-completion and trajectory logging is
-the module's own stated lab. A good test while drafting: if a
-paragraph would apply equally to evaluating a single, non-agentic LLM
-call, it belongs in `llm-evaluation-for-everyone`, not here; if it's
-specifically about evaluating a *loop's* behavior over multiple
-steps/tools/turns, it belongs here.
+**What it must teach:** per `docs/curriculum/CURRICULUM_MAP.md`'s own
+outcome and lab language: iteration bounding (distinct from Chapter
+1's `max_iterations` reasoning-step cap and Chapter 6's action budget —
+this chapter's own angle is bounding cost/latency specifically, not
+safety), model tiering (routing cheap/easy sub-tasks to a smaller or
+cheaper model, reserving a larger one for genuinely hard steps),
+caching (avoiding a repeat call for a repeat question/state), and early
+exit (stopping a loop as soon as a confident-enough answer exists,
+rather than always running to the iteration cap). The module's own
+stated lab: "add iteration bounding, model tiering, and caching to a
+loop and measure the before/after cost and latency" — this chapter
+should produce a REAL before/after measurement, not just describe the
+techniques.
 
-**Hand-off point:** Chapter 6's own `lesson.html` doesn't name Chapter
-7 directly the way Chapter 5 named Chapter 6 (guardrails and evaluation
-are less directly coupled than guardrails and reflection were) — there
-is no required "extend this exact mechanism" hand-off comment to find.
-Instead, the natural continuity is architectural: Chapter 6's own
-`dispatch_tool_call()` / `guardrail_check_booking()` pattern already
-produces a structured `tool_trace` (a list of `(tool_name, result)`
-pairs) on every run — Chapter 7's own trajectory-logging material has a
-ready-made, already-demonstrated data source to build on and reference,
-rather than inventing tracing from scratch. Consider opening Chapter
-7's lesson by pointing at this continuity explicitly (an agent that
-already produces a `tool_trace` is most of the way to being
-*measurable*; Chapter 7 is what makes that trace worth something).
+**Hand-off point from Chapter 7:** Chapter 7's own eval harness
+(`task_success`, `trajectory_correctness`, `pass_at_k`, and especially
+`cost_per_success`) is Chapter 8's ready-made measurement layer — this
+chapter should explicitly open by pointing at that continuity (you
+cannot responsibly say a cost-control technique "worked" without the
+measurement layer Chapter 7 just built to prove it, particularly
+`cost_per_success`, which already treats a cheaper-but-lower-success
+change correctly instead of just looking at cost-per-run). A natural
+structure: apply Chapter 8's own cost/latency techniques to Chapter 7's
+own FactScout (or a close variant), and re-run Chapter 7's own harness
+before and after to report a REAL, measured cost/latency delta — not a
+new, disconnected agent from scratch.
 
-**No L2/L3/L4 project work this chapter.** Per
-`docs/curriculum/CURRICULUM_MAP.md`'s project ladder, the L2 Assisted
-project (Hollowridge Wellness Clinic's CareBot) closed at Chapter 6 —
-do NOT extend `chapters/chapter-04-memory-and-state/project/` again.
-The next numbered project, **L3 Independent** ("Design and implement a
-reliability-instrumented, cost-bounded agent for a given problem, no
-scaffold"), ships after Chapter 8, not Chapter 7 — so Chapter 7's own
-`project/` directory should be a **chapter mini-project** (the same
-"not yet on the numbered ladder" pattern Chapters 2-3 used before the
-L2 slot opened at Chapter 4), not a signpost and not a new numbered
-scaffold. Build it as a real, standalone `starter.py`/`solution.py`
-scaffold with its own structural self-checks, clearly labeled in
-`README.md`/`RUBRIC.md` as a chapter mini-project, not the L3 project.
+**No L2 project work this chapter.** The L2 Assisted project closed at
+Chapter 6. **The L3 Independent project ships AFTER this chapter, not
+during it** — per `docs/curriculum/CURRICULUM_MAP.md`'s project ladder,
+L3 is "design and implement a reliability-instrumented, cost-bounded
+agent for a given problem, no scaffold," and explicitly needs BOTH
+Chapter 7's reliability instrumentation AND Chapter 8's cost-bounding
+techniques to exist first. Chapter 8's own `project/` directory should
+therefore still be a **chapter mini-project** (matching Chapter 7's own
+pattern: a real, standalone scaffold, not the L3 project and not a
+signpost) — the L3 project itself should be scheduled as a SEPARATE,
+later piece of work (either its own dedicated session after Chapter 8
+ships, or explicitly folded into whichever session builds Chapter 9,
+if that session's own brief says so) — do not build the L3 project
+during the Chapter 8 session itself unless a future revision of this
+file explicitly says otherwise.
 
-**Module 4 assessment status — check and flag, do not silently skip:**
-`docs/curriculum/CURRICULUM_MAP.md` states Module 4's own assessment is
-"reliability-plan + cost-control exercise." As of this session,
-`assessments/module-assessments/` is **empty across the entire repo** —
-no module (including Modules 1-3, already complete) has shipped a
-module-level assessment file yet. This is a pre-existing gap, not
-something Chapter 6 introduced, but it should not keep being silently
-deferred forever. This session should explicitly decide one of: (a)
-build Module 4's assessment now, once both halves (Chapter 7's
-reliability-plan component) exist — likely premature until Chapter 8
-also ships the cost-control half; (b) explicitly flag in this file's
-own next hand-off that a future, dedicated session should audit
-`assessments/` across ALL modules once Chapter 8 ships and Module 4
-closes, rather than each chapter session continuing to defer it
-individually with no plan to ever actually build it. Do not simply
-repeat this note verbatim without making an actual decision — pick (a)
-or (b) explicitly and say why.
+**Module 4 assessment — build it THIS session, per the precedent set
+at Chapter 7:** `docs/curriculum/CURRICULUM_MAP.md` states Module 4's
+own assessment is "reliability-plan + cost-control exercise," spanning
+BOTH Chapter 7 and Chapter 8. Chapter 7's own session deliberately did
+NOT build this (see `quality-audits/chapter-07-audit.md`'s decision
+section) precisely so it could be built for real, once, at Chapter 8's
+own closing session — the same pattern `ai-engineering-for-everyone`
+used for its own Module 4 (built at Chapter 10, that module's closing
+chapter, not at Chapter 8, its opening one). Build
+`assessments/module-assessments/module-4-reliability-plan-and-cost-
+control-exercise/` (README + RUBRIC + starter.py + solution.py)
+reusing Chapter 7's own `task_success`/`trajectory_correctness`/
+`pass_at_k`/`cost_per_success` functions AND Chapter 8's own new
+cost/latency-control functions, applied to one combined scenario —
+follow `ai-engineering-for-everyone`'s own `module-4-cost-latency-
+reliability-engineering-exercise/` format exactly (read it directly,
+don't assume its shape from this description). Once Module 4's
+assessment ships, do the SAME gap-audit `ai-engineering-for-everyone`'s
+own session did: check whether Module 5's assessment (multi-agent
+coordination-pattern exercise, Chapters 9-11) can reasonably wait until
+that module closes, and say so explicitly in this file's own next
+hand-off rather than silently deferring again.
 
 **Concrete build steps:**
 
 1. Pick a fresh fictional scenario, distinct from every org in
-   `quality-audits/chapter-06-audit.md`'s running exclusion list
+   `quality-audits/chapter-07-audit.md`'s running exclusion list
    (currently: Northbeam Outdoors, Summit Gear Co-op, Fernbrook Ski
    Patrol, Wavecrest Marina, Alderleaf Research Group, Pinehurst Realty
    Group, Thistlewood Veterinary Group, Cobblestone Courier Co.,
@@ -970,65 +1121,61 @@ or (b) explicitly and say why.
    Driftwood Legal Clinic, Saltmarsh Language Academy, Hollowridge
    Wellness Clinic, Briarcliff Bike Rentals, Fenwick Home Repair
    Co-op, Mossgate Dental Group, Millbrook Credit Union, Amberlock
-   Self-Storage, Cascadia Home Security) — extend that list, don't
-   restart it. A natural fit: a multi-tool, multi-turn agent where
-   "did it work" isn't a single yes/no (a research/investigation agent,
-   a multi-step booking or diagnosis agent) so task-success and
-   trajectory-correctness are genuinely distinct, non-trivial questions.
+   Self-Storage, Cascadia Home Security, Greywick Dispatch, Larkmoor
+   Archive Service, Thornmere Public Transit, Emberlyn Underwriting) —
+   extend that list, don't restart it. A natural fit: an agent whose
+   loop currently calls a model on every single step/turn with no
+   caching or tiering, so the "before" measurement is genuinely
+   expensive/slow and the "after" measurement is a real, honest
+   improvement — OR (per the hand-off point above) reuse Chapter 7's
+   own FactScout/Greywick Dispatch directly.
 2. Re-warm and test every code example for real (local Ollama,
    `llama3.2:latest`, `base_url="http://localhost:11434/v1"`) before
-   writing it into `lesson.html`, exactly like Chapters 1-6's
-   scratchpad-first discipline — see `CONTRIBUTING.md`'s non-negotiable
-   rule. Budget up to 450s per live call, never idle-wait past that.
-   This session's own calls were all fast (under 16s) despite Chapter
-   5's disclosed 413.8s stall the session before it — do not assume
-   fast timing is now the norm; pre-warm anyway
-   (`curl -s localhost:11434/api/generate -d
-   '{"model":"llama3.2","prompt":"","keep_alive":"120m"}'`, allow up to
-   ~450s if cold), and disclose honestly (per Chapters 3, 5, and 6's own
-   precedent) whatever actually happens.
+   writing it into `lesson.html`, exactly like Chapters 1-7's own
+   scratchpad-first discipline. Budget up to 450s per live call, never
+   idle-wait past that. Chapter 7's own cold-load took 348.7s once;
+   Chapter 6's session never exceeded 15.8s — pre-warm anyway and
+   disclose honestly whatever actually happens this session.
 3. Build `lesson.html` to the same 60+ `<pre>`/`<code>`-block density
    bar, verified with `grep -c '<pre\|<code' lesson.html` before
-   calling it done — do not skip this check.
-4. Build the full file set matching Chapter 6's exactly: `quiz.html`
+   calling it done.
+4. Build the full file set matching Chapter 7's exactly: `quiz.html`
    (10 fill-in-the-blank), `interview-questions.html` + `.md` (10
-   questions across 4 levels), `exercises/` (8+ tasks, 5+ production-
-   gear, `starter.py`/`solution.py` both run and verified), `practice/`
+   questions across 4 levels), `exercises/` (7+ tasks, production-gear
+   items, `starter.py`/`solution.py` both run and verified), `practice/`
    (8+ scenarios, same file set), and a **chapter mini-project**
-   `project/` (real scaffold, not a signpost — see above).
-5. `assets/chapters-data.js`: add Chapter 7's real `path` only once
-   `lesson.html` exists. Chapters 8-13 stay without a `path`. Module
+   `project/` (real scaffold — see above, NOT the L3 project).
+5. `assets/chapters-data.js`: add Chapter 8's real `path` only once
+   `lesson.html` exists. Chapters 9-13 stay without a `path`. Module
    4's `examPath` stays `null` until a written exam actually exists.
-6. Update `docs/curriculum/index.html`'s Chapter 7 card from a
+6. Update `docs/curriculum/index.html`'s Chapter 8 card from a
    non-linked "Planned" `<div>` to a linked `<a class="chapter-card">`.
-   Module 4 ("Measuring and Controlling Agents") goes to **"In
-   Progress"**, NOT "Complete" — Chapter 8 still has to ship first.
-7. Update root `index.html`'s `hero-stats`: chapter count to 7 of 13
-   live. Module-complete count **stays at 3 of 6** (Module 4 isn't done
-   until Chapter 8 ships) — do not increment it this session.
-8. Write `quality-audits/chapter-07-audit.md` following
-   `chapter-06-audit.md`'s exact format: honest self-critique, the
-   extended fictional-org exclusion list, source verification (this
-   chapter likely names `llm-evaluation-for-everyone` — confirm that
-   reference is accurate against that course's own current curriculum
-   map/chapter list before citing specifics, the same verification
-   discipline this course's own discovery-notes work already used), a
-   fresh Ollama check with honest disclosure either way, and the full
-   code-tested-before-writing disclosure.
+   Module 4 ("Measuring and Controlling Agents") goes to **"Complete"**
+   — this is the chapter that actually closes it.
+7. Update root `index.html`'s `hero-stats`: chapter count to 8 of 13
+   live, module-complete count to **4 of 6** (this IS the session that
+   should increment it).
+8. Write `quality-audits/chapter-08-audit.md` following
+   `chapter-07-audit.md`'s exact format, including the Module 4
+   assessment build and the Module 5 gap-audit decision.
 9. Run `bash scripts/local_check.sh < /dev/null` before considering the
    chapter done — fix anything it flags.
-10. Update this file's "Last updated" line, add a new "Session 7"
-    section documenting what was built, move Chapter 7 from "Next
-    Recommended Task" into a "Chapter 7 — COMPLETE" section, and
-    rewrite "Next Recommended Task" for Chapter 8 ("Cost and Latency
-    Control of Agent Loops," closing Module 4) with the same concrete,
-    cold-pickup detail as this section, including a final, explicit
-    decision on the Module 4 assessment question raised above, before
+10. Re-run `chapters/chapter-04-memory-and-state/project/solution.py`
+    as the standing L2 regression check — must still be 10/10.
+11. Update this file's "Last updated" line, add a new "Session 8"
+    section documenting what was built, move Chapter 8 from "Next
+    Recommended Task" into a "Chapter 8 — COMPLETE" section (and mark
+    Module 4 complete), and rewrite "Next Recommended Task" for
+    Chapter 9 ("Multi-Agent Orchestration Patterns," opening Module 5)
+    with the same concrete, cold-pickup detail as this section,
+    including the Module 5 assessment gap-audit decision, before
     ending the session.
 
-**Do not** re-teach Chapters 1-6's own mechanics (the agent loop, tool
-selection, memory, reflection/self-correction, or guardrails) from
-scratch — assume the reader can already build a working, memory-
-equipped, reflection-capable, guardrail-bounded agent; Chapter 7's job
-is making that agent's behavior *measurable*, not re-explaining how it
-decides what to do.
+**Do not** re-teach Chapters 1-7's own mechanics (the agent loop, tool
+selection, memory, reflection/self-correction, guardrails, or the
+task-success/trajectory-correctness/pass@k measurement layer) from
+scratch — assume the reader can already build a working, measurable
+agent and already knows how to tell whether it's reliable; Chapter 8's
+job is making that already-measurable agent affordable and fast, using
+the measurement layer Chapter 7 just built to prove any claimed
+improvement is real.
