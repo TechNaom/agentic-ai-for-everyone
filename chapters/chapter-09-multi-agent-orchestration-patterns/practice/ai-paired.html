@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 9 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose a layered multi-agent coordination bug yourself, then critique an AI's plausible-but-flawed answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-09">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 9 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, not in the eight above: a team's supervisor agent, <strong>"DispatchBot"</strong>, routes incoming support requests to three workers (the specific company is left unnamed on purpose, the same way Chapter 7's "ClaimBot" and Chapter 8's "QuoteBot" scenarios did). Two real, layered problems were found in the same incident report. First: DispatchBot's router always returns its highest-scoring worker even when that score is 0 -- so a request like "I have a question about my account" (matching no worker's keywords confidently) gets silently routed to whichever worker happens to be listed first, and that worker then produces a plausible-sounding but completely irrelevant reply. Second, in the same incident: DispatchBot's retry logic re-sends a sub-task to a worker any time the worker's response looks malformed, with no check for whether an EARLIER attempt at the same sub-task had already succeeded -- so a single flaky response pattern quietly triples the cost of one customer's request.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>Before reading further: name the two distinct problems here using this chapter's vocabulary (one is about what a router should return when it has no confident match; the other is about what a retry loop is missing before it re-sends anything) and write your own fix for each. There's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> this scenario has two layered problems (a missing fail-closed routing check AND a missing idempotency check), so the prompt needs to ask the AI to find both, not just the more obviously dramatic one -- a shallow prompt like "why did DispatchBot misbehave?" invites an answer that fixates on the wrong-worker reply (the one with a visible, embarrassing customer-facing consequence) and never questions whether the retry logic is silently multiplying cost on every flaky response, which has no visible symptom at all unless someone checks the dispatch log.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here's DispatchBot's incident report... identify every distinct problem, not just one..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice and compare its answer against the critique below.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Here's my supervisor agent DispatchBot's incident report: [paste the scenario above]. Identify EVERY distinct problem in this report, not just the first one you notice -- there are two -- and name each using this chapter's vocabulary (a router that never returns "no confident match," versus a retry loop with no idempotency tracking). Propose a concrete, specific fix for each, including exactly what data structure or check should have existed before this system shipped.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <div class="what-is">
+    <span class="label">What a complete diagnosis catches</span>
+    <ul>
+      <li><strong>Problem 1 (router never returns "no match"):</strong> a router that always picks a highest-scorer, even at a zero score, silently misroutes any genuinely ambiguous or off-domain request -- exactly the fail-closed-routing gap this chapter's own Section 6 named. The fix is a hard rule: the router must return <code>None</code> when the best score is zero, and the supervisor must escalate or clarify rather than dispatch on a guess.</li>
+      <li><strong>Problem 2 (retry with no idempotency tracking):</strong> this chapter's own Section 13 explicitly demonstrated how a naive retry-on-any-malformed-response policy can double-dispatch the same sub-task, multiplying an entire worker's cost, not just one step's. The fix is a dispatch log keyed on <code>(subtask, worker)</code>, checked before every dispatch attempt including retries.</li>
+      <li>A shallow AI answer often catches only Problem 1 (the more visible, customer-facing bug) and misses that Problem 2 is a quiet cost problem with no obvious symptom until someone audits the dispatch log directly.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's answer against your own Step 1 notes and the two-problem breakdown above. Did it catch both? Did it propose the right fix for each -- a fail-closed router change and an idempotent dispatch log -- or did it conflate the two into one vague "add better error handling" suggestion?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice Bank</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

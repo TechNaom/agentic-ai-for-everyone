@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 9: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design a supervisor/worker coordination layer yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-09">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the exercises</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 9 &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked the exercises yourself on Hadleigh Civic Records Bureau's CaseScout. Now a third scenario, <strong>Corvindale Claims Network</strong> (a fictional multi-line insurance claims cooperative) and its supervisor agent <strong>ClaimScout</strong>, gets built a second way: by prompting an AI assistant for a supervisor/worker coordination layer, and reviewing what it hands back with the same skepticism you'd bring to a coworker's pull request before trusting its routing decisions.</p>
+  </div>
+
+  <h2>Step 1: Design it yourself, first</h2>
+  <p>ClaimScout dispatches incoming claims to three workers: AutoScout (auto claims), PropertyScout (property/home claims), and HealthScout (health claims). Before reading further, sketch your own plan: how would you route an ambiguous claim (e.g., "a tree fell on my car during the storm" touches both property and auto)? How would you verify a worker's result actually matches the claim it was given, and what would you do if the same claim got dispatched twice due to a retry? There's no grading here, just your own design to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant to build the same thing</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to state explicitly that an ambiguous or unroutable claim must NOT be dispatched to a best-guess worker (fail-closed routing), that each worker's result must be verified against the claim's own fields (not just checked for a well-formed shape), and that a retry must be idempotent -- otherwise a rushed AI answer tends to produce a router that always returns SOME worker even when uncertain, and a retry loop with no duplicate-dispatch protection, exactly the two failure modes this chapter's own Sections 6 and 13 demonstrated live.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write a Python supervisor/worker coordination layer for ClaimScout that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this chapter's own lesson pattern.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write Python stdlib-only supervisor/worker coordination code for ClaimScout, a supervisor that dispatches insurance claims to three workers: autoscout (auto claims), propertyscout (property claims), healthscout (health claims). I need: (1) a keyword-based router that scores each worker against a claim's description and returns None -- NOT a best guess -- when no worker scores confidently above zero; (2) a per-worker try/except isolation boundary so one worker's exception never loses another worker's already-completed result; (3) a content-verification function that checks a worker's returned result against the actual claim fields it was given (e.g., claim_id, claimant_name), not just that a result object was returned; (4) an idempotent dispatch log keyed on (claim_id, worker) so a retry after a malformed response never re-dispatches the same claim twice; (5) a which_agent_responsible function that walks a (worker, claim_id, verified_ok) trace and returns the first worker whose verification failed. Use only the Python standard library -- no LangGraph, CrewAI, or AutoGen.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated coordination layer tends to get wrong</span>
+    <ul>
+      <li><strong>A router that always returns a worker.</strong> Given "a tree fell on my car during the storm," does the generated router correctly recognize this as ambiguous and return <code>None</code>, or does it silently pick whichever worker happens to score highest by coincidence -- the exact fail-closed-routing gap this chapter's own Section 6 named?</li>
+      <li><strong>Verification that only checks the result's shape, not its content.</strong> Does the AI's "verification" function check that a dict with the right KEYS came back, or does it actually compare the VALUES against the original claim -- the difference between catching this chapter's own Porto/Lisbon-style bug and missing it entirely?</li>
+      <li><strong>A retry with no idempotency tracking.</strong> Does the generated retry logic check whether a claim was already successfully dispatched before re-dispatching, or does it just retry blindly whenever a response looks malformed -- risking the exact redundant-dispatch cost multiplication this chapter's own Section 13 demonstrated?</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against this chapter's own lesson pattern (Sections 6, 11-13) and against <code>solution.py</code> in the exercises folder. Where do they differ? Does the AI's version actually verify claim CONTENT and track dispatch idempotency, or does it stop at "the call didn't crash, so it must have worked"?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Exercises</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

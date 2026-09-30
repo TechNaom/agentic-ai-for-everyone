@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent Orchestration Patterns Project — Agentic AI for Everyone</title>
+<meta name="description" content="Chapter mini-project: a supervisor harness for CityScout, a fictional municipal building-services office's agent.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-09">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../interview-questions.html">&larr; Back to interview questions</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 9 Project (Chapter Mini-Project)</span>
+    <span class="reading-time">~60 min, hands-on</span>
+  </div>
+  <h1>Project: A Supervisor Harness for CityScout</h1>
+  <p>
+    This is a <strong>chapter mini-project</strong>, not one of this
+    course's numbered L1-L4 projects — the L3 Independent project was
+    deferred past Chapter 8 and is still not yet built as of this
+    chapter (not built here either; see <code>PROJECT_STATE.md</code>).
+    Scenario: <strong>Ashgrove Municipal Services</strong>, a fictional
+    municipal building-services office, wants <strong>CityScout</strong>
+    built the same way the lesson's TripScout was coordinated.
+  </p>
+
+  <div class="what-is">
+    <span class="label">The three pillars, combined</span>
+    <ul>
+      <li><strong>Fail-closed routing</strong> — the router returns the highest-scoring worker, UNLESS the score is 0, in which case it returns <code>None</code> rather than guessing.</li>
+      <li><strong>Failure isolation</strong> — every worker call runs inside a try/except boundary; an exception never propagates to the supervisor.</li>
+      <li><strong>Idempotent, attributed harness</strong> — skips a duplicate (subtask, worker) dispatch, and reports which agent was first responsible for any failed case.</li>
+    </ul>
+  </div>
+
+  <h2>The three TODOs</h2>
+  <ol>
+    <li><strong>TODO 1</strong> &mdash; <code>route_subtask()</code></li>
+    <li><strong>TODO 2</strong> &mdash; <code>dispatch_isolated()</code></li>
+    <li><strong>TODO 3</strong> &mdash; <code>run_city_scout_harness()</code></li>
+  </ol>
+
+  <h2>How to run it</h2>
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+  <p>Prints a structural self-check: 9 checks across routing, failure isolation, and the aggregate supervisor harness.</p>
+
+  <h2>Files</h2>
+  <ul>
+    <li><code>starter.py</code> &mdash; the scaffold with 3 <code># TODO</code>s and the self-check.</li>
+    <li><code>solution.py</code> &mdash; the fully filled-in reference; passes all 9 checks.</li>
+    <li><code>RUBRIC.md</code> &mdash; self-grading criteria.</li>
+    <li><code>ai-paired.html</code> &mdash; a solo-build-then-critique exercise using a fourth scenario.</li>
+  </ul>
+
+  <div class="chapter-nav">
+    <a href="../interview-questions.html">&larr; Back to Interview Questions</a>
+    <a href="ai-paired.html">AI-Paired Build &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

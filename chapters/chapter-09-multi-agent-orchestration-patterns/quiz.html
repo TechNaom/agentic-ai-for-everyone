@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent Orchestration Patterns Quiz — Agentic AI for Everyone</title>
+<meta name="description" content="Interactive quiz for Multi-Agent Orchestration Patterns.">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-09" data-chapter-id="chapter-09">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="lesson.html">&larr; Back to the lesson</a></p>
+
+  <span class="chapter-badge">Chapter 9 Quiz</span>
+  <h1>Multi-Agent Orchestration Patterns</h1>
+  <p>Fill in each blank, then check your answers. A perfect score marks this chapter complete.</p>
+
+  <div class="quiz-progress-wrap" aria-hidden="true">
+    <div class="quiz-progress-fill" id="quiz-progress-fill"></div>
+  </div>
+
+  <form onsubmit="return false;">
+
+    <div class="quiz-question">
+      <label for="q1"><span class="q-num">1</span> In a supervisor/worker system, the supervisor's three genuinely new jobs are decomposition, routing, and ______ -- none of which exist for a single-agent loop.</label>
+      <div class="fib-row">
+        <input type="text" id="q1" class="fib-blank" data-answers="aggregation" aria-label="Answer for question 1">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q2"><span class="q-num">2</span> This chapter's own live Section 4 result showed a supervisor call returning a fully-formed dispatch plan as plain text with an empty ______ field, which a naive check would silently drop.</label>
+      <div class="fib-row">
+        <input type="text" id="q2" class="fib-blank" data-answers="tool_calls,tool calls" aria-label="Answer for question 2">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q3"><span class="q-num">3</span> When a sub-task's keywords don't confidently match any worker, the router should return ______ rather than guess and dispatch anyway -- a fail-closed routing decision.</label>
+      <div class="fib-row">
+        <input type="text" id="q3" class="fib-blank" data-answers="None,none" aria-label="Answer for question 3">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q4"><span class="q-num">4</span> In a sequential ______, the stage order IS the architecture -- there is no supervisor choosing which worker handles what, unlike supervisor/worker's live routing decision.</label>
+      <div class="fib-row">
+        <input type="text" id="q4" class="fib-blank" data-answers="pipeline" aria-label="Answer for question 4">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q5"><span class="q-num">5</span> This chapter's live fan-out/fan-in test measured roughly a ______x speedup running three genuinely independent workers concurrently instead of sequentially.</label>
+      <div class="fib-row">
+        <input type="text" id="q5" class="fib-blank" data-answers="3.5,~3.5" aria-label="Answer for question 5">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q6"><span class="q-num">6</span> A blackboard's ______ is load-bearing, not decorative -- without it, concurrent workers can double-spend shared state like a budget.</label>
+      <div class="fib-row">
+        <input type="text" id="q6" class="fib-blank" data-answers="lock" aria-label="Answer for question 6">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q7"><span class="q-num">7</span> Failure isolation wraps a try/except around EACH worker's own dispatch, not the whole run -- otherwise one worker's crash loses every other worker's already-______ result.</label>
+      <div class="fib-row">
+        <input type="text" id="q7" class="fib-blank" data-answers="successful" aria-label="Answer for question 7">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q8"><span class="q-num">8</span> A worker returning a well-formed but wrong result (this chapter's Porto-instead-of-Lisbon hotel) can only be caught by verifying the result's ______, not just checking that a result was returned.</label>
+      <div class="fib-row">
+        <input type="text" id="q8" class="fib-blank" data-answers="content" aria-label="Answer for question 8">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q9"><span class="q-num">9</span> Idempotent dispatch keys on the (subtask, worker) pair so that a necessary retry never becomes a ______ dispatch that multiplies cost worker-by-worker.</label>
+      <div class="fib-row">
+        <input type="text" id="q9" class="fib-blank" data-answers="redundant,duplicate" aria-label="Answer for question 9">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q10"><span class="q-num">10</span> which_agent_responsible extends Chapter 7's trajectory_correctness from "which tool" to "which ______" -- the difference between debugging the right component and wasting a cycle on the wrong one.</label>
+      <div class="fib-row">
+        <input type="text" id="q10" class="fib-blank" data-answers="agent" aria-label="Answer for question 10">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div id="check-all-wrap">
+      <button type="button" id="check-all-btn" class="check-btn">Check All Answers</button>
+      <span id="quiz-score"></span>
+    </div>
+
+    <div class="quiz-celebration" id="quiz-celebration" aria-live="polite">
+      Perfect score. Chapter complete.
+    </div>
+  </form>
+
+  <div class="chapter-nav">
+    <a href="lesson.html">&larr; Back to Lesson</a>
+    <a href="exercises/index.html">Exercises &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/quiz-engine.js"></script>
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

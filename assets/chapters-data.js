@@ -106,7 +106,8 @@ window.AAFE_MODULES = [
         id: "chapter-09",
         num: 9,
         title: "Multi-Agent Orchestration Patterns",
-        description: "Supervisor/worker, pipeline, and debate/critique patterns, and when each earns its complexity."
+        description: "Supervisor/worker dispatch, sequential pipelines, parallel fan-out/fan-in, blackboard coordination, failure isolation, and cross-agent trajectory evaluation.",
+        path: "chapters/chapter-09-multi-agent-orchestration-patterns/lesson.html"
       },
       {
         id: "chapter-10",

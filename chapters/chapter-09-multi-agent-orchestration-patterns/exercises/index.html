@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent Orchestration Patterns Exercises — Agentic AI for Everyone</title>
+<meta name="description" content="Hands-on exercises for Multi-Agent Orchestration Patterns.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-09">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../quiz.html">&larr; Back to the quiz</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 9 Exercises</span>
+    <span class="reading-time">~40 min, hands-on</span>
+  </div>
+  <h1>Exercises: Multi-Agent Orchestration Patterns</h1>
+  <p>
+    These exercises use a second scenario, deliberately different from
+    the lesson's Quillmark Journeys/TripScout hook:
+    <strong>Hadleigh Civic Records Bureau</strong>, a fictional
+    municipal records office. Its supervisor agent, <strong>CaseScout</strong>,
+    dispatches sub-tasks to three specialist workers: PermitScout,
+    LicenseScout, and ZoningScout. Applying this chapter's
+    supervisor/worker concepts to a fresh scenario is the point.
+  </p>
+
+  <h2>How to run</h2>
+  <p>You'll need Python 3 installed. Check with:</p>
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 --version</code></pre>
+  </div>
+  <p>Then run the starter file:</p>
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+  <p>It prints a score report. Fill in each <code># TODO</code>, re-run, and watch your score climb toward the total (19 points across 7 tasks).</p>
+
+  <h2>The seven tasks</h2>
+  <ol>
+    <li><strong>Map facts to multi-agent coordination concepts</strong> &mdash; assign the correct concept (failure isolation, idempotent dispatch, cross-agent attribution, content verification, fail-closed routing) to five CaseScout facts.</li>
+    <li><strong>Fail-closed routing reasoning</strong> &mdash; decide whether a supervisor should dispatch to a worker when the router has no confident match.</li>
+    <li><strong>(Production-gear) <code>route_subtask</code></strong> &mdash; a fail-closed keyword router that returns <code>None</code> rather than guessing.</li>
+    <li><strong>(Production-gear) <code>verify_worker_result</code></strong> &mdash; content verification: does the result actually match what was requested.</li>
+    <li><strong>(Production-gear) <code>which_agent_responsible</code></strong> &mdash; cross-agent trajectory attribution, extending Chapter 7's tool-level version.</li>
+    <li><strong>(Production-gear) <code>classify_coordination_gap</code></strong> &mdash; classify a multi-agent setup's biggest blind spot from a capability dict.</li>
+    <li><strong>(Production-gear) <code>is_duplicate_dispatch</code></strong> &mdash; idempotency check keyed on the exact (subtask, worker) pair.</li>
+  </ol>
+
+  <h2>Files</h2>
+  <ul>
+    <li><code>starter.py</code> &mdash; the scaffold with 11 <code># TODO</code>s and the score report.</li>
+    <li><code>solution.py</code> &mdash; the fully filled-in reference; scores 19/19.</li>
+    <li><code>ai-paired.html</code> &mdash; a solo-build-then-critique exercise using a third scenario.</li>
+  </ul>
+
+  <div class="chapter-nav">
+    <a href="../quiz.html">&larr; Back to Quiz</a>
+    <a href="ai-paired.html">AI-Paired Exercise &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

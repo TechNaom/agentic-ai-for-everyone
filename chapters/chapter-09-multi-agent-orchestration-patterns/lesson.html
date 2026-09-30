@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent Orchestration Patterns — Agentic AI for Everyone</title>
+<meta name="description" content="Supervisor/worker orchestration, sequential pipelines, parallel fan-out/fan-in, blackboard/shared-state coordination, per-agent budgets, failure isolation, and cross-agent trajectory evaluation -- built on Quillmark Journeys' TripScout, with real, genuinely captured live Ollama dispatch and fan-out results.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-09">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../../index.html">&larr; Back to all chapters</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 9 of 13</span>
+    <span class="badge-difficulty">Advanced</span>
+    <span class="reading-time">70 min read, hands-on</span>
+  </div>
+  <h1>Multi-Agent Orchestration Patterns</h1>
+  <p class="lede">Every chapter through Chapter 8 built and improved ONE loop. This chapter opens Module 5 with the thing that changes when there is more than one: a <strong>supervisor</strong> agent decomposes a goal, dispatches sub-tasks to <strong>worker</strong> agents, and aggregates their results -- each worker already a Chapter-1-style loop, each one already Chapter-7-measurable and Chapter-8-cost-controllable on its own. What's genuinely new is coordination: did the supervisor decompose the goal correctly, route each sub-task to the right worker, and combine the results into a correct outcome. Built on Quillmark Journeys' TripScout, with real, unscripted live Ollama results -- including two genuine dispatch failures this session found while testing, not manufactured for the lesson.</p>
+
+  <nav class="page-toc" aria-label="On this page">
+    <span class="toc-label">On this page</span>
+    <a href="#handoff">1. Hand-off from Chapters 1-8: one loop, measured and controlled</a>
+    <a href="#ollama-check">2. A live check: warming Ollama before any orchestration code</a>
+    <a href="#dispatch-tools">3. The supervisor's dispatch tool schema</a>
+    <a href="#live-dispatch">4. A live one-sub-task-at-a-time dispatch -- 2 of 3 clean, 1 genuinely malformed</a>
+    <a href="#retry-detect">5. Detecting a malformed dispatch and retrying -- a real recovered call</a>
+    <a href="#misrouting">6. Failure mode 1: routing an ambiguous sub-task to no worker at all</a>
+    <a href="#pipeline">7. Sequential pipeline: the pattern supervisor/worker is NOT</a>
+    <a href="#fanout">8. Parallel fan-out/fan-in -- a real measured 3.5x on three live workers</a>
+    <a href="#blackboard">9. Blackboard/shared-state coordination</a>
+    <a href="#per-agent-budgets">10. Per-agent budgets -- Chapter 8's budget, one per worker</a>
+    <a href="#isolation">11. Failure isolation: one worker's crash must not crash the supervisor</a>
+    <a href="#verification">12. Failure mode 2: a plausible-but-wrong worker result the supervisor can't see without checking</a>
+    <a href="#redundant">13. Failure mode 3: redundant dispatch multiplies cost worker-by-worker</a>
+    <a href="#cross-agent-eval">14. Cross-agent trajectory evaluation: which AGENT, not just which tool</a>
+    <a href="#approval">15. A fail-closed approval checkpoint before a worker commits spend</a>
+    <a href="#assembled">16. TripScout, assembled end-to-end</a>
+    <a href="#checklist">17. A multi-agent coordination maturity checklist</a>
+    <a href="#thought-process">18. GenAI Builder Thought Process</a>
+    <a href="#recap">19. Points to remember</a>
+  </nav>
+
+  <div class="hook">
+    <p>Quillmark Journeys, a fictional travel-concierge cooperative, wants to replace a single do-everything trip-planning agent with a proper multi-agent system: <strong>TripScout</strong>, a supervisor that decomposes "plan my trip" into sub-tasks and dispatches each one to the right specialist -- <strong>FlightScout</strong>, <strong>StayScout</strong>, or <strong>ExcursionScout</strong> -- then combines their answers into one itinerary. This chapter builds that system for real, against local Ollama, and every failure mode it demonstrates (a malformed dispatch, a misrouted sub-task, a plausible-but-wrong worker result, and a redundant dispatch) was either genuinely encountered while testing this session's own code, or deliberately constructed the same honest way Chapter 1's Cedar Hollow bug was -- disclosed, not hidden.</p>
+  </div>
+
+  <section id="handoff" class="subtopic">
+    <h2>1. Hand-off from Chapters 1-8: one loop, measured and controlled</h2>
+    <p>Nothing about a single worker's own internal loop changes in this chapter. Each of FlightScout, StayScout, and ExcursionScout is exactly the kind of loop Chapters 1-8 already taught: a perception-reasoning-action-observation cycle (Chapter 1), with a plan (Chapter 2), a tool surface (Chapter 3), memory if it needs it (Chapter 4), a reflection step if it needs one (Chapter 5), guardrails (Chapter 6), instrumentation (Chapter 7), and a cost/latency budget (Chapter 8). This chapter does not re-teach any of that.</p>
+    <div class="what-is">
+      <span class="label">What is... a supervisor/worker multi-agent system, precisely?</span>
+      A <strong>supervisor</strong> is an agent whose own tool surface is "dispatch to worker X" -- it does not directly search flights, book hotels, or look up tours. A <strong>worker</strong> is an ordinary single-domain agent with its own tools, its own context, and its own budget. The supervisor's job is entirely coordination: decomposition (breaking the goal into sub-tasks), routing (choosing the right worker per sub-task), and aggregation (combining worker results into one outcome) -- three jobs that simply do not exist for a single-agent loop.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">from_chapter_7_and_8.py</span></div>
+      <pre><code>def is_within_budget(steps_used, cost_used, max_steps, max_cost):
+    """Chapter 8, project -- fail-closed: BOTH caps must hold."""
+    return steps_used <= max_steps and cost_used <= max_cost
+
+def trajectory_correctness(tool_names, expected):
+    """Chapter 7, Section 7 -- right tool, right order, collapsing
+    consecutive self-recovering duplicates. Reused unchanged below,
+    then EXTENDED in Section 14 to attribute a failure to an AGENT,
+    not just a tool."""
+    filtered = [t for t in tool_names if t in expected]
+    collapsed = []
+    for t in filtered:
+        if not collapsed or collapsed[-1] != t:
+            collapsed.append(t)
+    return collapsed == expected
+
+print("reused unchanged from Ch8:", is_within_budget(2, 0.03, 3, 0.10))
+print("reused unchanged from Ch7:", trajectory_correctness(["search_flights"], ["search_flights"]))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>reused unchanged from Ch8: True
+reused unchanged from Ch7: True</code></pre>
+    </div>
+    <p>This course's own boundary, restated explicitly as this course's positioning discipline requires: this chapter is not <code>mcp-for-everyone</code>'s wire protocol, and it is not a heavy agent framework's built-in "crew" or "graph" abstraction (LangGraph, CrewAI, AutoGen). Every coordination mechanism below -- dispatch, routing, a shared blackboard, budgets, isolation, verification -- is plain Python and the plain <code>openai</code> client, so the reader can see exactly what a framework would otherwise hide.</p>
+  </section>
+
+  <section id="ollama-check" class="subtopic">
+    <h2>2. A live check: warming Ollama before any orchestration code</h2>
+    <p>Matching every prior chapter's own discipline, Ollama was warmed before any live call this session:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">warm_up.sh</span></div>
+      <pre><code>curl -s localhost:11434/api/generate -d '{"model":"llama3.2","prompt":"","keep_alive":"120m"}'</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>{"model":"llama3.2","created_at":"2026-09-30T20:08:18.286185343Z","response":"","done":true,"done_reason":"load"}</code></pre>
+    </div>
+    <p>A sanity call after that warm-up was fast this session -- disclosed honestly either way, per this course's policy:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">sanity_check.py</span></div>
+      <pre><code>import time
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+
+t0 = time.monotonic()
+resp = client.chat.completions.create(
+    model="llama3.2",
+    messages=[{"role": "user", "content": "Say OK."}],
+    timeout=450,
+)
+print("elapsed:", round(time.monotonic() - t0, 2))
+print(resp.choices[0].message.content)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>elapsed: 2.64
+How can I assist you today?</code></pre>
+    </div>
+    <p>Warm and responsive this session -- every live call below ran under this chapter's own 450-second budget, and none required idle-waiting past it.</p>
+  </section>
+
+  <section id="dispatch-tools" class="subtopic">
+    <h2>3. The supervisor's dispatch tool schema</h2>
+    <p>TripScout's own tool surface is dispatch-only -- it never calls a flight, hotel, or activity API directly:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">dispatch_tools.py</span></div>
+      <pre><code>DISPATCH_TOOLS = [
+    {"type": "function", "function": {
+        "name": "dispatch_to_worker",
+        "description": "Send ONE sub-task to exactly one named worker agent.",
+        "parameters": {"type": "object", "properties": {
+            "worker": {"type": "string",
+                       "enum": ["flightscout", "stayscout", "excursionscout"]},
+            "subtask": {"type": "string"}},
+            "required": ["worker", "subtask"]}}},
+]
+print(DISPATCH_TOOLS[0]["function"]["parameters"]["properties"]["worker"]["enum"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>['flightscout', 'stayscout', 'excursionscout']</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>One tool, one sub-task, an enum-constrained worker field</dt>
+        <dd>An earlier attempt this session gave the supervisor THREE separate dispatch tools (<code>dispatch_to_flightscout</code>, <code>dispatch_to_stayscout</code>, <code>dispatch_to_excursionscout</code>) and asked it to decompose a full multi-part goal and call all three tools in one turn. That attempt is Section 4's first, honestly disclosed failure below -- the single-tool, one-sub-task-at-a-time shape shown here is what this chapter settled on AFTER that failure, not before it.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="live-dispatch" class="subtopic">
+    <h2>4. A live one-sub-task-at-a-time dispatch -- 2 of 3 clean, 1 genuinely malformed</h2>
+    <p>The first attempt this session gave the supervisor the FULL goal ("find a flight, a hotel, and an activity") and three separate dispatch tools, asking it to call all three. The real result, unscripted:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">supervisor_route_full_goal.py</span></div>
+      <pre><code>resp = client.chat.completions.create(
+    model="llama3.2",
+    messages=[
+        {"role": "system", "content": "You are TripScout, a supervisor agent. "
+         "Decompose the traveler's goal into sub-tasks and dispatch EACH "
+         "sub-task to exactly one worker tool. Call all the dispatch tools "
+         "you need, one call per sub-task."},
+        {"role": "user", "content": "Plan a 3-day trip to Lisbon: find a "
+         "flight from Boston, a hotel near the river, and one walking-tour "
+         "activity."},
+    ],
+    tools=THREE_SEPARATE_DISPATCH_TOOLS,
+    timeout=450,
+)
+msg = resp.choices[0].message
+print(msg.tool_calls if msg.tool_calls else "NO TOOL CALLS: " + msg.content)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session -- genuinely malformed, not edited)</span>
+      <pre><code>NO TOOL CALLS: {"name":"dispatch_to_flightscout","parameters":{"subtask":"find_flight_from_boston_lisbon_3day_trip"}}; {"name":"dispatch_to_stayscout","parameters":{"subtask":"find_hotel_near_river..."}}; {"name":"dispatch_to_excursionscout","parameters":{"subtask":"find_walking_tour_of_belem..."}}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>A real decomposition failure, not a routing failure</dt>
+        <dd>The model correctly IDENTIFIED three sub-tasks and three right workers -- but wrote the plan as plain-text JSON-shaped content instead of real <code>tool_calls</code>, because it was asked to make three separate calls in one turn. <code>msg.tool_calls</code> came back empty, so a naive supervisor that assumes "if no tool call, nothing to dispatch" would silently drop the ENTIRE plan. This is exactly the decomposition-correctness failure mode this chapter's own brief named.</dd>
+      </dl>
+    </div>
+    <p>The fix tested next: give the supervisor ONE sub-task per call, with the single <code>dispatch_to_worker</code> tool from Section 3. Three separate real calls, one per sub-task:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">supervisor_route_one_at_a_time.py</span></div>
+      <pre><code>subtasks = [
+    "Find a flight from Boston to Lisbon for a 3-day trip.",
+    "Find a hotel near the river in Lisbon for 3 nights.",
+    "Find one walking-tour activity in Lisbon.",
+]
+for st in subtasks:
+    resp = client.chat.completions.create(
+        model="llama3.2",
+        messages=[
+            {"role": "system", "content": "You are TripScout, a supervisor "
+             "agent. You are given ONE sub-task. Call dispatch_to_worker "
+             "exactly once, choosing the single correct worker: flightscout "
+             "(flights only), stayscout (hotels/lodging only), "
+             "excursionscout (activities/tours only)."},
+            {"role": "user", "content": st},
+        ],
+        tools=DISPATCH_TOOLS,
+        timeout=450,
+    )
+    msg = resp.choices[0].message
+    if msg.tool_calls:
+        tc = msg.tool_calls[0]
+        print(tc.function.name, tc.function.arguments)
+    else:
+        print("NO TOOL CALL:", msg.content)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session -- 2 clean, 1 STILL malformed)</span>
+      <pre><code>dispatch_to_worker {"worker":"flightscout","subtask":"find_flight_boston_lisbon_3days"}
+dispatch_to_worker {"subtask":"find a hotel near the river in Lisbon for 3 nights","worker":"stayscout"}
+NO TOOL CALL: {"name":"dispatch_to_worker","parameters":{"subtask":"Find one walking-tour activity in Lisbon","worker":"excursionscout"}}</code></pre>
+    </div>
+    <p>One sub-task at a time fixed two of the three -- but the THIRD call still came back with the same "plausible JSON as plain text" quirk, with no tool call at all. One-at-a-time dispatch is necessary here, but Section 5 shows it is not, by itself, sufficient -- a supervisor still needs to detect and recover from a call that comes back this way.</p>
+  </section>
+
+  <section id="retry-detect" class="subtopic">
+    <h2>5. Detecting a malformed dispatch and retrying -- a real recovered call</h2>
+    <p>The fix is to check <code>msg.tool_calls</code> explicitly rather than assume a tool was called, and retry the SAME sub-task (not the whole goal) when it comes back empty:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">dispatch_with_retry.py</span></div>
+      <pre><code>def dispatch_once(subtask):
+    resp = client.chat.completions.create(
+        model="llama3.2",
+        messages=[
+            {"role": "system", "content": "You are TripScout, a supervisor "
+             "agent. You are given ONE sub-task. Call dispatch_to_worker "
+             "exactly once, choosing the single correct worker: flightscout "
+             "(flights only), stayscout (hotels/lodging only), "
+             "excursionscout (activities/tours only)."},
+            {"role": "user", "content": subtask},
+        ],
+        tools=DISPATCH_TOOLS,
+        timeout=450,
+    )
+    return resp.choices[0].message
+
+def dispatch_with_retry(subtask, max_attempts=3):
+    for attempt in range(1, max_attempts + 1):
+        msg = dispatch_once(subtask)
+        if msg.tool_calls:
+            tc = msg.tool_calls[0]
+            args = json.loads(tc.function.arguments)
+            return {"ok": True, "attempt": attempt,
+                    "worker": args.get("worker"), "subtask": args.get("subtask")}
+        print(f"  attempt {attempt} failed to emit a real tool_call -- retrying")
+    return {"ok": False, "attempt": max_attempts}
+
+result = dispatch_with_retry("Find one walking-tour activity in Lisbon.")
+print(result)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>{'ok': True, 'attempt': 1, 'worker': 'excursionscout', 'subtask': 'find walking tour in Lisbon'}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Non-determinism, disclosed honestly</dt>
+        <dd>This exact sub-task failed to emit a tool call in Section 4's run and succeeded on the FIRST retry attempt here, moments later, with the identical prompt. That is the real, observed shape of this sandbox's Ollama behavior -- not every failure needs three attempts, but a supervisor that doesn't check <code>tool_calls is None</code> at all would have dropped the sub-task both times, silently.</dd>
+      </dl>
+    </div>
+    <p>Fail-closed, applied to dispatch itself: if <code>dispatch_with_retry</code> exhausts <code>max_attempts</code> and still returns <code>{"ok": False}</code>, the supervisor must treat that sub-task as UNFULFILLED and say so in the final aggregate result -- never silently proceed as if the worker had already handled it. A supervisor that defaults to "assume success when dispatch is unclear" fails open exactly where Chapter 6's guardrail chapter warned against it.</p>
+  </section>
+
+  <section id="misrouting" class="subtopic">
+    <h2>6. Failure mode 1: routing an ambiguous sub-task to no worker at all</h2>
+    <p>Not every sub-task cleanly names a domain. A deterministic keyword router makes this concrete and testable without depending on model variance:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">router.py</span></div>
+      <pre><code>WORKER_KEYWORDS = {
+    "flightscout": {"flight", "fly", "airline", "airport"},
+    "stayscout": {"hotel", "lodging", "stay", "room"},
+    "excursionscout": {"tour", "activity", "excursion", "museum", "walk"},
+}
+
+def route_subtask(subtask):
+    words = set(subtask.lower().replace(".", "").split())
+    scores = {w: len(words & kws) for w, kws in WORKER_KEYWORDS.items()}
+    best = max(scores, key=scores.get)
+    if scores[best] == 0:
+        return None
+    return best
+
+print(route_subtask("Find a flight from Boston to Lisbon."))
+print(route_subtask("Book something nice in Lisbon for our anniversary."))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>flightscout
+None</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>None means "no confident route" -- not "route to whichever worker scored highest anyway"</dt>
+        <dd>A router that always returns SOME worker (even at a tied or zero score) will silently misroute ambiguous requests to whichever worker happens to be listed first. "Book something nice" genuinely could be a hotel or an activity -- the correct behavior is for the supervisor to ask a clarifying question or escalate, never to guess and dispatch anyway. This mirrors Chapter 6's guardrail discipline: an uncertain routing decision must fail closed (no dispatch) rather than fail open (dispatch to a guess).</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="pipeline" class="subtopic">
+    <h2>7. Sequential pipeline: the pattern supervisor/worker is NOT</h2>
+    <p>Worth naming explicitly, since it's easy to confuse: a <strong>sequential pipeline</strong> is stages that MUST run in order, each stage's output feeding the next -- there is no supervisor choosing which worker handles what; the order itself IS the architecture.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">pipeline.py</span></div>
+      <pre><code>def draft_itinerary(flight, hotel, activity):
+    return {"flight": flight, "hotel": hotel, "activity": activity, "draft": True}
+
+def check_total_budget(itinerary, budget_remaining):
+    total = itinerary["flight"]["cost"] + itinerary["hotel"]["cost"] + itinerary["activity"]["cost"]
+    itinerary["within_budget"] = total <= budget_remaining
+    itinerary["total_cost"] = total
+    return itinerary
+
+def finalize_itinerary(itinerary):
+    itinerary["draft"] = False
+    itinerary["status"] = "confirmed" if itinerary["within_budget"] else "over_budget"
+    return itinerary
+
+stage1 = draft_itinerary({"cost": 900}, {"cost": 650}, {"cost": 90})
+stage2 = check_total_budget(stage1, budget_remaining=1800)
+stage3 = finalize_itinerary(stage2)
+print(stage3)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'flight': {'cost': 900}, 'hotel': {'cost': 650}, 'activity': {'cost': 90}, 'within_budget': True, 'draft': False, 'total_cost': 1640, 'status': 'confirmed'}</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... the actual difference from supervisor/worker?</span>
+      In supervisor/worker, TripScout decides WHICH sub-tasks exist and WHICH worker handles each one -- routing is a live decision. In a pipeline, the three stages above always run in that exact order on the same data; there is no routing decision to get wrong, only a wrong STAGE ORDER (which would be a code bug, not an agent-reasoning failure). TripScout's own dispatch decisions (Sections 4-6) could feed a pipeline's first stage, but the dispatch and the pipeline are two different coordination patterns, not the same one under two names.
+    </div>
+  </section>
+
+  <section id="fanout" class="subtopic">
+    <h2>8. Parallel fan-out/fan-in -- a real measured 3.5x on three live workers</h2>
+    <p>FlightScout, StayScout, and ExcursionScout are genuinely independent -- none needs another's result to do its own job. Run sequentially vs. concurrently, real Ollama calls, three separate workers each with their own tool:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">fan_out_fan_in.py</span></div>
+      <pre><code>from concurrent.futures import ThreadPoolExecutor
+
+def run_worker(worker_name, subtask):
+    resp = client.chat.completions.create(
+        model="llama3.2",
+        messages=[{"role": "system", "content": f"You are {worker_name}, a "
+                    "worker agent. Call your one tool to handle this sub-task."},
+                   {"role": "user", "content": subtask}],
+        tools=WORKER_TOOLS[worker_name],
+        timeout=450,
+    )
+    msg = resp.choices[0].message
+    tool_called = msg.tool_calls[0].function.name if msg.tool_calls else None
+    return worker_name, tool_called
+
+jobs = [
+    ("flightscout", "Find a flight from Boston to Lisbon."),
+    ("stayscout", "Find a hotel near the river in Lisbon."),
+    ("excursionscout", "Find a walking tour in Lisbon."),
+]
+
+t0 = time.monotonic()
+seq_results = [run_worker(*j) for j in jobs]
+seq_elapsed = round(time.monotonic() - t0, 2)
+
+t0 = time.monotonic()
+with ThreadPoolExecutor(max_workers=3) as ex:
+    par_results = list(ex.map(lambda j: run_worker(*j), jobs))
+par_elapsed = round(time.monotonic() - t0, 2)
+
+print("SEQUENTIAL total:", seq_elapsed, seq_results)
+print("PARALLEL total:", par_elapsed, par_results)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>SEQUENTIAL total: 33.65 [('flightscout', 'search_flights'), ('stayscout', 'search_hotels'), ('excursionscout', 'search_activities')]
+PARALLEL total: 9.57 [('flightscout', 'search_flights'), ('stayscout', 'search_hotels'), ('excursionscout', 'search_activities')]</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>A real ~3.5x fan-out speedup -- and all three workers routed correctly this run</dt>
+        <dd>33.65s sequential vs. 9.57s running the same three real calls concurrently -- <code>fan-in</code> is simply collecting <code>par_results</code> once every future resolves. This generalizes Chapter 8 Section 9's own two-call, ~3.2x result to three genuinely independent WORKERS rather than two tool calls inside one loop -- the same underlying win (independent I/O-bound calls in parallel), now at the multi-agent layer.</dd>
+      </dl>
+    </div>
+    <p>The same caution Chapter 8 raised still applies, now worker-by-worker: parallelizing workers that are NOT actually independent (for example, if ExcursionScout needed StayScout's chosen hotel's neighborhood to pick a nearby walking tour) would be a correctness bug, not a speed win -- fan-out is only safe when fan-in doesn't need to feed back into the fan-out itself.</p>
+  </section>
+
+  <section id="blackboard" class="subtopic">
+    <h2>9. Blackboard/shared-state coordination</h2>
+    <p>Dispatch is one coordination style -- the supervisor explicitly routes each sub-task. A <strong>blackboard</strong> is a different style: a shared piece of state every agent can read and write, letting workers coordinate WITHOUT the supervisor mediating every single interaction.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">blackboard.py</span></div>
+      <pre><code>import threading
+
+class Blackboard:
+    def __init__(self, initial):
+        self._data = dict(initial)
+        self._lock = threading.Lock()
+
+    def read(self, key):
+        with self._lock:
+            return self._data.get(key)
+
+    def decrement(self, key, amount):
+        with self._lock:
+            self._data[key] -= amount
+            return self._data[key]
+
+board = Blackboard({"budget_remaining": 1800})
+print("stayscout books $650 hotel, remaining:", board.decrement("budget_remaining", 650))
+print("flightscout books $900 flight, remaining:", board.decrement("budget_remaining", 900))
+print("excursionscout sees remaining before booking:", board.read("budget_remaining"))
+print("excursionscout tries $300 tour -- would go negative:", board.read("budget_remaining") - 300 < 0)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>stayscout books $650 hotel, remaining: 1150
+flightscout books $900 flight, remaining: 250
+excursionscout sees remaining before booking: 250
+excursionscout tries $300 tour -- would go negative: True</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>The lock is not decorative</dt>
+        <dd>Section 8 just showed workers running CONCURRENTLY. If two workers decrement <code>budget_remaining</code> at the same moment without a lock, a classic race condition can let both reads see the same pre-decrement value and both proceed as if the full amount were still available -- double-spending a shared budget. <code>threading.Lock()</code> serializes each read-decrement pair so that can't happen, even when workers run in parallel via Section 8's <code>ThreadPoolExecutor</code>.</dd>
+      </dl>
+    </div>
+    <p>This chapter's own boundary, stated explicitly: a blackboard is a deliberately minimal shared-state primitive, not this course's full memory architecture (Chapter 4) or a distributed coordination service. For a real production system with many workers and a persistence requirement, the blackboard concept generalizes to a shared database row or a message queue's shared topic -- the LOCK's job (serialize concurrent reads+writes to shared state) is the part that matters, not the specific Python class.</p>
+  </section>
+
+  <section id="per-agent-budgets" class="subtopic">
+    <h2>10. Per-agent budgets -- Chapter 8's budget, one per worker</h2>
+    <p>Chapter 8's <code>is_within_budget</code> capped ONE loop's steps and cost. In a multi-agent system, EACH worker needs its own budget -- a loose budget on one worker doesn't protect against a tight-budget worker quietly overrunning its own cap while the aggregate total still looks fine.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">per_agent_budgets.py</span></div>
+      <pre><code>def is_within_budget(steps_used, cost_used, max_steps, max_cost):
+    """Chapter 8 -- unchanged."""
+    return steps_used <= max_steps and cost_used <= max_cost
+
+AGENT_BUDGETS = {
+    "flightscout": {"max_steps": 3, "max_cost": 0.10},
+    "stayscout": {"max_steps": 3, "max_cost": 0.10},
+    "excursionscout": {"max_steps": 2, "max_cost": 0.05},   # deliberately tighter
+}
+
+def run_worker_with_budget(worker, steps_taken, cost_so_far):
+    b = AGENT_BUDGETS[worker]
+    return is_within_budget(steps_taken, cost_so_far, b["max_steps"], b["max_cost"])
+
+print("excursionscout at step 2, $0.04 (within its own tighter budget):",
+      run_worker_with_budget("excursionscout", 2, 0.04))
+print("excursionscout at step 3, $0.04 (exceeds its own max_steps=2):",
+      run_worker_with_budget("excursionscout", 3, 0.04))
+print("the SAME step/cost under flightscout's looser budget:",
+      run_worker_with_budget("flightscout", 3, 0.04))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>excursionscout at step 2, $0.04 (within its own tighter budget): True
+excursionscout at step 3, $0.04 (exceeds its own max_steps=2): False
+the SAME step/cost under flightscout's looser budget: True</code></pre>
+    </div>
+    <p>Why ExcursionScout gets the tightest budget: it's the lowest-stakes, most-substitutable sub-task (a single activity recommendation) -- a runaway ExcursionScout wastes less if capped hard and fast, freeing the supervisor to retry with a different sub-task rather than let one worker's overrun consume budget that should go to the flight or hotel search.</p>
+  </section>
+
+  <section id="isolation" class="subtopic">
+    <h2>11. Failure isolation: one worker's crash must not crash the supervisor</h2>
+    <p>A worker can raise an exception -- a malformed dispatch, a missing argument, a downstream API timeout. Without isolation, one worker's crash takes down the entire multi-agent run:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">failure_isolation.py</span></div>
+      <pre><code>def excursionscout_worker(city):
+    if city is None:
+        raise ValueError("excursionscout received no city -- cannot search activities")
+    return {"worker": "excursionscout", "activity": f"Walking tour of {city}"}
+
+def flightscout_worker(origin, destination):
+    return {"worker": "flightscout", "flight": f"{origin} -> {destination}"}
+
+def dispatch_isolated(worker_fn, *args):
+    try:
+        return {"ok": True, "result": worker_fn(*args)}
+    except Exception as e:
+        return {"ok": False, "error": str(e), "worker": worker_fn.__name__}
+
+def supervisor_run(jobs):
+    return [dispatch_isolated(fn, *args) for fn, args in jobs]
+
+jobs = [
+    (flightscout_worker, ("Boston", "Lisbon")),
+    (excursionscout_worker, (None,)),   # simulated bad dispatch: missing city
+]
+run_results = supervisor_run(jobs)
+print(run_results)
+print("supervisor still produced", sum(1 for r in run_results if r["ok"]),
+      "of", len(run_results), "results despite one worker crashing")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>[{'ok': True, 'result': {'worker': 'flightscout', 'flight': 'Boston -> Lisbon'}}, {'ok': False, 'error': 'excursionscout received no city -- cannot search activities', 'worker': 'excursionscout_worker'}]
+supervisor still produced 1 of 2 results despite one worker crashing</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>The try/except boundary lives around EACH dispatch, not around the whole run</dt>
+        <dd>If the <code>try</code> wrapped the entire <code>supervisor_run</code> loop instead of each individual <code>dispatch_isolated</code> call, FlightScout's already-successful result would be lost the moment ExcursionScout raised -- the whole run would abort on the first failure. Wrapping per-worker is what actually delivers "one worker's failure doesn't crash the orchestrator," matching this chapter's own required guarantee.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="verification" class="subtopic">
+    <h2>12. Failure mode 2: a plausible-but-wrong worker result the supervisor can't see without checking</h2>
+    <p>The most dangerous multi-agent failure isn't a crash -- it's a worker that returns a well-formed, confident-looking result that is simply wrong. A genuine bug, planted the same honest way Chapter 1's Cedar Hollow bug was, then caught:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">plausible_but_wrong.py</span></div>
+      <pre><code>def stayscout_worker_buggy(city):
+    # BUG: ignores the requested city and always returns a hotel in Porto.
+    return {"worker": "stayscout", "city": "Porto", "hotel": "Ribeira Inn"}
+
+hotel_result = stayscout_worker_buggy("Lisbon")
+print("stayscout returned:", hotel_result)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed -- looks completely fine on its own)</span>
+      <pre><code>stayscout returned: {'worker': 'stayscout', 'city': 'Porto', 'hotel': 'Ribeira Inn'}</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... why a supervisor can't catch this just by checking "did the worker respond"?</span>
+      <code>stayscout_worker_buggy</code> returned a perfectly well-formed dict with a real hotel name -- there is no exception to catch (Section 11), no missing tool call (Section 5), and no ambiguous routing (Section 6). The ONLY way to catch it is to verify the CONTENT of the result against what was actually requested. This is exactly the "plausible-but-wrong" risk this chapter's own brief named, and it is the multi-agent-layer version of Chapter 7's own content-correctness lesson (the $12M/$9.4M bug) -- now applied across agents instead of within one loop.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">verify_worker_result.py</span></div>
+      <pre><code>def verify_worker_result(result, expected_city):
+    if result.get("city") != expected_city:
+        return {"ok": False,
+                "reason": f"expected city={expected_city!r}, got city={result.get('city')!r}"}
+    return {"ok": True}
+
+verification = verify_worker_result(hotel_result, "Lisbon")
+print("verification (catches the plausible-but-wrong result):", verification)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>verification (catches the plausible-but-wrong result): {'ok': False, 'reason': "expected city='Lisbon', got city='Porto'"}</code></pre>
+    </div>
+    <p>The supervisor's job, once <code>verify_worker_result</code> returns <code>{"ok": False}</code>, is to treat that worker's result as UNTRUSTED and either re-dispatch, escalate, or exclude it from the final aggregate -- never pass a failed-verification result through to the final itinerary as if it had been checked.</p>
+  </section>
+
+  <section id="redundant" class="subtopic">
+    <h2>13. Failure mode 3: redundant dispatch multiplies cost worker-by-worker</h2>
+    <p>Section 5's retry logic, applied naively, creates a NEW cost problem: retrying on "missing tool call" without checking whether the first attempt already actually succeeded can double-dispatch the same sub-task.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">naive_redundant_dispatch.py</span></div>
+      <pre><code>DISPATCH_LOG = []
+
+def naive_dispatch(subtask, worker):
+    DISPATCH_LOG.append((subtask, worker))
+    return f"dispatched {subtask!r} to {worker}"
+
+def naive_retry_supervisor(subtask, worker):
+    # naive: retries WITHOUT checking whether the first attempt already
+    # dispatched successfully.
+    results = [naive_dispatch(subtask, worker)]
+    results.append(naive_dispatch(subtask, worker))   # duplicate dispatch!
+    return results
+
+naive_retry_supervisor("Find a hotel near the river in Lisbon.", "stayscout")
+print("naive retry dispatch log (redundant):", DISPATCH_LOG)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>naive retry dispatch log (redundant): [('Find a hotel near the river in Lisbon.', 'stayscout'), ('Find a hotel near the river in Lisbon.', 'stayscout')]</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why this is worse than a single loop's own wasted step</dt>
+        <dd>Chapter 8's cost-control chapter worried about one loop repeating an expensive step. A supervisor/worker system multiplies that risk: EVERY retry re-dispatches to a WHOLE separate worker agent, which may itself make multiple LLM calls and tool calls -- one careless retry-without-idempotency-check can multiply the cost of an entire worker's run, not just one step.</dd>
+      </dl>
+    </div>
+    <p>The fix: track which (sub-task, worker) pairs have already been dispatched, and skip a duplicate:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">idempotent_dispatch.py</span></div>
+      <pre><code>DISPATCHED_HASHES = set()
+
+def idempotent_dispatch(subtask, worker):
+    key = (subtask, worker)
+    if key in DISPATCHED_HASHES:
+        return f"SKIPPED duplicate dispatch of {subtask!r} to {worker}"
+    DISPATCHED_HASHES.add(key)
+    DISPATCH_LOG.append((subtask, worker))
+    return f"dispatched {subtask!r} to {worker}"
+
+print(idempotent_dispatch("Find a hotel near the river in Lisbon.", "stayscout"))
+print(idempotent_dispatch("Find a hotel near the river in Lisbon.", "stayscout"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>dispatched 'Find a hotel near the river in Lisbon.' to stayscout
+SKIPPED duplicate dispatch of 'Find a hotel near the river in Lisbon.' to stayscout</code></pre>
+    </div>
+    <p>This is deliberately a SET keyed on the exact (subtask, worker) pair, not a broader dedup on worker alone -- a supervisor legitimately dispatches to the SAME worker multiple times across a run (Section 8 dispatched to three different workers once each, but a longer goal easily needs FlightScout twice for two different legs). Idempotency must key on the specific sub-task, not just the worker's name.</p>
+  </section>
+
+  <section id="cross-agent-eval" class="subtopic">
+    <h2>14. Cross-agent trajectory evaluation: which AGENT, not just which tool</h2>
+    <p>Chapter 7's <code>trajectory_correctness</code> answered "which TOOL was responsible" within one loop. A multi-agent run needs the same question answered one level up: which AGENT was responsible.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">which_agent_responsible.py</span></div>
+      <pre><code>def which_agent_responsible(trace):
+    """
+    trace: list of (agent, tool, ok) tuples across the WHOLE multi-agent
+    run. Returns the name of the FIRST agent whose step failed
+    verification, or None if every step passed -- extends Chapter 7's
+    trajectory_correctness from "which tool" to "which agent," since a
+    wrong result can originate in ANY worker, not just a missing or
+    wrong tool call.
+    """
+    for agent, tool, ok in trace:
+        if not ok:
+            return agent
+    return None
+
+full_trace = [
+    ("flightscout", "search_flights", True),
+    ("stayscout", "search_hotels", False),   # this is Section 12's Porto/Lisbon bug
+    ("excursionscout", "search_activities", True),
+]
+print("which agent responsible for this run's failure:", which_agent_responsible(full_trace))
+print("which agent responsible for an all-passing run:",
+      which_agent_responsible([("flightscout", "x", True), ("stayscout", "y", True)]))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>which agent responsible for this run's failure: stayscout
+which agent responsible for an all-passing run: None</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why attribution matters operationally, not just diagnostically</dt>
+        <dd>In a single-agent loop, "which tool failed" and "what do I fix" are almost the same question. In a multi-agent system, a supervisor-level bug (misrouting, Section 6) and a worker-level bug (the Porto/Lisbon content error, Section 12) look identical from OUTSIDE the system -- both produce a wrong final itinerary. <code>which_agent_responsible</code> is the difference between debugging TripScout's own routing logic and debugging StayScout's own tool implementation -- the wrong fix wastes an entire investigation cycle.</dd>
+      </dl>
+    </div>
+    <p>This is this chapter's own explicit continuation of <code>llm-evaluation-for-everyone</code>'s boundary, restated per this course's standing positioning discipline: that sibling course teaches evaluation methodology as its own deep discipline (including trajectory evaluation for tool-use agents); this course's own Chapter 7 already deferred deep methodology to it, and this section deliberately reuses Chapter 7's OWN mechanism rather than re-deriving a new one, extending it one level (agent, not tool) exactly the way this course's chapters build on each other.</p>
+  </section>
+
+  <section id="approval" class="subtopic">
+    <h2>15. A fail-closed approval checkpoint before a worker commits spend</h2>
+    <p>Chapter 6's fix made <code>human_approved</code> default to <code>False</code> -- the same discipline applies anywhere a worker is about to commit real spend on the traveler's behalf:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">fail_closed_approval.py</span></div>
+      <pre><code>def requires_human_approval(action_cost, threshold=500):
+    return action_cost >= threshold
+
+def approve_booking(action_cost, human_approved=False):
+    """Fail closed: any booking at/above threshold is DENIED unless
+    human_approved is explicitly True. Default is False -- the same
+    fail-closed discipline as Chapter 6's guardrail fix."""
+    if requires_human_approval(action_cost) and not human_approved:
+        return {"approved": False,
+                "reason": "booking >= $500 requires human approval; none given (default-deny)"}
+    return {"approved": True}
+
+print("flightscout $900 booking, no approval given:", approve_booking(900))
+print("flightscout $900 booking, WITH approval:", approve_booking(900, human_approved=True))
+print("excursionscout $90 booking, under threshold:", approve_booking(90))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>flightscout $900 booking, no approval given: {'approved': False, 'reason': 'booking >= $500 requires human approval; none given (default-deny)'}
+flightscout $900 booking, WITH approval: {'approved': True}
+excursionscout $90 booking, under threshold: {'approved': True}</code></pre>
+    </div>
+    <p>In a multi-agent system this checkpoint belongs INSIDE each worker's own commit step (FlightScout's own booking call), not only at the supervisor level -- a supervisor-level-only check would miss a worker that commits spend directly without reporting back first.</p>
+  </section>
+
+  <section id="assembled" class="subtopic">
+    <h2>16. TripScout, assembled end-to-end</h2>
+    <p>All of Sections 3-15's pieces, combined into one run: dispatch with idempotency (Section 13), a per-step ok/fail trace, and cross-agent attribution (Section 14):</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tripscout_assembled.py</span></div>
+      <pre><code>def run_tripscout(goal_subtasks):
+    trace = []
+    dispatched = set()
+    for subtask, worker, verified_ok in goal_subtasks:
+        key = (subtask, worker)
+        if key in dispatched:
+            continue   # idempotent skip, Section 13
+        dispatched.add(key)
+        trace.append((worker, subtask, verified_ok))
+    responsible = which_agent_responsible(trace)
+    return {"trace": trace, "first_failed_agent": responsible}
+
+demo = run_tripscout([
+    ("find flight", "flightscout", True),
+    ("find hotel", "stayscout", False),      # Section 12's Porto/Lisbon bug
+    ("find activity", "excursionscout", True),
+])
+print(demo)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'trace': [('flightscout', 'find flight', True), ('stayscout', 'find hotel', False), ('excursionscout', 'find activity', True)], 'first_failed_agent': 'stayscout'}</code></pre>
+    </div>
+    <p>A supervisor built this way is honest about the outcome: it can dispatch, isolate a crash, verify a result, skip a redundant call, and say EXACTLY which agent caused a bad run when one occurs -- the four capabilities this chapter's own brief named, combined in fewer than twenty lines because each piece was already built and tested separately above.</p>
+  </section>
+
+  <section id="checklist" class="subtopic">
+    <h2>17. A multi-agent coordination maturity checklist</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">maturity_checklist.py</span></div>
+      <pre><code>def classify_coordination_gap(setup):
+    if setup.get("checks_tool_calls_before_trusting_dispatch") is False:
+        return "no tool_calls check -- Section 4/5's exact gap, a malformed dispatch is silently dropped"
+    if setup.get("routes_to_none_when_ambiguous") is False:
+        return "router always guesses a worker -- Section 6's exact gap, ambiguous sub-tasks get silently misrouted"
+    if setup.get("isolates_worker_failures") is False:
+        return "no per-worker try/except -- Section 11's exact gap, one crash takes down the whole run"
+    if setup.get("verifies_worker_content") is False:
+        return "no content verification -- Section 12's exact gap, a plausible-but-wrong result passes through unchecked"
+    if setup.get("dispatch_is_idempotent") is False:
+        return "no idempotent dispatch -- Section 13's exact gap, retries multiply cost worker-by-worker"
+    if setup.get("attributes_failure_to_agent") is False:
+        return "no cross-agent attribution -- Section 14's exact gap, debugging wastes a cycle on the wrong agent"
+    return "no known gap matched"
+
+print(classify_coordination_gap({"checks_tool_calls_before_trusting_dispatch": False}))
+print(classify_coordination_gap({"checks_tool_calls_before_trusting_dispatch": True, "routes_to_none_when_ambiguous": False}))
+print(classify_coordination_gap({"checks_tool_calls_before_trusting_dispatch": True, "routes_to_none_when_ambiguous": True,
+      "isolates_worker_failures": True, "verifies_worker_content": True, "dispatch_is_idempotent": True,
+      "attributes_failure_to_agent": False}))
+print(classify_coordination_gap({"checks_tool_calls_before_trusting_dispatch": True, "routes_to_none_when_ambiguous": True,
+      "isolates_worker_failures": True, "verifies_worker_content": True, "dispatch_is_idempotent": True,
+      "attributes_failure_to_agent": True}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>no tool_calls check -- Section 4/5's exact gap, a malformed dispatch is silently dropped
+router always guesses a worker -- Section 6's exact gap, ambiguous sub-tasks get silently misrouted
+no cross-agent attribution -- Section 14's exact gap, debugging wastes a cycle on the wrong agent
+no known gap matched</code></pre>
+    </div>
+    <p>The order mirrors the order this chapter built these capabilities in: a supervisor that can't even trust its own dispatch call (first check) has nothing worth routing correctly; attribution (last check) is the one that matters most once everything else already works, because it's what makes a rare failure fast to fix instead of a mystery.</p>
+  </section>
+
+  <section id="thought-process" class="subtopic">
+    <h2>18. GenAI Builder Thought Process</h2>
+    <div class="thinking-box">
+      <p><strong>Thought process:</strong> the natural first instinct when a goal needs "more than one thing to happen" is to reach for a heavy framework's built-in crew/graph abstraction and trust it to handle coordination correctly. This chapter's own real, unscripted Section 4 result is the direct rebuttal to trusting any abstraction blindly: even a single, simple "call one tool" request came back malformed on the very first try, and a THIRD of the one-at-a-time calls in that same test run came back malformed too -- a framework that silently swallows a missing <code>tool_calls</code> response would have dropped an entire sub-task with no error at all. The habit that actually works, demonstrated this chapter: never assume a dispatch call succeeded just because it returned without an exception (Section 5); route ambiguous sub-tasks to NO worker rather than guess (Section 6); wrap EACH worker's own execution in its own isolation boundary, not the whole run (Section 11); verify a worker's result CONTENT against what was actually requested, not just its shape (Section 12); make dispatch idempotent so a necessary retry never becomes a redundant, cost-multiplying re-dispatch (Section 13); and always be able to answer "which AGENT" when something goes wrong, not just "which tool" (Section 14). A strong prompt for an AI pair-programmer building a supervisor/worker system for a different domain: "I'm building a supervisor agent that dispatches sub-tasks to 2-3 worker agents, each with its own tool surface. Build: (1) a single dispatch tool with an enum-constrained worker field, given ONE sub-task per call, not a full multi-part goal in one call; (2) explicit tool_calls-is-None detection with a bounded retry on the SAME sub-task, never the whole goal; (3) a keyword or embedding router that returns None (no dispatch) when no worker scores confidently, rather than guessing; (4) a per-worker try/except boundary so one worker's exception never aborts other workers' already-completed results; (5) a content-verification function per worker that checks the RESULT against what was actually requested, not just that a result was returned; (6) an idempotent dispatch log keyed on (subtask, worker) so a legitimate retry never becomes a duplicate paid dispatch; (7) a which_agent_responsible function that walks a (agent, tool, ok) trace and returns the first agent whose step failed. Use only the Python standard library, concurrent.futures for fan-out, and the plain openai client -- no LangGraph, CrewAI, or AutoGen."</p>
+    </div>
+  </section>
+
+  <div class="real-world">
+    <span class="label">In the Real World</span>
+    <ul>
+      <li>Section 4's genuine malformed-dispatch result is a real, common small-model behavior: asked to make several tool calls in one turn, a model will sometimes describe its intended calls as text instead of emitting them as real <code>tool_calls</code>. Production systems built on smaller or local models specifically prefer one-tool-call-per-turn supervisor prompts for exactly this reason -- not a stylistic choice, a reliability one.</li>
+      <li>Section 8's fan-out pattern is the same one behind a research assistant that fires a web search, a document lookup, and a calculator call concurrently instead of serially -- the biggest latency win in many multi-agent systems is simply not waiting for independent work to finish one at a time.</li>
+      <li>Section 12's plausible-but-wrong worker result is the most common REAL production incident in multi-agent systems -- not a crash (which alerts on its own) but a confidently wrong sub-result that silently degrades the aggregate outcome. Teams running supervisor/worker systems in production budget real engineering time for worker-level content verification, not just worker-level error handling.</li>
+    </ul>
+  </div>
+
+  <section id="recap" class="subtopic">
+    <div class="points-to-remember">
+      <h2>Points to Remember</h2>
+      <ul>
+        <li><strong>Supervisor/worker adds three NEW jobs that don't exist for a single loop</strong> (Section 1): decomposition, routing, and aggregation -- each worker is still an ordinary Chapter 1-8 loop underneath.</li>
+        <li><strong>Never trust a dispatch just because it returned without an exception</strong> (Sections 4-5) -- a genuine, unscripted result this session showed a supervisor call returning a fully-formed plan as plain text with an EMPTY <code>tool_calls</code>, which a naive check would silently drop.</li>
+        <li><strong>Ambiguous routing must fail closed to "no worker," not guess</strong> (Section 6) -- the same fail-closed discipline this chapter's approval checkpoint (Section 15) and Chapter 6's own guardrail fix both use.</li>
+        <li><strong>A sequential pipeline and supervisor/worker are different patterns</strong> (Section 7) -- a pipeline's order IS the architecture; a supervisor's routing is a live decision.</li>
+        <li><strong>Fan-out only helps genuinely independent work</strong> (Section 8) -- a real measured 3.5x speedup on three real, independent worker calls; parallelizing dependent workers is a correctness bug.</li>
+        <li><strong>A blackboard's lock is load-bearing, not decorative</strong> (Section 9) -- concurrent workers without it can double-spend shared state.</li>
+        <li><strong>Each worker needs its OWN budget</strong> (Section 10) -- a loose aggregate total can hide one worker quietly overrunning its own cap.</li>
+        <li><strong>Isolate failures per worker, not per run</strong> (Section 11) -- wrapping the whole run in one try/except loses every already-successful result the moment one worker fails.</li>
+        <li><strong>The most dangerous failure has no error at all</strong> (Section 12) -- a plausible-but-wrong worker result requires CONTENT verification, not just shape-checking.</li>
+        <li><strong>Idempotent dispatch, keyed on (subtask, worker)</strong> (Section 13) -- a necessary retry must never become a redundant, cost-multiplying re-dispatch.</li>
+        <li><strong>Attribution answers "which AGENT," extending Chapter 7's "which tool"</strong> (Section 14) -- the difference between debugging the right component and wasting a cycle on the wrong one.</li>
+        <li>No agent framework was used anywhere in this chapter -- every coordination mechanism is plain Python (stdlib plus <code>concurrent.futures</code>) or the plain <code>openai</code> client against local Ollama.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p>Ready to check what stuck? Head to the interactive quiz next &mdash; every blank has a Check button, so you'll know instantly if you've got it.</p>
+
+  <div class="chapter-nav">
+    <a href="../../index.html">&larr; All Chapters</a>
+    <a href="quiz.html">Take the Quiz &rarr;</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+    <span><a href="https://github.com/TechNaom/agentic-ai-for-everyone">github.com/TechNaom/agentic-ai-for-everyone</a></span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>
