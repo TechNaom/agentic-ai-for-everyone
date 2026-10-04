@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 12: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design an architecture decision yourself, then critique an AI's plausible-but-flawed one.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-12">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the exercises</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 12 &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked the exercises yourself on Lantern Hill Senior Living. Now a third scenario, <strong>Vantage Peak Ski Resorts</strong> (a fictional ski resort operator) gets an architecture decision built a second way: by prompting an AI assistant for a full Architecture Decision Record, and reviewing what it hands back with the same skepticism you'd bring to a coworker's design-review doc before approving a build.</p>
+  </div>
+
+  <h2>Step 1: Design it yourself, first</h2>
+  <p>Vantage Peak wants an agent for two request types: (1) lift-ticket refund requests when a lift is closed for weather, and (2) a 24/7 unattended avalanche-sensor alert that pages the ski patrol when a sensor trips. Before reading further, characterize this problem yourself: is it single- or multi-agent, and which specific fact decides it? Which of Chapters 4-11's mechanisms are load-bearing, and which aren't? What reliability/cost budget would you set for the avalanche-alert path versus the refund path? There's no grading here, just your own design to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant to build the same decision</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to force the AI to state problem FACTS before proposing a design, the same ordering this chapter's own framework uses -- otherwise a rushed AI answer tends to jump straight to "I'd use a multi-agent system" because the two request types sound different in tone, without ever checking whether they actually need independent concurrent actors (they don't -- both can be handled by one agent with the right tools and guardrails), and tends to either skip a guardrail on the irreversible refund action or skip the operating layer for the 24/7 unattended sensor path entirely.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Design an agent architecture for Vantage Peak Ski Resorts that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this chapter's own lesson pattern.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>I need an Architecture Decision Record for an agent system at Vantage Peak Ski Resorts, handling (1) lift-ticket refund requests when a lift closes for weather, and (2) a 24/7 unattended avalanche-sensor alert that pages ski patrol when a sensor trips. Before proposing ANY design: state explicitly whether this needs a single agent or multiple agents, using this test -- multi-agent is only justified if there are distinct, specialized subtasks that can run INDEPENDENTLY, or if multiple actors must act CONCURRENTLY on shared state. Name the specific fact that decides it. Then, for each of: persisted memory, a grounded reflection step, a human-approval guardrail, reliability measurement, cost control, multi-agent dispatch, peer communication, and an operating layer (retries/timeouts/logging), state whether it's load-bearing for THIS problem and the one fact that makes it so or not. Then state a reliability/cost budget as two numbers (a minimum task-success rate and a maximum cost per run), with the avalanche-alert path getting the stricter of the two. Do not skip straight to a design before completing all three of these steps.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated architecture decision tends to get wrong</span>
+    <ul>
+      <li><strong>Multi-agent chosen from tone, not facts.</strong> Does the AI justify splitting refunds and avalanche alerts into separate agents because they "feel different," without naming a concrete independently-runnable-subtask or concurrent-actor fact -- the exact over-engineering smell this chapter's Section 10 catches?</li>
+      <li><strong>A missing guardrail on the refund action.</strong> Does the generated design actually gate the refund behind a human-approval checkpoint (Chapter 6), or does it quietly auto-approve every refund regardless of amount?</li>
+      <li><strong>A missing operating layer on the 24/7 path.</strong> Does the design account for the avalanche-sensor path running UNATTENDED -- idempotent alert dispatch, a timeout on the sensor-read call, structured logging -- or does it only describe the conversational refund path and leave the sensor path as an afterthought?</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's ADR against this chapter's own lesson pattern (Sections 4-10, 17-19) and against <code>solution.py</code> in the exercises folder. Did it state facts before proposing mechanisms, or the other way around?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Exercises</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

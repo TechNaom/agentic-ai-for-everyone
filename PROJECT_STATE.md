@@ -1,17 +1,21 @@
 # PROJECT_STATE.md — Agentic AI for Everyone
 
-Last updated: 2026-10-04 (Session 11 — Chapter 11, "Operating Agents in
-Production," complete and live. This CLOSES Module 5 — Multi-Agent
-Systems is now **Complete**: Chapters 9, 10, and 11 are all live, AND
-Module 5's own combined assessment was built this session, on schedule,
-at `assessments/module-assessments/module-5-multi-agent-coordination-
-and-operations-exercise/`. Modules 1-5 (Chapters 1-11) are now fully
-complete. This session did NOT build the L3 Independent project —
-deferred a FIFTH consecutive time, restated loudly below and in
-`quality-audits/chapter-11-audit.md`. Chapters 12-13 are scaffolded
-(`.gitkeep`'d directories), not yet built. Nothing has been pushed to
-GitHub — all work is local-only, matching every prior session's explicit
-instructions.)
+Last updated: 2026-10-04 (Session 12 — Chapter 12, "Designing Agent
+Architectures," complete and live. This OPENS Module 6 — Architecture
+and Capstone is now **In Progress**: Chapter 12 shipped the
+architecture-decision framework, Module 6's own Chapter-12-scoped
+assessment (`assessments/module-assessments/module-6-architecture-
+design-exercise/`), AND — closing a FIVE-session deferral — the **L3
+Independent project**, at `chapters/chapter-12-designing-agent-
+architectures/project/` (Driftlight Energy Cooperative). The L3
+question is now CLOSED; see `docs/curriculum/CURRICULUM_MAP.md`'s
+project-ladder section and `quality-audits/chapter-12-audit.md` for
+the full decision record. Modules 1-5 (Chapters 1-11) remain fully
+complete. Chapter 13, the capstone (L4 Architecture Challenge), is
+scaffolded (`.gitkeep`'d directory), not yet built — it is the ONLY
+remaining chapter in this entire 13-chapter course. Nothing has been
+pushed to GitHub — all work is local-only, matching every prior
+session's explicit instructions.)
 
 ## Course Objective
 
@@ -1567,166 +1571,284 @@ memory of Session 10.
   `quality-audits/chapter-11-audit.md` for the full reasoning and the
   Chapter 12 brief below for the restatement.
 
-## Next Recommended Task: Chapter 12 — "Designing Agent Architectures"
+## Session 12 — Chapter 12, "Designing Agent Architectures" (2026-10-04)
+
+This session RESUMED a Chapter 12 build that a prior session had
+started and was killed mid-way by a transient network error (not a
+logic failure), picked up cold except for an orchestrator's own
+pre-verification of what already existed on disk.
+
+1. Independently verified, rather than rebuilt, everything the
+   orchestrator had already confirmed GOOD: `lesson.html` (60 lines
+   match `<pre\|<code`), `quiz.html`, `interview-questions.md`+`.html`,
+   the full `exercises/` set (`solution.py` 17/17, `starter.py` 1/17
+   no crash), and `practice/solution.py` (8/8).
+2. Read `PROJECT_STATE.md`'s own Chapter 12 brief in full (the section
+   this session is now replacing), `docs/curriculum/CURRICULUM_MAP.md`'s
+   Module 6 section, the resumed `lesson.html` in full (to recover its
+   own framework functions and its own already-made L3 decision), and
+   `quality-audits/chapter-11-audit.md`'s 44-org exclusion list before
+   writing anything new.
+3. Discovered the resumed `lesson.html` had ALREADY decided the L3
+   question (Section 21: "This chapter's project closes a
+   five-session-deferred commitment") and already named the project's
+   scenario (Driftlight Energy Cooperative). This session's job became
+   verifying that decision was sound, not re-deciding from scratch --
+   see the dedicated L3 section in `quality-audits/chapter-12-audit.md`
+   for the full verification.
+4. Built the entire `project/` directory from scratch as the **L3
+   Independent project**: `README.md`, `RUBRIC.md`, `solution.py`
+   (deliberately NO `starter.py`, per L3's own "no scaffold"
+   definition), `index.html`, `ai-paired.html` (a fourth scenario,
+   Mirelake Water Authority). `solution.py` implements a real
+   `MemoryStore` (JSON-file-backed, proven to persist across two
+   separate instantiations), a fail-closed `apply_credit` guardrail,
+   and an idempotent `commit_once`/`idempotency_key` layer, then
+   instruments all three with a deterministic reliability/cost harness
+   and proves the stated 0.95/0.08 budget is actually met with real
+   measured numbers (1.00 success rate, $0.03-0.05 cost per task,
+   printed at the end of a run). Scores 12/12.
+5. Built the missing `practice/{README.md,starter.py,index.html,
+   ai-paired.html}` around the pre-existing `practice/solution.py` (8
+   abstract scenarios: SingleDesk, TwinField, VaultGate, ChatterMesh,
+   NightWatch, DraftCritic, StakesLadder, ReviewPacket).
+   `ai-paired.html` uses a ninth scenario ("ScopeCreep," employer left
+   unnamed per this course's own convention).
+6. Checked both `assessments/module-assessments/` and
+   `assessments/architecture-challenges/` before building Module 6's
+   own assessment, per the brief's explicit instruction. Decision:
+   `assessments/architecture-challenges/` is reserved for Chapter 13's
+   own capstone (the curriculum map's own term for Ch13's rubric is
+   "architecture challenge, Level 4," matching that directory's name).
+   Module 6's Chapter-12-scoped assessment follows every prior
+   module's own naming convention instead:
+   `assessments/module-assessments/module-6-architecture-design-
+   exercise/`. Reuses Chapter 12's own tested framework functions via
+   `importlib` from `project/solution.py`, applied to a SIXTH fresh
+   scenario (Alderwood Transit Cooperative). `solution.py` 6/6;
+   `starter.py` 0/6, no crash.
+7. Wrote `quality-audits/chapter-12-audit.md`, extending (not
+   restarting) `chapter-11-audit.md`'s 44-org exclusion list. New orgs
+   this session: **Driftlight Energy Cooperative** (project),
+   **Mirelake Water Authority** (project `ai-paired.html`), **Alderwood
+   Transit Cooperative** (Module 6 assessment) -- plus "ScopeCreep"'s
+   unnamed employer (practice `ai-paired.html`). The resumed build's
+   own orgs (Copperfield Municipal Utilities, Lantern Hill Senior
+   Living, Vantage Peak Ski Resorts) are listed in the running
+   exclusion list for completeness but were not new this session.
+8. Wired Chapter 12 into `assets/chapters-data.js` (real `path` added),
+   `docs/curriculum/index.html` (Chapter 12 card converted to a live
+   link, Module 6 feature card marked **"In Progress,"** NOT
+   "Complete" -- Chapter 13's own capstone rubric still has to ship;
+   the stale "Chapters 1-6" intro paragraph, found in the same spot
+   prior sessions have repeatedly found one, was also corrected), and
+   root `index.html` (`hero-stats` updated to 12/13 chapters, module
+   count stays at 5/6; the chapter-map section intro paragraph
+   corrected to reflect Chapters 1-12 live).
+9. Updated `docs/curriculum/CURRICULUM_MAP.md`'s project-ladder section:
+   L3 Independent now reads **"SHIPPED at Ch. 12"** with a pointer to
+   the project directory and this session's audit.
+10. Ran `bash scripts/local_check.sh < /dev/null` for the whole repo,
+    ALONE, with no other command running concurrently -- all six
+    checks passed clean.
+11. Re-ran every regression named in this session's own resume brief:
+    Ch4/L2 10/10, Ch7 8/8, Ch8 9/9, Ch9 9/9, Ch10 9/9, Ch11 9/9, and
+    Modules 1-5's own assessments (4/4, 5/5, 3/3, 3/3, 4/4
+    respectively) -- all unchanged, all green.
+12. Committed Chapter 12, the L3 Independent project, the Module 6
+    assessment, and all wiring/audit/state changes locally -- no
+    remote added, nothing pushed, matching every prior session's
+    explicit local-only instructions.
+
+## Chapter 12 — COMPLETE
+
+- `lesson.html`: 60 lines match `<pre\|<code` (120 total tag
+  occurrences via `-o`), meeting the 60+ requirement at the course's
+  own minimum bar, appropriate for a chapter whose content is
+  deliberately more prose/decision-framework-heavy than Chapters
+  1-11's code-heavy mechanics. Built around Copperfield Municipal
+  Utilities' outage/billing-dispute problem: a four-question decision
+  framework (characterization, mechanism selection, a reliability/cost
+  budget, a trade-off defense) run in a fixed order, an
+  architecture-smell check catching both over- and under-engineering
+  from the same selected-mechanisms dict, a deliberately bad design
+  caught by that check, a contrasting multi-agent-justified worked
+  example (Harrowgate), a retroactive check against Chapters 4, 6, and
+  11's own already-shipped designs, budget-sensitivity tiers, a
+  ten-case snap-judgment battery, Chapter 7/8's own harnesses reused
+  unchanged to instrument the chosen design, a five-system cross-check,
+  and the assembled Architecture Decision Record. Section 21 states
+  this chapter's own L3 decision explicitly. Ran no live Ollama call,
+  by design, with the reasoning stated in Section 2.
+- `quiz.html`: 10 fill-in-the-blank questions.
+- `interview-questions.html` + `.md`: 10 questions across
+  beginner/intermediate/senior/architect, including a dedicated
+  architect-level question defending the L3 decision.
+- `exercises/`: Lantern Hill Senior Living scenario, 7 tasks, 17
+  points. `solution.py` verified 17/17; `starter.py` verified 1/17
+  with no crash. `ai-paired.html` uses a third scenario (Vantage Peak
+  Ski Resorts).
+- `practice/`: 8 independent diagnostic scenarios (abstract system
+  names, not full orgs, matching this chapter's own convention).
+  `solution.py` verified 8/8; `starter.py` verified 0/8 with no crash.
+  `ai-paired.html` uses a ninth scenario ("ScopeCreep," employer left
+  unnamed).
+- `project/` (**the L3 Independent project — SHIPPED, closing a
+  five-session deferral**): Driftlight Energy Cooperative, a
+  demand-response energy cooperative needing memory (a pledge set at
+  enrollment persists to a later, separate event), guardrails (a
+  fail-closed credit-approval threshold), reliability measurement,
+  cost control, and the operating layer (idempotent credits for
+  unattended overnight events) -- a genuinely richer scenario than the
+  lesson's own Copperfield. Deliberately NO `starter.py`, per L3's own
+  "no scaffold" definition. `solution.py` characterizes, selects
+  mechanisms, states a budget, implements it as real code, and PROVES
+  the budget is met with a real measured harness. Scores 12/12.
+  `RUBRIC.md` included. `ai-paired.html` uses a fourth scenario
+  (Mirelake Water Authority).
+- **Module 6's own assessment** ("architecture-design exercise,"
+  scoped to Chapter 12 alone per the curriculum map's explicit
+  Ch.12/Ch.13 split): `assessments/module-assessments/module-6-
+  architecture-design-exercise/`, reusing Chapter 12's own framework
+  functions applied to a sixth scenario (Alderwood Transit
+  Cooperative). `solution.py` 6/6; `starter.py` 0/6, no crash.
+- Wired into `assets/chapters-data.js` with a real `path`;
+  `docs/curriculum/index.html` and root `index.html` both reflect
+  Chapter 12 live, Module 6 in progress.
+
+## Next Recommended Task: Chapter 13 — "Capstone: Designing and Defending an Autonomous Agent System"
 
 Read this whole section before writing anything. It is written to be
-picked up cold, with zero memory of Session 11.
+picked up cold, with zero memory of Session 12.
 
-**What's already true when this session starts:** Chapters 1-11 are live
-and complete. Modules 1-5 are all **Complete**, including Module 5's own
-combined assessment (built at Chapter 11's session). Chapter 9 built
-supervisor/worker dispatch; Chapter 10 added peer-to-peer communication;
-Chapter 11 added production-operating concerns (idempotent retries,
-three-layer timeouts, structured logging, crash-survivable run
-summaries) on top of both. The reader now has a full, tested vocabulary
-for a coordinated, communicating, operable multi-agent system.
+**What's already true when this session starts:** Chapters 1-12 are
+live and complete. Modules 1-5 are all **Complete**. Module 6 is **In
+Progress** — Chapter 12 shipped the architecture-decision framework,
+Module 6's own Chapter-12-scoped assessment, AND the L3 Independent
+project (closing a five-session deferral). The reader now has every
+mechanism (Ch1-11) AND the decision layer for choosing among them
+(Ch12). Chapter 13 is this course's FINAL chapter and its capstone.
 
 **What this chapter must do, per `docs/curriculum/CURRICULUM_MAP.md`:**
-Chapter 12, "Designing Agent Architectures," OPENS Module 6 (Architecture
-and Capstone), whose purpose is "architect-level synthesis — designing
-and defending a complete agent system." Chapter 12's own job (Chapter 13
-is the capstone itself, out of scope this session) is teaching the
-DECISION-MAKING layer above all of Chapters 1-11's individual
-mechanisms: given a business/system problem, how does an architect
-choose which mechanisms to include (single-agent vs. multi-agent,
-supervisor/worker vs. peer-to-peer, which guardrails, how much memory,
-what reliability/cost budget) and justify that choice against
-alternatives, in writing, the way a real design review expects.
-Concretely, this likely means:
-- **A structured framework for the architecture decision itself** — at
-  minimum: problem characterization (what makes this a single- vs.
-  multi-agent problem), mechanism selection (which of Chapters 1-11's
-  tools are load-bearing vs. unnecessary for this problem), a stated
-  reliability/cost budget (reusing Chapter 7/8's vocabulary, not
-  reinventing it), and an explicit trade-off discussion (what this
-  design gives up by NOT choosing an alternative).
-- **Reusing, not re-teaching, every mechanism chosen.** An architecture
-  document that says "add a guardrail here" should point at Chapter 6's
-  actual mechanisms by name, not redescribe them. Chapter 12's own new
-  content is the DECISION framework and how to defend it, not the
-  mechanisms themselves.
-- **Module 6's own assessment is "architecture-design exercise,"
-  scoped to Chapter 12 alone** (Chapter 13 has its own separate capstone
-  rubric, per the curriculum map's "Assessment: architecture-design
-  exercise (Ch. 12) + capstone rubric (Ch. 13, architecture challenge,
-  Level 4)" line) — confirm this exact split against
-  `docs/curriculum/CURRICULUM_MAP.md` before building anything, since it
-  differs from Modules 1-5's single-combined-assessment pattern.
-- Check whether `assessments/module-assessments/` or
-  `assessments/architecture-challenges/` (both directories already exist
-  in the repo) is the right home for Chapter 12's own assessment — this
-  session should actually look at `assessments/architecture-challenges/`
-  before assuming the `module-assessments/` naming convention
-  automatically carries over, since Module 6 is explicitly architecture-
-  flavored and the repo already has a dedicated directory for exactly
-  that.
+Chapter 13 is the **L4 Architecture Challenge** — "design and defend a
+complete multi-component autonomous agent system; business/system
+problem only" (Level 4, Architect difficulty). Unlike L1-L3, which
+each shipped as or alongside a numbered chapter's own project, L4 IS
+the entire chapter's deliverable — there is no separate "lesson vs.
+project" split the way Chapters 1-12 had; the capstone's problem
+statement, its required deliverable, and its grading rubric are
+Chapter 13's whole content. Concretely, this likely means:
+- **A multi-component problem, not a single-agent one.** Per the
+  curriculum map's own learning-outcome #10 ("design and defend a
+  complete autonomous agent system architecture for a realistic
+  multi-component product"), the capstone's own problem statement
+  should plausibly need MORE than Chapter 12's own Copperfield/
+  Driftlight/Alderwood single-agent examples — likely genuinely
+  justifying multi-agent coordination (Ch9-10) alongside the
+  single-agent mechanisms, so the reader exercises the FULL mechanism
+  inventory's range, not just the subset Chapter 12's own three
+  worked scenarios happened to need.
+- **The deliverable is a full Architecture Decision Record PLUS a
+  working reference implementation**, the same two-part shape Chapter
+  12's own L3 project just proved out (design + real, instrumented
+  code), scaled up to a multi-component system. Reuse
+  `characterize_problem`/`select_mechanisms`/`reliability_cost_budget`/
+  `architecture_smell_check`/`build_adr` from Chapter 12's own
+  `project/solution.py` by import, exactly like Module 6's own
+  assessment and the L3 project itself both already did — do not
+  redefine these functions a third time.
+- **The capstone rubric is Chapter 13's own grading document** —
+  confirm its exact name and scope against
+  `docs/curriculum/CURRICULUM_MAP.md`'s Module 6 line ("capstone
+  rubric (Ch. 13, architecture challenge, Level 4)") before building
+  it, and place it in `assessments/architecture-challenges/` — this
+  session confirmed that directory is reserved for exactly this
+  deliverable (see `quality-audits/chapter-12-audit.md`'s Module 6
+  section for the full reasoning), so Chapter 13 should actually use
+  it, not route the capstone through `module-assessments/` instead.
 
-**The L3 Independent project — FLAGGED LOUDLY, deferred FIVE times now.**
-Per the curriculum map, L3 ("design and implement a reliability-
-instrumented, cost-bounded agent for a given problem, no scaffold") was
-supposed to ship "after Ch. 8." It has now been deferred past Chapters 8,
-9, 10, and 11 — **five consecutive sessions** — each time with an explicit
-restatement rather than a silent drop (see `quality-audits/chapter-08
-through -11-audit.md` for the running record). Chapter 11's own session
-judged that folding L3 into Chapter 11 would have compromised either the
-chapter itself or Module 5's own mandatory assessment, and deferred it
-again rather than ship it shallow. **This session (Chapter 12) should
-make a real decision, not defer by default a sixth time:**
-1. First, check whether Chapter 12's own architecture-design material
-   can legitimately absorb L3's definition — an architect choosing a
-   reliability-instrumented, cost-bounded design FOR a given problem is
-   conceptually close to what Chapter 12 already teaches, the same way
-   Chapter 11's own brief considered folding L3 in.
-2. If Chapter 12's own project naturally covers L3's definition with a
-   genuinely independent, no-scaffold deliverable (a README, a RUBRIC,
-   and one reference `solution.py`/design document, NO starter
-   scaffold, per L3's own "independent" definition), build it as L3
-   explicitly, label it as closing that deferral, and update
-   `docs/curriculum/CURRICULUM_MAP.md`'s project-ladder section to show
-   L3 as shipped.
-3. If it does NOT cleanly fit (e.g., if Chapter 12's assessment is
-   prose/design-document-shaped rather than code-shaped, which an
-   architecture exercise plausibly is, and L3's definition wants a
-   working no-scaffold AGENT, not just a design document), then this
-   session must make an explicit, reasoned decision: either (a) build
-   L3 as its OWN separate deliverable this session, outside Chapter 12's
-   own required file set, scoped small and honestly, or (b) defer it a
-   SIXTH time with a clear, specific reason (not just "ran out of
-   session"), and flag that a dedicated, L3-only session may be needed
-   if it keeps slipping. Six deferrals without ever shipping would be a
-   genuine process failure worth naming plainly in that session's audit.
-4. Whatever is decided, restate it explicitly in this file's own
-   Chapter 13 hand-off (written at the end of Chapter 12's session) —
-   do not let it disappear silently.
+**Scenario constraints:** pick a fresh fictional organization NOT on
+the running exclusion list in `quality-audits/chapter-12-audit.md`
+(currently 50 orgs — see that file for the full list). Extend it,
+don't restart it. Chapter 13's own capstone material may reasonably
+reference MULTIPLE prior chapters' scenarios by name as worked
+examples or as components of the capstone's own larger system (e.g.,
+"this capstone's dispatch layer reuses Harrowgate's own peer-agent
+shape from Chapter 10-11") without that counting as a fresh org
+needing exclusion — only a genuinely NEW scenario built for the
+capstone's own problem statement needs a fresh name.
 
-**Scenario constraints:** pick a fresh fictional organization NOT on the
-running exclusion list in `quality-audits/chapter-11-audit.md` (currently
-44 orgs — see that file for the full list). Extend it, don't restart it.
-Chapter 12's architecture-design material may reasonably reference
-MULTIPLE prior chapters' scenarios by name as worked examples (e.g.,
-"CareBot's guardrail choice in Chapter 6" or "Harrowgate's retry design
-in Chapter 11") without that counting as a fresh org needing exclusion
-— only a genuinely NEW scenario built for Chapter 12's own exercises/
-practice/project needs a fresh name.
-
-**Live Ollama discipline (non-negotiable, from this course's reliability
-policy):** if this chapter's own content calls for any live model
-content, warm Ollama with a SINGLE background request
+**Live Ollama discipline, if used at all:** Chapter 12's own session
+ran NO live model call and disclosed exactly why (the skill being
+exercised is judgment against written facts, not a model's live
+behavior) — the capstone may have the same property (a design-and-
+defend exercise), or it may genuinely need a live call if the
+reference implementation includes a real agent loop as part of
+proving the architecture out. Decide this explicitly and state the
+reasoning either way, the same as Chapter 12 did. If a live call is
+used: warm Ollama with a SINGLE background request
 (`curl -s localhost:11434/api/generate -d '{"model":"llama3.2","prompt":"","keep_alive":"120m"}'`),
-then run ONE sanity call before any lesson code — do NOT launch a second
-warm-up or live request concurrently (Chapter 10's own session found two
-concurrent warm-ups raced and cost a 314s cold start; Chapter 11's
-session avoided this by warming alone and ran a clean 11.12s sanity
-check). Budget up to 450s per live call. Capture real transcripts,
-disclose honestly, and never re-run until a convenient result appears.
-Note that Chapter 12's architecture-focused content may need LESS live
-model content than Chapters 1-11 (the skill being taught is designing
-systems, not running one live), and it is fine to say so explicitly if
-true, rather than forcing in a live call that doesn't serve the chapter's
-own point.
+then run ONE sanity call before any lesson code — do NOT launch a
+second warm-up or live request concurrently (Chapter 10's own session
+found two concurrent warm-ups raced and cost a 314s cold start).
+Budget up to 450s per live call, capture real transcripts, disclose
+honestly.
 
 **Build steps:**
 
-1. Re-read `docs/curriculum/CURRICULUM_MAP.md`'s Module 6 section and
-   Chapter Roadmap table in full, and confirm the exact title ("Designing
-   Agent Architectures") and the Ch.12-vs-Ch.13 assessment split before
-   building anything.
-2. Re-read Chapters 1-11's own `lesson.html` "Points to remember"
-   sections (fast way to re-derive the full mechanism inventory this
-   chapter must teach learners to CHOOSE AMONG, without re-teaching any
-   of them from scratch).
-3. Decide the L3 question (see above) EARLY, before building Chapter
-   12's own file set, since the decision may change what Chapter 12's
-   project actually is.
-4. Build `lesson.html` to the same 60+ `<pre>`/`<code>`-line density bar
-   this course has held every chapter, verified with
-   `grep -c '<pre\|<code' lesson.html` before calling it done — even
-   though this chapter is architect-level and more prose/decision-
-   framework-heavy than Chapters 1-11, the density bar is a standing,
-   non-negotiable requirement, not optional at this difficulty tier.
-5. Build the full file set matching Chapter 11's own pattern as closely
-   as this chapter's different (architecture-document-shaped, not
-   agent-code-shaped) content allows: `quiz.html`, `interview-
-   questions.md` + `.html`, `exercises/`, `practice/`, and `project/`
-   (or, if the L3 decision above routes L3's own deliverable through
-   this project slot, say so explicitly in `project/README.md`).
-6. Build Module 6's OWN assessment for Chapter 12 specifically
-   ("architecture-design exercise," per the curriculum map) — confirm
-   its home directory per the check above before creating files.
-7. `assets/chapters-data.js`: add Chapter 12's real `path` only once
-   `lesson.html` exists. Chapter 13 stays without one.
-8. Update `docs/curriculum/index.html`: convert Chapter 12's card from a
-   non-linked "Planned" `<div>` to a linked `<a class="chapter-card">`.
-   Module 6's feature card moves from "Planned" to "In Progress" (NOT
-   "Complete" — Chapter 13, the capstone, still has to ship).
-9. Update root `index.html`'s `hero-stats`: chapter count to **12 of
-   13**, module-complete count stays at **5 of 6** (Module 6 isn't
-   complete until Chapter 13 ships). Update the stale "Chapters 1-11"
-   intro paragraph to "Chapters 1-12."
-10. Write `quality-audits/chapter-12-audit.md` following
-    `chapter-11-audit.md`'s exact format. Extend (don't restart) the
-    exclusion list. State the L3 decision explicitly and loudly (built,
-    or deferred a sixth time with a specific reason).
+1. Re-read `docs/curriculum/CURRICULUM_MAP.md`'s Module 6 section, its
+   Chapter Roadmap table, its full 10-item learning-outcome ladder, and
+   its Projects section (L1-L4) in full before building anything —
+   confirm the exact capstone title ("Capstone: Designing and
+   Defending an Autonomous Agent System") and its Level 4 scope.
+2. Re-read Chapter 12's own `lesson.html` in full (its four-question
+   framework, its architecture-smell check, its ADR assembly) and
+   `project/solution.py` (the functions to import, not redefine) —
+   this is the toolkit the capstone applies at full scale, not a new
+   invention.
+3. Design the capstone's own problem statement: a realistic,
+   multi-component business/system problem that plausibly needs
+   several of Ch1-11's mechanisms together, including — if genuinely
+   justified by the problem's own facts, not by habit — multi-agent
+   coordination.
+4. Build `lesson.html` (or the capstone's own equivalent primary page
+   — confirm the right file name/shape for a chapter whose
+   deliverable IS the project, not a separate lesson) to the same 60+
+   `<pre>`/`<code>`-line density bar every prior chapter held, verified
+   with `grep -c '<pre\|<code' lesson.html` before calling it done.
+5. Build the capstone deliverable: a full Architecture Decision
+   Record for the chosen multi-component problem, PLUS a working
+   reference implementation that proves the chosen design out (reusing
+   Chapter 12's own framework functions and, where genuinely needed,
+   Chapters 1-11's own mechanisms by import or by pattern), PLUS the
+   quiz/interview-questions/exercises/practice file set this course's
+   every prior chapter has shipped — confirm with `CURRICULUM_MAP.md`
+   whether the capstone's own unique, whole-chapter-is-the-project
+   shape changes any of this set, and say so explicitly if it does.
+6. Build the **capstone rubric** in `assessments/architecture-
+   challenges/` (confirmed reserved for exactly this in Chapter 12's
+   own audit) — this is Chapter 13's own grading document, separate
+   from Module 6's Chapter-12-scoped assessment that already shipped.
+7. `assets/chapters-data.js`: add Chapter 13's real `path` once its
+   primary page exists.
+8. Update `docs/curriculum/index.html`: convert Chapter 13's card from
+   a non-linked "Planned" element to a linked chapter card. Module 6's
+   feature card moves from "In Progress" to **"Complete"** — this is
+   the LAST chapter in the entire course, so Module 6 completing also
+   means the WHOLE COURSE is complete.
+9. Update root `index.html`'s `hero-stats`: chapter count to **13 of
+   13**, module-complete count to **6 of 6**. Update the "Chapters
+   1-12" intro paragraph to reflect all 13 chapters live and every
+   module complete. Consider whether a closing/completion note
+   (e.g., a "course complete" banner or a capstone-specific call to
+   action) belongs on the home page now that this is the final
+   chapter — this is the first session where that question is live,
+   so make an explicit decision and state it, rather than silently
+   leaving the page's existing "in progress" framing unchanged by
+   default.
+10. Write `quality-audits/chapter-13-audit.md` following
+    `chapter-12-audit.md`'s exact format. Extend (don't restart) the
+    exclusion list.
 11. Run `bash scripts/local_check.sh < /dev/null` **alone**, with no
     other repo command running concurrently.
 12. Re-run every regression, each must be unchanged:
@@ -1736,19 +1858,22 @@ own point.
     - `chapters/chapter-09-multi-agent-orchestration-patterns/project/solution.py`: 9/9
     - `chapters/chapter-10-multi-agent-coordination-and-communication/project/solution.py`: 9/9
     - `chapters/chapter-11-operating-agents-in-production/project/solution.py`: 9/9
-    - `assessments/module-assessments/` (Modules 1-5's own assessments):
+    - `chapters/chapter-12-designing-agent-architectures/project/solution.py` (L3): 12/12
+    - `assessments/module-assessments/` (Modules 1-6's own assessments):
       all must still pass their own solutions.
-13. Update this file: "Last updated" line, a new "Session 12" section, a
-    "Chapter 12 — COMPLETE" section, and a fresh "Next Recommended Task"
-    brief for Chapter 13 (the capstone), including the L3 restatement if
-    it is still not resolved. Then end the session.
+13. Update this file: "Last updated" line, a new "Session 13" section,
+    a "Chapter 13 — COMPLETE" section, and a closing course-complete
+    summary (there is no Chapter 14 hand-off — this is the final
+    chapter). Then end the session.
 
-**Do NOT** re-teach Chapters 1-11's own mechanics (the agent loop, tool
-selection, memory, reflection, guardrails, the reliability/cost
-measurement layer, supervisor dispatch, peer messaging, the claim-check,
-deadlock detection, idempotent retries, timeouts, or structured logging)
-from scratch. Assume the reader can already build and operate a
-coordinated multi-agent system. Chapter 12's job is teaching how to
-CHOOSE among everything already built, and defend that choice in
-writing, for a problem the reader hasn't seen before.
+**Do NOT** re-teach any of Chapters 1-12's own mechanics or re-derive
+Chapter 12's own decision framework from scratch — import and apply
+it. Chapter 13's job is proving the reader can use everything this
+course has built, together, on one new, sufficiently complex problem,
+end to end, and defend the result in writing.
 
+**The L3 Independent project question is now CLOSED** — it shipped at
+Chapter 12 (see `docs/curriculum/CURRICULUM_MAP.md`'s project-ladder
+section and `quality-audits/chapter-12-audit.md`). Chapter 13's own
+session does not need to revisit it; only L4 (the capstone itself)
+remains open.

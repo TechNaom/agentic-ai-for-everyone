@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 12 Project: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design and instrument an independent agent yourself, then critique an AI's plausible-but-flawed L3-shaped build.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-12">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the project</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 12 Project &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">25 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked through the L3 project yourself on Driftlight Energy Cooperative. Now a fourth scenario, <strong>Mirelake Water Authority</strong> (a fictional municipal water utility), gets a full L3-shaped deliverable — characterization, mechanism selection, budget, implementation, and instrumentation — built a second way: by prompting an AI assistant for the whole thing, and reviewing what it hands back with the same skepticism a senior engineer would bring to a junior's first independent design-and-build submission.</p>
+  </div>
+
+  <h2>Step 1: Design and instrument it yourself, first</h2>
+  <p>Mirelake Water Authority wants an agent for its own demand-side program: residential customers pledge a daily water-usage reduction target (gallons) when they enroll in a drought-response rebate; during a declared drought-stage event, the agent checks each customer's actual usage against their pledge and issues a rebate credit if they met it. Drought-stage events can be declared at any hour and run for weeks unattended. Before reading further: characterize this problem yourself, select mechanisms, state a budget, and sketch (in words or code) how you'd implement and prove it. There's no grading here — compare your own attempt against Step 3's checklist and against this chapter's own <code>project/solution.py</code> pattern.</p>
+
+  <h2>Step 2: Ask an AI assistant to build the same deliverable</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> an L3-shaped prompt needs to force the AI through all five steps IN ORDER and demand a real, checkable harness at the end, not just a design narrative — otherwise a rushed AI answer tends to describe a plausible-sounding memory/guardrail/operating-layer design in prose, assert that it's "reliable and cost-effective," and never actually produce numbers that prove the claim, which is exactly the gap Chapter 7-8's own "measured, not asserted" lesson exists to close.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Design and implement an agent for Mirelake Water Authority that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this chapter's own project pattern.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>I need a reliability-instrumented, cost-bounded agent design AND a working implementation for Mirelake Water Authority's drought-response rebate program: customers pledge a daily gallons-reduction target at enrollment (a separate, earlier session); during an unattended drought-stage event that can run for weeks, the agent checks actual usage against the pledge and issues a rebate credit if the target was met. Do all of the following, in order, and don't skip to code before step 3: (1) characterize whether this is single- or multi-agent, naming the specific fact that decides it; (2) for each of memory, reflection, a human-approval guardrail, reliability measurement, cost control, multi-agent dispatch, peer communication, and an operating layer, state whether it's load-bearing here and why; (3) state a reliability/cost budget as two numbers; (4) implement the load-bearing mechanisms as real code, including a guardrail that is fail-CLOSED by default and an idempotent commit for the rebate credit; (5) write a small harness that runs multiple trials and reports a measured task-success rate and cost-per-success, and check those numbers against the budget from step 3 explicitly -- don't just assert the budget is met.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated L3 submission tends to get wrong</span>
+    <ul>
+      <li><strong>Memory claimed but not proven.</strong> Does the AI's "memory" mechanism actually persist across two separate process runs (a real file or database write-then-read), or is it just a dictionary that happens to survive within one script's execution — which would silently fail the moment a real drought-stage event fires in a separate process weeks after enrollment?</li>
+      <li><strong>A guardrail that defaults open.</strong> Does the rebate-credit guardrail default to requiring approval (fail-CLOSED, Chapter 6's own lesson), or does it default to auto-approving unless told otherwise (fail-open — the exact mistake Chapter 6's own LedgerBot session caught and corrected)?</li>
+      <li><strong>A budget asserted, not measured.</strong> Does the AI's response end with a harness that prints real success-rate and cost-per-success numbers and explicitly compares them to the stated budget — or does it just claim "this design meets a 95% reliability target" with no code that could ever prove or disprove that claim?</li>
+      <li><strong>No idempotency on the rebate credit.</strong> Since drought-stage events run unattended for weeks, does the design protect against a retried check-and-credit call double-crediting the same customer for the same event, the same failure Chapter 11's own lesson built <code>idempotency_key</code>/<code>commit_once</code> to prevent?</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's full deliverable against this chapter's own <code>project/solution.py</code> and <code>RUBRIC.md</code>. Did it implement and PROVE each mechanism, or just describe one plausibly?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Project</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

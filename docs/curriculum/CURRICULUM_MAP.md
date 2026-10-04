@@ -184,8 +184,11 @@ complete agent system.
   after Ch. 4, extended through Ch. 5-6's reflection/guardrail
   material).
 - **L3 Independent** — Design and implement a reliability-instrumented,
-  cost-bounded agent for a given problem, no scaffold (ships after
-  Ch. 8).
+  cost-bounded agent for a given problem, no scaffold. **SHIPPED at
+  Ch. 12**, after five deferrals across Ch. 8-11 — see
+  `chapters/chapter-12-designing-agent-architectures/project/` (Driftlight
+  Energy Cooperative) and `quality-audits/chapter-12-audit.md` for the
+  decision record.
 - **L4 Architecture Challenge** — Design and defend a complete
   multi-component autonomous agent system; business/system problem
   only (this is the capstone, Ch. 13).

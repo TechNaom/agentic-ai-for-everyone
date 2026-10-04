@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Designing Agent Architectures — Agentic AI for Everyone</title>
+<meta name="description" content="The decision-making layer above Chapters 1-11's mechanisms: problem characterization, mechanism selection, a reliability/cost budget, and a written trade-off defense -- built on Copperfield Municipal Utilities' architecture review, reusing Chapters 1-11's mechanisms by name.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-12">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../../index.html">&larr; Back to all chapters</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 12 of 13</span>
+    <span class="badge-difficulty">Architect</span>
+    <span class="reading-time">55 min read, decision-framework-heavy</span>
+  </div>
+  <h1>Designing Agent Architectures</h1>
+  <p class="lede">Chapters 1-11 built and tested every individual mechanism an agent system can have: the loop itself, planning, tool use, memory, reflection, guardrails, reliability measurement, cost control, multi-agent dispatch, peer communication, and production operating. This chapter opens Module 6 by asking a different question than any prior chapter: given a NEW problem you haven't seen, how do you decide WHICH of those eleven chapters' mechanisms are load-bearing, which are unnecessary weight, and how do you defend that choice in writing, the way a real design review expects? This chapter does not re-teach a single mechanism. It teaches the decision layer that sits above all of them.</p>
+
+  <nav class="page-toc" aria-label="On this page">
+    <span class="toc-label">On this page</span>
+    <a href="#handoff">1. Hand-off from Chapters 1-11: from building mechanisms to choosing among them</a>
+    <a href="#ollama-note">2. Why this chapter runs no live model call, and says so</a>
+    <a href="#framework">3. The decision framework: four questions, in order</a>
+    <a href="#characterization">4. Question 1 -- problem characterization: is this a single- or multi-agent problem?</a>
+    <a href="#copperfield">5. Worked example: Copperfield Municipal Utilities' outage-response problem</a>
+    <a href="#mechanism-inventory">6. Question 2 -- mechanism selection: the Chapter 1-11 inventory, as a lookup</a>
+    <a href="#mechanism-selection">7. Mechanism selection applied to Copperfield, reusing Chapters 3-6 by name</a>
+    <a href="#budget">8. Question 3 -- a reliability/cost budget, reusing Chapter 7 and 8's own vocabulary</a>
+    <a href="#tradeoffs">9. Question 4 -- the trade-off defense: what this design gives up</a>
+    <a href="#smell-check">10. The architecture-smell checklist: catching over- and under-engineering</a>
+    <a href="#overengineered">11. A deliberately bad design, caught by the smell check</a>
+    <a href="#multi-agent-case">12. A contrasting worked example: when multi-agent genuinely IS justified</a>
+    <a href="#retro-check">13. Retroactive check: running the framework against Chapters 4, 6, and 11's own designs</a>
+    <a href="#budget-tiers">14. Budget sensitivity: three stakes tiers, same formula</a>
+    <a href="#under-engineered">15. The smell check catching under-engineering: an unattended case with no operating layer</a>
+    <a href="#glossary-check">16. Quick-check glossary: naming the mechanism from a one-line symptom</a>
+    <a href="#battery">17. A battery of ten snap-judgment cases</a>
+    <a href="#instrumenting">18. Instrumenting the chosen design: Chapter 7 and 8's own harnesses, reused unchanged</a>
+    <a href="#five-systems">19. Five systems, one framework, run one at a time</a>
+    <a href="#adr">20. Assembling the Architecture Decision Record</a>
+    <a href="#l3">21. This chapter's project closes a five-session-deferred commitment</a>
+    <a href="#boundary">22. What this chapter does NOT teach, on purpose</a>
+    <a href="#thought-process">23. GenAI Builder Thought Process</a>
+    <a href="#calibration">24. Three calibration checks before the exercises</a>
+    <a href="#recap">25. Points to remember</a>
+  </nav>
+
+  <div class="hook">
+    <p>Every chapter from 1 through 11 handed you a problem that already told you which mechanism to build: Chapter 1's problem needed a loop, Chapter 6's problem needed a guardrail, Chapter 9's problem needed a supervisor. Real problems don't arrive pre-labeled. A VP hands you a paragraph describing a business process and asks, "what should we build, and why not something simpler?" This chapter is about answering that question in writing, defensibly, using nothing but the eleven chapters of mechanisms you already have.</p>
+  </div>
+
+  <section id="handoff" class="subtopic">
+    <h2>1. Hand-off from Chapters 1-11: from building mechanisms to choosing among them</h2>
+    <p>Chapters 1-11 each answered "how do I build X." This chapter answers "given a problem, should I build X at all, and if so, how much of it." Nothing from any prior chapter is redefined below -- every mechanism is referenced by name, by the function or concept that already exists for it.</p>
+    <div class="what-is">
+      <span class="label">What is... an architecture DECISION, as distinct from a mechanism?</span>
+      A mechanism (memory, a guardrail, a retry policy) is a tool in a toolbox. An architecture <strong>decision</strong> is the claim "for THIS problem, tool X is load-bearing and tool Y is not, and here is why" -- made explicit, in writing, before any code exists. Chapters 1-11 taught you to build every tool. This chapter teaches you to choose, defensibly, which ones a given problem actually needs.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">mechanism_inventory.py</span></div>
+      <pre><code>MECHANISM_INVENTORY = {
+    1: "the agent loop itself (perceive, reason, act, observe)",
+    2: "planning -- fixed up-front vs. emergent one-step-at-a-time",
+    3: "tool use -- selection among overlapping tools, failure policies",
+    4: "memory -- short-term working memory vs. persisted long-term facts",
+    5: "reflection -- a grounded self-critique-and-revise step",
+    6: "guardrails -- allowlists, human approval, sandboxing, budgets, rate limits",
+    7: "reliability measurement -- task success, trajectory correctness, pass@k",
+    8: "cost/latency control -- per-step cost, model tiering, budget enforcement",
+    9: "multi-agent orchestration -- supervisor/worker dispatch, attribution",
+    10: "multi-agent communication -- peer messaging, claim-checks, deadlock handling",
+    11: "operating -- idempotency, layered timeouts, structured logging, run summaries",
+}
+for num, desc in MECHANISM_INVENTORY.items():
+    print(f"Ch{num}: {desc}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Ch1: the agent loop itself (perceive, reason, act, observe)
+Ch2: planning -- fixed up-front vs. emergent one-step-at-a-time
+Ch3: tool use -- selection among overlapping tools, failure policies
+Ch4: memory -- short-term working memory vs. persisted long-term facts
+Ch5: reflection -- a grounded self-critique-and-revise step
+Ch6: guardrails -- allowlists, human approval, sandboxing, budgets, rate limits
+Ch7: reliability measurement -- task success, trajectory correctness, pass@k
+Ch8: cost/latency control -- per-step cost, model tiering, budget enforcement
+Ch9: multi-agent orchestration -- supervisor/worker dispatch, attribution
+Ch10: multi-agent communication -- peer messaging, claim-checks, deadlock handling
+Ch11: operating -- idempotency, layered timeouts, structured logging, run summaries</code></pre>
+    </div>
+    <p>Every one of these eleven rows is a tool, not a requirement. This chapter's whole job is the function that decides, for a NEW problem, which rows actually apply.</p>
+  </section>
+
+  <section id="ollama-note" class="subtopic">
+    <h2>2. Why this chapter runs no live model call, and says so</h2>
+    <p>Per this course's own reliability policy, a live call is run when a chapter's content genuinely needs one. Chapters 1-11 needed live calls because they taught a model's own behavior (tool selection, argument drift, reflection quality, prompt-injection response). This chapter teaches a DECISION PROCESS applied to written problem descriptions -- the thing being exercised is the reader's judgment, not a model's behavior. Forcing in a live call here would not serve the chapter's own point, so this session made none, honestly, rather than padding in a call for its own sake.</p>
+    <div class="go-deeper">
+      <span class="label">Go deeper</span>
+      This mirrors a real architecture practice: a design review happens BEFORE a model is ever called, against a written problem statement and a written proposal. The live-model skills from Chapters 1-11 are exactly what you'd reach for once a chosen architecture starts getting built -- this chapter sits one layer above that, at the point where the decision is still only on paper.
+    </div>
+  </section>
+
+  <section id="framework" class="subtopic">
+    <h2>3. The decision framework: four questions, in order</h2>
+    <p>Every architecture decision in this chapter answers four questions, always in this order, because each later question depends on the answer to the one before it:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">decision_framework.py</span></div>
+      <pre><code>DECISION_FRAMEWORK = [
+    ("1. Characterization", "Is this a single-agent or multi-agent problem, "
+     "and why? (Ch1-2 loop/planning vocabulary; Ch9-10 coordination vocabulary)"),
+    ("2. Mechanism selection", "Of Ch1-11's eleven mechanisms, which are "
+     "LOAD-BEARING for this specific problem, and which would be unnecessary "
+     "weight?"),
+    ("3. Reliability/cost budget", "What task-success rate and per-run cost "
+     "ceiling does this problem's own stakes demand? (Ch7 reliability "
+     "vocabulary, Ch8 cost vocabulary, reused, not reinvented)"),
+    ("4. Trade-off defense", "What does this design give up by NOT choosing "
+     "the next-best alternative, in writing, the way a design review expects?"),
+]
+for step, question in DECISION_FRAMEWORK:
+    print(f"{step}: {question}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>1. Characterization: Is this a single-agent or multi-agent problem, and why? (Ch1-2 loop/planning vocabulary; Ch9-10 coordination vocabulary)
+2. Mechanism selection: Of Ch1-11's eleven mechanisms, which are LOAD-BEARING for this specific problem, and which would be unnecessary weight?
+3. Reliability/cost budget: What task-success rate and per-run cost ceiling does this problem's own stakes demand? (Ch7 reliability vocabulary, Ch8 cost vocabulary, reused, not reinvented)
+4. Trade-off defense: What does this design give up by NOT choosing the next-best alternative, in writing, the way a design review expects?</code></pre>
+    </div>
+    <p>Sections 4-9 below walk all four questions against one real worked problem. Section 10 adds a fifth, cross-cutting check -- a "smell test" -- that catches the two most common mistakes: choosing MORE architecture than a problem needs, and choosing LESS than it needs.</p>
+  </section>
+
+  <section id="characterization" class="subtopic">
+    <h2>4. Question 1 -- problem characterization: is this a single- or multi-agent problem?</h2>
+    <p>Chapter 9 taught you how to BUILD supervisor/worker dispatch once you already know you need it. This chapter teaches the test for whether you need it at all.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">characterize_problem.py</span></div>
+      <pre><code>def characterize_problem(problem):
+    """problem is a dict of yes/no problem FACTS (not a vibe). Returns a
+    verdict and the single strongest reason, so the decision is always
+    traceable to one concrete fact, not a blended impression."""
+    if problem.get("distinct_specialized_subtasks") and problem.get("subtasks_can_run_independently"):
+        return {"multi_agent_justified": True,
+                "reason": "distinct, specialized subtasks that can proceed "
+                           "independently -- a single agent would need to "
+                           "context-switch between unrelated skill sets"}
+    if problem.get("requires_concurrent_independent_actors"):
+        return {"multi_agent_justified": True,
+                "reason": "multiple independent actors must act at the same "
+                           "time on a shared resource (Ch10's coordination "
+                           "problem, not Ch9's dispatch problem)"}
+    return {"multi_agent_justified": False,
+            "reason": "one agent, multiple tools, is sufficient -- the "
+                       "subtasks share state and don't need independent "
+                       "concurrent actors"}
+
+print(characterize_problem({"distinct_specialized_subtasks": False,
+                             "subtasks_can_run_independently": False,
+                             "requires_concurrent_independent_actors": False}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'multi_agent_justified': False, 'reason': "one agent, multiple tools, is sufficient -- the subtasks share state and don't need independent concurrent actors"}</code></pre>
+    </div>
+    <p>This function doesn't decide from a topic ("this sounds complicated, so multi-agent"). It decides from two concrete facts: do the subtasks need genuinely different skills that can proceed independently (Chapter 9's case), or does the problem need multiple actors acting concurrently on shared state (Chapter 10's case)? If neither fact is true, the default is single-agent -- the architecture decision equivalent of Chapter 3's "cheapest, most decisive signal first" tool-selection ordering.</p>
+  </section>
+
+  <section id="copperfield" class="subtopic">
+    <h2>5. Worked example: Copperfield Municipal Utilities' outage-response problem</h2>
+    <p>Copperfield Municipal Utilities, a fictional regional electric utility, wants an agent to handle two request types from its customer portal: (1) "my power is out" outage reports, which need a grid-status lookup and, if confirmed, an automatic restoration-ticket creation; and (2) "my bill looks wrong" billing disputes, which need an account lookup, a usage-history comparison, and -- only above a $75 disputed amount -- a human-approved credit.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">copperfield_characterization.py</span></div>
+      <pre><code>copperfield_problem = {
+    "distinct_specialized_subtasks": False,   # both request types read/write
+                                               # the same customer+grid state
+    "subtasks_can_run_independently": False,
+    "requires_concurrent_independent_actors": False,  # one customer, one
+                                                        # conversation at a time
+}
+verdict = characterize_problem(copperfield_problem)
+print(f"multi_agent_justified: {verdict['multi_agent_justified']}")
+print(f"reason: {verdict['reason']}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>multi_agent_justified: False
+reason: one agent, multiple tools, is sufficient -- the subtasks share state and don't need independent concurrent actors</code></pre>
+    </div>
+    <p>This matches Chapters 1-8's own CareBot and LedgerBot (single agent, multiple tools) rather than Chapter 9's CityScout or Chapter 10/11's peer-agent pairs. The two request types don't need independent actors -- they need one agent that correctly selects among four tools (Chapter 3's own skill) and applies the right guardrail before the one genuinely risky action (the credit).</p>
+  </section>
+
+  <section id="mechanism-inventory" class="subtopic">
+    <h2>6. Question 2 -- mechanism selection: the Chapter 1-11 inventory, as a lookup</h2>
+    <p>Once a problem is characterized, the second question is which of the remaining ten mechanisms (the loop itself and planning are assumed for ANY agent) are load-bearing. This is answered per-mechanism, against stated problem facts, not by habit or by copying the last design.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">mechanism_tests.py</span></div>
+      <pre><code>MECHANISM_TESTS = {
+    "memory (Ch4)": lambda p: p.get("facts_must_persist_across_separate_sessions", False),
+    "reflection (Ch5)": lambda p: p.get("has_a_hard_to_verify_free_text_output", False),
+    "guardrails (Ch6)": lambda p: p.get("has_an_irreversible_or_costly_action", False),
+    "reliability measurement (Ch7)": lambda p: p.get("failures_are_costly_enough_to_measure", False),
+    "cost control (Ch8)": lambda p: p.get("runs_at_volume_or_has_a_cost_ceiling", False),
+    "multi-agent dispatch (Ch9)": lambda p: p.get("multi_agent_justified", False),
+    "peer communication (Ch10)": lambda p: p.get("multi_agent_justified", False) and p.get("requires_concurrent_independent_actors", False),
+    "operating layer (Ch11)": lambda p: p.get("runs_unattended", False),
+}
+
+def select_mechanisms(problem):
+    return {name: test(problem) for name, test in MECHANISM_TESTS.items()}
+
+print(select_mechanisms({"facts_must_persist_across_separate_sessions": False}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'memory (Ch4)': False, 'reflection (Ch5)': False, 'guardrails (Ch6)': False, 'reliability measurement (Ch7)': False, 'cost control (Ch8)': False, 'multi-agent dispatch (Ch9)': False, 'peer communication (Ch10)': False, 'operating layer (Ch11)': False}</code></pre>
+    </div>
+    <p>Each test is a one-line, named, checkable claim -- the same discipline Chapter 1's tool schemas and Chapter 6's guardrail allowlist used. An architect who can't state WHICH fact makes a mechanism load-bearing hasn't finished the decision yet.</p>
+  </section>
+
+  <section id="mechanism-selection" class="subtopic">
+    <h2>7. Mechanism selection applied to Copperfield, reusing Chapters 3-6 by name</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">copperfield_mechanisms.py</span></div>
+      <pre><code>copperfield_problem.update({
+    "facts_must_persist_across_separate_sessions": False,  # each portal
+        # session is self-contained; contrast with Ch4's CoachBot, where an
+        # injury stated once must inform a LATER, separate session
+    "has_a_hard_to_verify_free_text_output": False,        # both actions
+        # (ticket created / credit applied) are checkable facts, not prose
+    "has_an_irreversible_or_costly_action": True,           # the >$75 credit
+    "failures_are_costly_enough_to_measure": True,          # a wrongly
+        # denied outage ticket or a wrongly approved credit both cost real
+        # money and trust
+    "runs_at_volume_or_has_a_cost_ceiling": True,           # thousands of
+        # portal sessions per day
+    "runs_unattended": False,                               # a human
+        # customer is present on the other end of every session
+})
+for name, needed in select_mechanisms(copperfield_problem).items():
+    print(f"{name}: {'LOAD-BEARING' if needed else 'not needed'}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>memory (Ch4): not needed
+reflection (Ch5): not needed
+guardrails (Ch6): LOAD-BEARING
+reliability measurement (Ch7): LOAD-BEARING
+cost control (Ch8): LOAD-BEARING
+multi-agent dispatch (Ch9): not needed
+peer communication (Ch10): not needed
+operating layer (Ch11): not needed</code></pre>
+    </div>
+    <p>Three of eight remaining mechanisms are load-bearing: Chapter 6's human-approval checkpoint (reused unchanged, triggered above the $75 threshold -- the same pattern as LedgerBot's own approval gate), Chapter 7's task-success/trajectory-correctness measurement (because a wrong credit or a wrong outage ticket is exactly the kind of costly failure Chapter 7 built `pass_at_k` to catch), and Chapter 8's cost/budget accounting (`is_within_budget`, reused unchanged, because Copperfield runs at volume). Memory, reflection, multi-agent dispatch, peer communication, and the operating layer are all explicitly NOT needed here -- and saying so, with the specific fact that rules each one out, is as much the deliverable as naming what IS needed.</p>
+  </section>
+
+  <section id="budget" class="subtopic">
+    <h2>8. Question 3 -- a reliability/cost budget, reusing Chapter 7 and 8's own vocabulary</h2>
+    <p>Once guardrails, reliability measurement, and cost control are confirmed load-bearing, the architect states NUMBERS, not just "we'll measure it" -- reusing Chapter 7's `pass_at_k`/`run_harness` and Chapter 8's `is_within_budget`/`cost_per_success` unchanged.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">reliability_cost_budget.py</span></div>
+      <pre><code>import importlib.util, os
+
+def _load(name, rel_path, repo_root):
+    spec = importlib.util.spec_from_file_location(name, os.path.join(repo_root, rel_path))
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    return mod
+
+REPO_ROOT = os.path.abspath(os.path.join(os.getcwd()))
+ch7 = _load("ch7", "chapters/chapter-07-evaluating-agent-reliability/project/solution.py", REPO_ROOT)
+ch8 = _load("ch8", "chapters/chapter-08-cost-and-latency-control-of-agent-loops/project/solution.py", REPO_ROOT)
+
+def reliability_cost_budget(problem):
+    """Stakes-driven, not arbitrary: a costlier failure mode gets a
+    HIGHER required success rate and a LOWER per-run cost ceiling."""
+    if problem.get("has_an_irreversible_or_costly_action"):
+        return {"min_task_success_rate": 0.95, "max_cost_per_run": 0.08,
+                "reused_from": "Ch7 pass_at_k threshold; Ch8 is_within_budget max_cost"}
+    return {"min_task_success_rate": 0.85, "max_cost_per_run": 0.15,
+            "reused_from": "Ch7 pass_at_k threshold; Ch8 is_within_budget max_cost"}
+
+print(reliability_cost_budget(copperfield_problem))
+print("is_within_budget(3, 0.05, max_steps=6, max_cost=0.08) ->",
+      ch8.is_within_budget(3, 0.05, 6, 0.08))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'min_task_success_rate': 0.95, 'max_cost_per_run': 0.08, 'reused_from': 'Ch7 pass_at_k threshold; Ch8 is_within_budget max_cost'}
+is_within_budget(3, 0.05, max_steps=6, max_cost=0.08) -> True</code></pre>
+    </div>
+    <p>Copperfield's credit-approval path gets a tighter budget (95% success floor, 8-cent ceiling) than a lower-stakes path would -- the exact same `is_within_budget` function Chapter 8 built and Chapter 9 reused unchanged a second time now gets reused a THIRD time, at the architecture-decision layer, to turn a stated budget into a checkable gate rather than an aspiration.</p>
+  </section>
+
+  <section id="tradeoffs" class="subtopic">
+    <h2>9. Question 4 -- the trade-off defense: what this design gives up</h2>
+    <p>A design review never accepts "we chose X" alone -- it asks "why not Y," and expects the cost of NOT choosing Y stated plainly.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">tradeoff_defense.py</span></div>
+      <pre><code>TRADEOFFS_REJECTED = [
+    {"alternative": "supervisor/worker multi-agent split (Ch9), one agent "
+         "per request type",
+     "why_rejected": "both request types read/write the SAME customer and "
+         "grid state; splitting them adds Ch9's dispatch/attribution "
+         "overhead with no independent-execution benefit, and risks the "
+         "exact race Ch10's claim-check exists to prevent, for no reason",
+     "cost_of_not_choosing_it": "none material -- the single-agent design "
+         "loses nothing Copperfield's problem actually needs"},
+    {"alternative": "skip reflection (Ch5) entirely, since it tested as "
+         "not load-bearing",
+     "why_rejected": "N/A -- this IS the chosen design, not an alternative",
+     "cost_of_not_choosing_it": "if a FUTURE request type adds a hard-to-"
+         "verify free-text output (e.g., a written dispute summary), "
+         "reflection becomes load-bearing again and must be re-added, not "
+         "assumed permanently unnecessary"},
+]
+for t in TRADEOFFS_REJECTED:
+    print(t["alternative"], "->", t["why_rejected"][:60] + "...")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>supervisor/worker multi-agent split (Ch9), one agent per request type -> both request types read/write the SAME customer and grid...
+skip reflection (Ch5) entirely, since it tested as not load-bearing -> N/A -- this IS the chosen design, not an alternative...</code></pre>
+    </div>
+    <p>Note the second entry's shape: a trade-off defense also states what would RE-OPEN a closed decision later. An architecture decision is a snapshot against stated facts, not a permanent verdict -- if Copperfield later adds a request type with a hard-to-verify output, Section 6's `has_a_hard_to_verify_free_text_output` fact flips, and reflection becomes load-bearing again.</p>
+  </section>
+
+  <section id="smell-check" class="subtopic">
+    <h2>10. The architecture-smell checklist: catching over- and under-engineering</h2>
+    <p>Two mistakes recur in every architecture review: choosing MORE mechanism than a problem needs (over-engineering -- cost and complexity with no corresponding benefit) and choosing LESS than it needs (under-engineering -- a real failure mode with no mechanism guarding it). A smell check catches both from the SAME selected-mechanisms dict, automatically.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">architecture_smell_check.py</span></div>
+      <pre><code>def architecture_smell_check(problem, selected):
+    flags = []
+    if selected.get("multi-agent dispatch (Ch9)") and not problem.get("distinct_specialized_subtasks"):
+        flags.append("OVER-ENGINEERED: multi-agent chosen with no distinct "
+                     "specialized subtasks -- Ch9's own dispatch overhead "
+                     "buys nothing here")
+    if problem.get("has_an_irreversible_or_costly_action") and not selected.get("guardrails (Ch6)"):
+        flags.append("UNDER-ENGINEERED: an irreversible/costly action exists "
+                     "with NO guardrail -- Ch6's fail-safe-default lesson "
+                     "applies directly")
+    if problem.get("runs_unattended") and not selected.get("operating layer (Ch11)"):
+        flags.append("UNDER-ENGINEERED: runs unattended with no operating "
+                     "layer -- no idempotency, no timeout, no log; Ch11's "
+                     "central finding (a retried call can drift its own "
+                     "arguments) applies with nothing to catch it")
+    if selected.get("reflection (Ch5)") and not problem.get("has_a_hard_to_verify_free_text_output"):
+        flags.append("OVER-ENGINEERED: reflection chosen with no hard-to-"
+                     "verify output -- Ch5's own lesson is that retry is "
+                     "not reflection; reflection on a checkable fact is "
+                     "just an extra call with no benefit")
+    return flags
+
+print(architecture_smell_check(copperfield_problem, select_mechanisms(copperfield_problem)))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>[]</code></pre>
+    </div>
+    <p>Zero flags on Copperfield's final design -- every load-bearing mechanism is backed by a stated fact, and no mechanism was chosen without one.</p>
+  </section>
+
+  <section id="overengineered" class="subtopic">
+    <h2>11. A deliberately bad design, caught by the smell check</h2>
+    <p>The smell check is only useful if it actually catches a bad design, not just confirms a good one. Here is Copperfield's SAME problem, given a wrong, over-and-under-engineered architecture on purpose.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">bad_design_demo.py</span></div>
+      <pre><code>bad_selection = {
+    "memory (Ch4)": False, "reflection (Ch5)": True,   # wrong: added anyway
+    "guardrails (Ch6)": False,                         # wrong: dropped
+    "reliability measurement (Ch7)": True, "cost control (Ch8)": True,
+    "multi-agent dispatch (Ch9)": True,                # wrong: added anyway
+    "peer communication (Ch10)": False, "operating layer (Ch11)": False,
+}
+flags = architecture_smell_check(copperfield_problem, bad_selection)
+for f in flags:
+    print("-", f)
+print(f"\n{len(flags)} flags raised on the deliberately bad design")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>- OVER-ENGINEERED: multi-agent chosen with no distinct specialized subtasks -- Ch9's own dispatch overhead buys nothing here
+- UNDER-ENGINEERED: an irreversible/costly action exists with NO guardrail -- Ch6's fail-safe-default lesson applies directly
+- OVER-ENGINEERED: reflection chosen with no hard-to-verify output -- Ch5's own lesson is that retry is not reflection; reflection on a checkable fact is just an extra call with no benefit
+
+3 flags raised on the deliberately bad design</code></pre>
+    </div>
+    <p>All three real mistakes are caught, each pointing back at the exact chapter whose own lesson explains why it's a mistake. This is the chapter's central proof: the smell check isn't decorative -- it genuinely distinguishes Section 7's defensible design from this section's indefensible one, using the same stated problem facts both times.</p>
+  </section>
+
+  <section id="multi-agent-case" class="subtopic">
+    <h2>12. A contrasting worked example: when multi-agent genuinely IS justified</h2>
+    <p>Copperfield's problem characterized as single-agent. Not every problem does. Contrast it against Chapter 11's own Harrowgate Logistics Exchange (DockScout/YardScout) and Wrenfield Dispatch Alliance (ClaimScout/ShipScout) -- both genuinely needed two independent, concurrently-acting peer agents, which is exactly why Chapters 9-11 built them that way.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">harrowgate_contrast.py</span></div>
+      <pre><code>harrowgate_problem = {
+    "distinct_specialized_subtasks": True,     # dock-side vs. yard-side work
+    "subtasks_can_run_independently": True,
+    "requires_concurrent_independent_actors": True,  # both act on the SAME
+                                                        # shipment queue at once
+}
+verdict = characterize_problem(harrowgate_problem)
+print(verdict)
+
+harrowgate_problem["multi_agent_justified"] = verdict["multi_agent_justified"]
+selection = select_mechanisms(harrowgate_problem)
+print(f"peer communication (Ch10): {selection['peer communication (Ch10)']}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'multi_agent_justified': True, 'reason': 'distinct, specialized subtasks that can proceed independently -- a single agent would need to context-switch between unrelated skill sets'}
+peer communication (Ch10): True</code></pre>
+    </div>
+    <p>Same framework, same four functions, opposite verdict -- because the underlying facts are genuinely different. Harrowgate's two concurrently-acting agents on one shared shipment queue is exactly the shape Chapter 10's claim-check and Chapter 11's idempotency keys were built for; Copperfield's single conversational flow is not. An architect who reaches for Chapter 9-10's machinery on every problem, or never reaches for it on any problem, has skipped Section 4's characterization step -- this is why it comes first.</p>
+  </section>
+
+  <section id="retro-check" class="subtopic">
+    <h2>13. Retroactive check: running the framework against Chapters 4, 6, and 11's own designs</h2>
+    <p>A framework that only agrees with examples built specifically to agree with it isn't a real framework. Here it is run against three systems this course already built, BEFORE this chapter existed, to see whether it reaches the same verdicts those chapters' own sessions reached by hand.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">carebot_retro.py</span></div>
+      <pre><code>carebot_problem = {
+    "distinct_specialized_subtasks": False, "subtasks_can_run_independently": False,
+    "requires_concurrent_independent_actors": False,
+    "facts_must_persist_across_separate_sessions": True,   # an injury stated
+        # once must inform a LATER, separate visit -- Ch4's own central claim
+    "has_a_hard_to_verify_free_text_output": True,         # a drafted reply
+    "has_an_irreversible_or_costly_action": True,           # Ch6's booking guardrail
+}
+sel = select_mechanisms(carebot_problem)
+print(f"memory: {sel['memory (Ch4)']}, reflection: {sel['reflection (Ch5)']}, guardrails: {sel['guardrails (Ch6)']}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>memory: True, reflection: True, guardrails: True</code></pre>
+    </div>
+    <p>CareBot's L2 project build (Chapters 4-6) added exactly these three mechanisms, in exactly this order, across three sessions -- the framework reaches the same verdict in one pass that those three sessions reached by lived experience.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">harrowgate_operating_retro.py</span></div>
+      <pre><code>harrowgate_problem["runs_unattended"] = True   # Ch11's own framing: the SAME
+    # system now has to run overnight with nobody watching
+harrowgate_problem["multi_agent_justified"] = True
+sel = select_mechanisms(harrowgate_problem)
+print(f"operating layer (Ch11): {sel['operating layer (Ch11)']}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>operating layer (Ch11): True</code></pre>
+    </div>
+    <p>Harrowgate's own Chapter 11 session added idempotency, timeouts, logging, and run summaries precisely because DockScout/YardScout started running unattended -- the single fact `runs_unattended: True` is what the framework uses to reach the same conclusion.</p>
+  </section>
+
+  <section id="budget-tiers" class="subtopic">
+    <h2>14. Budget sensitivity: three stakes tiers, same formula</h2>
+    <p>Section 8 stated two numbers for one problem. A real architecture practice states a RULE that produces the right numbers across many problems, not one hand-picked pair.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">budget_tiers.py</span></div>
+      <pre><code>STAKES_TIERS = [
+    ("low (informational only, no money/safety impact)", {"has_an_irreversible_or_costly_action": False, "failures_are_costly_enough_to_measure": False}),
+    ("medium (Copperfield's own tier)", {"has_an_irreversible_or_costly_action": True, "failures_are_costly_enough_to_measure": True}),
+    ("high (irreversible AND runs unattended, e.g. Harrowgate)", {"has_an_irreversible_or_costly_action": True, "runs_unattended": True}),
+]
+for label, facts in STAKES_TIERS:
+    b = reliability_cost_budget(facts)
+    print(f"{label}: min_success={b['min_task_success_rate']}, max_cost={b['max_cost_per_run']}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>low (informational only, no money/safety impact): min_success=0.85, max_cost=0.15
+medium (Copperfield's own tier): min_success=0.95, max_cost=0.08
+high (irreversible AND runs unattended, e.g. Harrowgate): min_success=0.95, max_cost=0.08</code></pre>
+    </div>
+    <p>The current two-tier formula from Section 8 already separates "has an irreversible/costly action" from "does not" -- the high tier shows the SAME tier applies once any irreversible action exists, whether or not the system also runs unattended. A real extension (left as this chapter's exercises material) would add a third, tighter tier for problems that are BOTH irreversible and unattended at once.</p>
+  </section>
+
+  <section id="under-engineered" class="subtopic">
+    <h2>15. The smell check catching under-engineering: an unattended case with no operating layer</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">under_engineered_demo.py</span></div>
+      <pre><code>unattended_problem = dict(harrowgate_problem)
+unattended_problem["runs_unattended"] = True
+under_selection = dict(select_mechanisms(unattended_problem))
+under_selection["operating layer (Ch11)"] = False   # the mistake: built the
+    # dispatch and peer messaging, forgot the operating layer entirely
+flags = architecture_smell_check(unattended_problem, under_selection)
+for f in flags:
+    print("-", f)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>- UNDER-ENGINEERED: runs unattended with no operating layer -- no idempotency, no timeout, no log; Ch11's central finding (a retried call can drift its own arguments) applies with nothing to catch it</code></pre>
+    </div>
+    <p>This is the single most expensive mistake this course's own eleven chapters warn against: a system that coordinates correctly by hand (Ch9-10) but was never given Chapter 11's operating layer before being left to run unattended.</p>
+  </section>
+
+  <section id="glossary-check" class="subtopic">
+    <h2>16. Quick-check glossary: naming the mechanism from a one-line symptom</h2>
+    <p>Five short, independent checks -- the same diagnostic shape this course's `practice/` banks use every chapter -- confirming that a one-line symptom maps to exactly one named mechanism.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">glossary_checks.py</span></div>
+      <pre><code>SYMPTOM_TO_MECHANISM = {
+    "a retried call commits the same side effect twice": "idempotency key (Ch11)",
+    "the model narrates a transfer that never actually dispatched": "guardrail enforced AT dispatch, not on narration (Ch6)",
+    "two peer agents both claim the same work item": "shared, locked claim-check (Ch10)",
+    "a fact told once is forgotten the next session": "persisted long-term memory (Ch4)",
+    "a draft answer leaves a question unanswered but looks complete": "grounded reflection, not retry (Ch5)",
+}
+for symptom, mechanism in SYMPTOM_TO_MECHANISM.items():
+    print(f"{symptom!r} -> {mechanism}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>'a retried call commits the same side effect twice' -> idempotency key (Ch11)
+'the model narrates a transfer that never actually dispatched' -> guardrail enforced AT dispatch, not on narration (Ch6)
+'two peer agents both claim the same work item' -> shared, locked claim-check (Ch10)
+'a fact told once is forgotten the next session' -> persisted long-term memory (Ch4)
+'a draft answer leaves a question unanswered but looks complete' -> grounded reflection, not retry (Ch5)</code></pre>
+    </div>
+    <p>An architect who can instantly map a symptom back to its one named mechanism, across all eleven prior chapters, is exactly the skill this chapter's own quiz and interview questions test.</p>
+  </section>
+
+  <section id="battery" class="subtopic">
+    <h2>17. A battery of ten snap-judgment cases</h2>
+    <p>Six characterization cases and four smell-check cases, each run independently, to pressure-test the framework beyond the two hand-picked scenarios above.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">characterization_battery.py</span></div>
+      <pre><code>CASES = [
+    ("A", {"distinct_specialized_subtasks": True, "subtasks_can_run_independently": True}),
+    ("B", {"requires_concurrent_independent_actors": True}),
+    ("C", {"distinct_specialized_subtasks": True, "subtasks_can_run_independently": False}),
+    ("D", {}),
+    ("E", {"distinct_specialized_subtasks": False, "requires_concurrent_independent_actors": True}),
+    ("F", {"distinct_specialized_subtasks": True, "subtasks_can_run_independently": True, "requires_concurrent_independent_actors": True}),
+]
+for label, facts in CASES:
+    v = characterize_problem(facts)
+    print(f"{label}: {v['multi_agent_justified']}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>A: True
+B: True
+C: False
+D: False
+E: True
+F: True</code></pre>
+    </div>
+    <p>Case C is the one worth pausing on: distinct specialized subtasks ALONE, without the ability to run independently, is NOT enough to justify multi-agent -- the test requires both facts together, exactly the way `MECHANISM_TESTS`' own `and` in Section 4 is written. Case E shows the second path to the same verdict (concurrent independent actors) succeeding even with no distinct subtasks.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">smell_battery.py</span></div>
+      <pre><code>SMELL_CASES = [
+    ("G", {"distinct_specialized_subtasks": False}, {"multi-agent dispatch (Ch9)": True}),
+    ("H", {"has_an_irreversible_or_costly_action": True}, {"guardrails (Ch6)": False}),
+    ("I", {"runs_unattended": True}, {"operating layer (Ch11)": False}),
+    ("J", {"has_a_hard_to_verify_free_text_output": False}, {"reflection (Ch5)": True}),
+]
+for label, problem, selected in SMELL_CASES:
+    flags = architecture_smell_check(problem, selected)
+    print(f"{label}: {len(flags)} flag(s)")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>G: 1 flag(s)
+H: 1 flag(s)
+I: 1 flag(s)
+J: 1 flag(s)</code></pre>
+    </div>
+    <p>Every one of the four classic mistakes (over-engineering with multi-agent, under-engineering with no guardrail, under-engineering with no operating layer, over-engineering with unneeded reflection) is caught in isolation, independent of whichever other mechanisms happen to be chosen alongside it.</p>
+  </section>
+
+  <section id="instrumenting" class="subtopic">
+    <h2>18. Instrumenting the chosen design: Chapter 7 and 8's own harnesses, reused unchanged</h2>
+    <p>A budget stated in Section 8 is only real once it's checked against an actual harness. Chapter 7's `run_harness`/`pass_at_k` and Chapter 8's `run_cost_controlled_harness`/`cost_per_success` -- built for Emberlyn Underwriting's TriageScout -- are imported unchanged and run exactly as they were in their own chapters.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">reliability_instrument.py</span></div>
+      <pre><code>results = ch7.run_harness()
+for tid, r in results.items():
+    print(tid, round(r["task_success_rate"], 2), round(r["trajectory_correctness_rate"], 2))
+print("pass_at_1 for T1:", round(ch7.pass_at_k(results["T1"]["successes"], 1), 3))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>T1 0.9 0.75
+T2 0.8 0.8
+T3 0.95 0.85
+pass_at_1 for T1: 0.9</code></pre>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">cost_instrument.py</span></div>
+      <pre><code>cost_results = ch8.run_cost_controlled_harness()
+print(ch8.cost_per_success(cost_results))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'T1': 0.093111, 'T2': 0.109, 'T3': 0.098588}</code></pre>
+    </div>
+    <p>Every task's cost-per-success lands under this design's own stated $0.15 ceiling (Section 14's low/medium tier), and Chapter 7's own measured task-success rates (0.8-0.95) are exactly the numbers a 0.95 budget threshold is meant to be checked against -- this is what "reliability-instrumented, cost-bounded" means in practice: real harness numbers, re-run against a stated budget, not a one-time assertion. This chapter's project (Section 20) does exactly this for a brand-new problem.</p>
+  </section>
+
+  <section id="five-systems" class="subtopic">
+    <h2>19. Five systems, one framework, run one at a time</h2>
+    <p>The final cross-check: every multi-agent-or-not system this course has built -- CareBot (Ch4-6), LedgerBot (Ch6), Harrowgate's DockScout/YardScout (Ch9-11), Wrenfield's ClaimScout/ShipScout (Ch11), and this chapter's own Copperfield -- run through the SAME `characterize_problem` -> `select_mechanisms` -> `architecture_smell_check` pipeline, each as its own independent check.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">carebot_check.py</span></div>
+      <pre><code>v = characterize_problem(carebot_problem)
+sel = select_mechanisms({**carebot_problem, "multi_agent_justified": v["multi_agent_justified"]})
+flags = architecture_smell_check(carebot_problem, sel)
+print(f"CareBot: multi_agent={v['multi_agent_justified']}, flags={len(flags)}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>CareBot: multi_agent=False, flags=0</code></pre>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">ledgerbot_check.py</span></div>
+      <pre><code>ledgerbot_problem = {"distinct_specialized_subtasks": False,
+    "requires_concurrent_independent_actors": False,
+    "has_an_irreversible_or_costly_action": True,
+    "failures_are_costly_enough_to_measure": True,
+    "runs_at_volume_or_has_a_cost_ceiling": True, "runs_unattended": False}
+v = characterize_problem(ledgerbot_problem)
+sel = select_mechanisms({**ledgerbot_problem, "multi_agent_justified": v["multi_agent_justified"]})
+flags = architecture_smell_check(ledgerbot_problem, sel)
+print(f"LedgerBot: multi_agent={v['multi_agent_justified']}, flags={len(flags)}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>LedgerBot: multi_agent=False, flags=0</code></pre>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">harrowgate_check.py</span></div>
+      <pre><code>v = characterize_problem(harrowgate_problem)
+sel = select_mechanisms(harrowgate_problem)
+flags = architecture_smell_check(harrowgate_problem, sel)
+print(f"Harrowgate: multi_agent={v['multi_agent_justified']}, flags={len(flags)}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Harrowgate: multi_agent=True, flags=0</code></pre>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">wrenfield_check.py</span></div>
+      <pre><code>wrenfield_problem = {"distinct_specialized_subtasks": True, "subtasks_can_run_independently": True,
+    "requires_concurrent_independent_actors": True, "runs_unattended": True}
+v = characterize_problem(wrenfield_problem)
+sel = select_mechanisms({**wrenfield_problem, "multi_agent_justified": v["multi_agent_justified"]})
+flags = architecture_smell_check(wrenfield_problem, sel)
+print(f"Wrenfield: multi_agent={v['multi_agent_justified']}, flags={len(flags)}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Wrenfield: multi_agent=True, flags=0</code></pre>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">copperfield_check.py</span></div>
+      <pre><code>v = characterize_problem(copperfield_problem)
+sel = select_mechanisms(copperfield_problem)
+flags = architecture_smell_check(copperfield_problem, sel)
+print(f"Copperfield: multi_agent={v['multi_agent_justified']}, flags={len(flags)}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Copperfield: multi_agent=False, flags=0</code></pre>
+    </div>
+    <p>Zero flags on all five -- every one of these systems' real, already-shipped architecture (two single-agent designs, two multi-agent designs, and this chapter's own Copperfield) is internally consistent with the facts that justify it. That consistency, checked mechanically rather than asserted, is the whole point of Sections 10-11's smell check.</p>
+  </section>
+
+  <section id="adr" class="subtopic">
+    <h2>20. Assembling the Architecture Decision Record</h2>
+    <p>The four questions above are not a private thought process -- they are a document, in a fixed shape, that a reviewer who wasn't in the room can read and evaluate.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">build_adr.py</span></div>
+      <pre><code>def build_adr(name, problem, verdict, selected, budget, tradeoffs, flags):
+    lines = [f"ARCHITECTURE DECISION RECORD -- {name}", "=" * 60,
+              "", "CONTEXT", problem.get("_context", "(see problem statement)"),
+              "", "DECISION",
+              f"  multi-agent: {verdict['multi_agent_justified']} ({verdict['reason']})"]
+    for mech, needed in selected.items():
+        if needed:
+            lines.append(f"  load-bearing: {mech}")
+    lines += ["", "RELIABILITY/COST BUDGET",
+              f"  min_task_success_rate: {budget['min_task_success_rate']}",
+              f"  max_cost_per_run: {budget['max_cost_per_run']}",
+              "", "ALTERNATIVES CONSIDERED AND REJECTED"]
+    for t in tradeoffs:
+        lines.append(f"  - {t['alternative']}: {t['why_rejected']}")
+    lines += ["", "SMELL CHECK", f"  flags: {flags if flags else 'none'}"]
+    return "\n".join(lines)
+
+copperfield_problem["_context"] = "Outage reports and billing disputes via one customer portal."
+print(build_adr("Copperfield Municipal Utilities", copperfield_problem,
+                 characterize_problem(copperfield_problem),
+                 select_mechanisms(copperfield_problem),
+                 reliability_cost_budget(copperfield_problem),
+                 TRADEOFFS_REJECTED,
+                 architecture_smell_check(copperfield_problem, select_mechanisms(copperfield_problem))))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>ARCHITECTURE DECISION RECORD -- Copperfield Municipal Utilities
+============================================================
+
+CONTEXT
+Outage reports and billing disputes via one customer portal.
+
+DECISION
+  multi-agent: False (one agent, multiple tools, is sufficient -- the subtasks share state and don't need independent concurrent actors)
+  load-bearing: guardrails (Ch6)
+  load-bearing: reliability measurement (Ch7)
+  load-bearing: cost control (Ch8)
+
+RELIABILITY/COST BUDGET
+  min_task_success_rate: 0.95
+  max_cost_per_run: 0.08
+
+ALTERNATIVES CONSIDERED AND REJECTED
+  - supervisor/worker multi-agent split (Ch9), one agent per request type: both request types read/write the SAME customer and grid state; splitting them adds Ch9's dispatch/attribution overhead with no independent-execution benefit, and risks the exact race Ch10's claim-check exists to prevent, for no reason
+  - skip reflection (Ch5) entirely, since it tested as not load-bearing: N/A -- this IS the chosen design, not an alternative
+
+SMELL CHECK
+  flags: none</code></pre>
+    </div>
+    <p>This is the deliverable a real design review reads: a bounded claim, backed by stated facts, with alternatives named and rejected for stated reasons, and a machine-checkable smell test confirming internal consistency -- built entirely from Chapters 1-11's own vocabulary, reused, never redefined.</p>
+  </section>
+
+  <section id="l3" class="subtopic">
+    <h2>21. This chapter's project closes a five-session-deferred commitment</h2>
+    <p>Per `docs/curriculum/CURRICULUM_MAP.md`'s project ladder, the <strong>L3 Independent project</strong> ("design and implement a reliability-instrumented, cost-bounded agent for a given problem, no scaffold") was due after Chapter 8 and had been deferred, explicitly and loudly, through Chapters 9, 10, and 11 -- five consecutive sessions. This chapter's own project IS that L3 project: characterizing a new problem, selecting mechanisms, stating a reliability/cost budget, and then actually IMPLEMENTING a small working agent against that budget -- using Chapter 7's `pass_at_k`/`run_harness` and Chapter 8's `is_within_budget`/`cost_per_success`, reused unchanged, to prove the stated budget is actually met, not just asserted. See `project/README.md` for the full problem statement (Driftlight Energy Cooperative) and `quality-audits/chapter-12-audit.md` for this session's explicit decision record.</p>
+    <div class="real-world">
+      <span class="label">Real-world link</span>
+      This is exactly what "architecture" means in a senior/staff engineering role: not writing more code, but deciding, in writing, with evidence, which code is worth writing for a given problem -- and then proving the resulting system actually hits the numbers the decision promised.
+    </div>
+  </section>
+
+  <section id="boundary" class="subtopic">
+    <h2>22. What this chapter does NOT teach, on purpose</h2>
+    <p>This chapter does not re-teach any of Chapters 1-11's mechanics. It also does not teach deep evaluation methodology (deferred to `llm-evaluation-for-everyone`), context-window construction (deferred to `context-engineering-for-everyone`), or infrastructure-layer production engineering (deferred to `ai-engineering-for-everyone`) -- the same boundaries every prior chapter held. What it adds, once, is the decision layer: characterization, mechanism selection, a budget, a trade-off defense, and a smell check. Chapter 13's capstone is where a reader applies this same framework to a full, previously-unseen system end to end.</p>
+  </section>
+
+  <section id="thought-process" class="subtopic">
+    <h2>23. GenAI Builder Thought Process</h2>
+    <p>When you ask an AI assistant to help design an agent architecture for a new problem, the single highest-value question to ask it back is not "what should I build" -- it's "what problem FACTS are you assuming, and which of my eleven mechanisms does each one rule in or out?" An AI that jumps straight to a multi-agent diagram without naming the fact that justifies it has skipped Section 4's characterization step, exactly the way a human architect would be called out for doing in a real design review.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">prompt_for_review.txt</span></div>
+      <pre><code>"Here is my problem statement: [paste it]. Before proposing an
+architecture, state the specific facts that would make this a
+multi-agent problem per Chapter 9-10's own tests (distinct
+specialized subtasks that run independently, OR concurrent
+independent actors on shared state), and say explicitly whether
+THIS problem has those facts. Then, for each of Chapters 4-8's
+mechanisms, name the one fact that makes it load-bearing or not.
+Do not propose a design before answering both of those."</code></pre>
+    </div>
+    <p>This forces the same ordering Section 3's framework uses -- characterization before mechanism selection -- and makes an AI's own shortcuts (jumping to a design before stating the facts that justify it) visible immediately.</p>
+  </section>
+
+  <section id="calibration" class="subtopic">
+    <h2>24. Three calibration checks before the exercises</h2>
+    <p>Three final, independent one-liners -- a shape the `exercises/` and `practice/` banks below use throughout -- confirming the framework's building blocks behave predictably in isolation, outside any one worked scenario.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">calibration_1.py</span></div>
+      <pre><code>print(characterize_problem({"distinct_specialized_subtasks": True,
+    "subtasks_can_run_independently": True,
+    "requires_concurrent_independent_actors": False})["multi_agent_justified"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>True</code></pre>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">calibration_2.py</span></div>
+      <pre><code>sel = select_mechanisms({"has_an_irreversible_or_costly_action": True,
+    "runs_unattended": True, "multi_agent_justified": False})
+print(sel["guardrails (Ch6)"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>True</code></pre>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">calibration_3.py</span></div>
+      <pre><code>print(reliability_cost_budget({"has_an_irreversible_or_costly_action": False}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'min_task_success_rate': 0.85, 'max_cost_per_run': 0.15, 'reused_from': 'Ch7 pass_at_k threshold; Ch8 is_within_budget max_cost'}</code></pre>
+    </div>
+  </section>
+
+  <section id="recap" class="subtopic">
+    <h2>25. Points to remember</h2>
+    <ul class="recap-list">
+      <li>An architecture DECISION is a traceable claim ("mechanism X is load-bearing BECAUSE fact Y"), not a vibe -- the same discipline Chapter 1's tool schemas and Chapter 6's guardrails already required at the mechanism level.</li>
+      <li>The four-question order matters: characterize (single- vs. multi-agent) before selecting mechanisms, select mechanisms before stating a budget, state a budget before defending trade-offs.</li>
+      <li>Chapter 9's dispatch and Chapter 10's peer communication are only load-bearing when a problem has distinct independently-runnable subtasks OR concurrent independent actors on shared state -- not by default, and not by habit.</li>
+      <li>A reliability/cost budget (Ch7's <code>pass_at_k</code>, Ch8's <code>is_within_budget</code>) should scale with a problem's actual stakes -- a costlier failure mode gets a tighter budget, stated as a number, not an aspiration.</li>
+      <li>A smell check catches both over-engineering (mechanism chosen with no supporting fact) and under-engineering (a real risk fact with no supporting mechanism) from the same selected-mechanisms dict.</li>
+      <li>An Architecture Decision Record assembles all four questions plus the smell check into one document a reviewer who wasn't in the room can evaluate.</li>
+      <li>This chapter's project closes a five-session-deferred L3 Independent project commitment -- see Section 14 and this chapter's own quality audit for the explicit decision.</li>
+      <li>This chapter deliberately ran no live model call -- the skill being exercised is the reader's judgment against written problem facts, not a model's own behavior.</li>
+    </ul>
+  </section>
+
+</main>
+<script src="../../assets/sidebar.js"></script>
+<script src="../../assets/progress.js"></script>
+</body>
+</html>

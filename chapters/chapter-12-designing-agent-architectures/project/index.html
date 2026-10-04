@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Designing Agent Architectures Project — Agentic AI for Everyone</title>
+<meta name="description" content="The L3 Independent project, shipped here after five deferrals: a reliability-instrumented, cost-bounded agent for Driftlight Energy Cooperative, no scaffold.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-12">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../practice/index.html">&larr; Back to practice</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">L3 Independent Project (this course's numbered project ladder)</span>
+    <span class="reading-time">~90 min, independent, no scaffold</span>
+  </div>
+  <h1>Project: Driftlight Energy Cooperative — the L3 Independent Project</h1>
+  <p>
+    This is this course's numbered <strong>L3 Independent project</strong>
+    — not a chapter mini-project. L3's own definition: "design and
+    implement a reliability-instrumented, cost-bounded agent for a
+    given problem, no scaffold." It was due after Chapter 8 and was
+    deferred, explicitly, across Chapters 9, 10, and 11 — five
+    consecutive sessions. This session's decision to ship it here is
+    recorded in <code>quality-audits/chapter-12-audit.md</code>.
+  </p>
+  <p>
+    <strong>There is deliberately no <code>starter.py</code>.</strong>
+    L3 is "no scaffold" by definition — you're handed a problem
+    statement, not a fill-in-the-blank file. Read the problem
+    statement in <code>README.md</code>, attempt your own
+    characterization, mechanism selection, budget, implementation, and
+    instrumentation first, then compare against <code>solution.py</code>.
+  </p>
+
+  <h2>The problem, in short</h2>
+  <p>
+    <strong>Driftlight Energy Cooperative</strong>, a fictional energy
+    co-op, runs a demand-response program: members pledge a
+    kilowatt-hour curtailment amount at enrollment (a separate, earlier
+    session), and Driftlight must dispatch curtailment requests and
+    apply credits during later, unattended grid-load-spike events —
+    referencing that on-file pledge correctly, crediting exactly once
+    per event even if a call is retried, and gating large credits
+    behind human approval.
+  </p>
+
+  <h2>What the reference solution proves, end to end</h2>
+  <ol>
+    <li>Characterizes the problem (single-agent, with the deciding fact stated).</li>
+    <li>Selects the five load-bearing mechanisms (memory, guardrails, reliability measurement, cost control, operating layer) and the three that are NOT (reflection, multi-agent dispatch, peer communication).</li>
+    <li>States a reliability/cost budget (95% minimum task-success, 8-cent maximum cost per run).</li>
+    <li>Implements a real <code>MemoryStore</code>, a fail-closed <code>apply_credit</code> guardrail, and an idempotent <code>commit_once</code> commit layer.</li>
+    <li>Instruments all three task types with a deterministic harness and measures real task-success rates and cost-per-success against the stated budget.</li>
+    <li>Assembles the Architecture Decision Record.</li>
+  </ol>
+
+  <h2>Files</h2>
+  <ul>
+    <li><code>solution.py</code> &mdash; the reference deliverable, no scaffold; scores 12/12.</li>
+    <li><code>RUBRIC.md</code> &mdash; self-grading criteria.</li>
+    <li><code>ai-paired.html</code> &mdash; a solo-build-then-critique exercise using a fourth scenario, Mirelake Water Authority.</li>
+  </ul>
+
+  <div class="chapter-nav">
+    <a href="../practice/index.html">&larr; Back to Practice</a>
+    <a href="ai-paired.html">AI-Paired Exercise &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

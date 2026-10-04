@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 12 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose a layered architecture-decision mistake yourself, then critique an AI's plausible-but-flawed answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-12">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 12 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, not in the eight above: an unnamed logistics company's dispatch-review system, <strong>"ScopeCreep"</strong> (the specific company is left unnamed on purpose, the same way Chapter 11's "NotaryBot" scenario did), got an architecture proposal from an AI assistant with two real, layered problems in the same design review. First: the proposal split a single conversational request type (order-status lookups) into THREE separate agents "for separation of concerns," with no distinct specialized subtasks and no concurrent independent actors anywhere in the problem -- pure over-engineering. Second, in the SAME proposal: the system's one genuinely irreversible action (auto-cancelling an order after three failed delivery attempts) was given no human-approval checkpoint at all -- pure under-engineering, in the same document as the first mistake.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>Before reading further: name both problems using this chapter's vocabulary (one is a smell-check over-engineering flag, the other is a smell-check under-engineering flag) and state the specific fact that each one violates. There's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> this scenario has two layered mistakes in one proposal (unjustified multi-agent AND a missing guardrail), so the prompt needs to ask for every distinct issue, not just one -- a shallow prompt like "review this architecture" invites an answer that fixates on the more dramatic-sounding three-agent split and never checks whether the one truly risky action (auto-cancellation) has a guardrail at all.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here's ScopeCreep's architecture proposal... identify every distinct problem, not just one..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice and compare its answer against the critique below.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Here's an architecture proposal for a logistics dispatch-review agent: order-status lookups are split across three separate agents "for separation of concerns," and orders are auto-cancelled after three failed delivery attempts with no approval step. Run this chapter's architecture-smell check against it: for each mechanism chosen, state the SPECIFIC fact (distinct independently-runnable subtasks, or concurrent independent actors on shared state) that would justify it, or flag it as over-engineered if no such fact exists. Separately, name any irreversible or costly action with NO guardrail, and flag it as under-engineered. Do not stop after finding the first issue -- find every distinct one.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <div class="what-is">
+    <span class="label">What a complete diagnosis catches</span>
+    <ul>
+      <li><strong>Problem 1 (unjustified multi-agent split):</strong> this chapter's own Section 10-11 architecture-smell check flags exactly this pattern -- multi-agent chosen with no distinct specialized subtasks that can run independently. Order-status lookups for ONE request type is a single-agent, multiple-tools problem (the same shape as Copperfield's own two request types), not three agents that would need Chapter 9's own dispatch/attribution overhead for no independent-execution benefit.</li>
+      <li><strong>Problem 2 (missing guardrail on auto-cancellation):</strong> this chapter's own Section 10-11 smell check also flags an irreversible/costly action with no guardrail. Auto-cancelling an order is exactly the kind of action Chapter 6's fail-safe-default lesson says needs a human-approval checkpoint before it fires, not after a customer complains.</li>
+      <li>A shallow AI answer often catches only the more visible mistake (the dramatic three-agent split) and misses that the SAME proposal has a second, independent under-engineering problem sitting right next to it.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's answer against your own Step 1 notes and the two-problem breakdown above. Did it catch both the over-engineering AND the under-engineering flag, or did it fixate on one and miss the other?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice Bank</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>
