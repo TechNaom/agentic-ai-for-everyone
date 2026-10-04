@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capstone Quiz — Agentic AI for Everyone</title>
+<meta name="description" content="Interactive quiz for the Capstone: Designing and Defending an Autonomous Agent System.">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-13" data-chapter-id="chapter-13">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="lesson.html">&larr; Back to the lesson</a></p>
+
+  <span class="chapter-badge">Chapter 13 Quiz</span>
+  <h1>Capstone: Designing and Defending an Autonomous Agent System</h1>
+  <p>Fill in each blank, then check your answers. A perfect score marks this chapter -- and this course -- complete.</p>
+
+  <div class="quiz-progress-wrap" aria-hidden="true">
+    <div class="quiz-progress-fill" id="quiz-progress-fill"></div>
+  </div>
+
+  <form onsubmit="return false;">
+
+    <div class="quiz-question">
+      <label for="q1"><span class="q-num">1</span> L4 differs from L3 in kind, not size: it must plausibly need genuine multi-agent ______, not just a bigger single-agent problem.</label>
+      <div class="fib-row">
+        <input type="text" id="q1" class="fib-blank" data-answers="coordination" aria-label="Answer for question 1">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q2"><span class="q-num">2</span> This chapter's five decision-framework functions are ______ unchanged from Chapter 12's own project/solution.py, not redefined a third time.</label>
+      <div class="fib-row">
+        <input type="text" id="q2" class="fib-blank" data-answers="imported" aria-label="Answer for question 2">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q3"><span class="q-num">3</span> Thornwick Marketplace Collective needs BOTH Chapter 9's dispatch test (distinct, independently-runnable subtasks) AND Chapter 10's ______ test (concurrent independent actors on shared state).</label>
+      <div class="fib-row">
+        <input type="text" id="q3" class="fib-blank" data-answers="coordination" aria-label="Answer for question 3">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q4"><span class="q-num">4</span> select_mechanisms selects ALL ______ of Chapter 1-11's non-foundational mechanisms as load-bearing for Thornwick -- the full inventory.</label>
+      <div class="fib-row">
+        <input type="text" id="q4" class="fib-blank" data-answers="eight,8" aria-label="Answer for question 4">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q5"><span class="q-num">5</span> InventoryLedger.try_claim rejects a sku that's already in the claimed_this_tick set BEFORE even checking stock -- this is a claim-______, not an unlocked read-then-write.</label>
+      <div class="fib-row">
+        <input type="text" id="q5" class="fib-blank" data-answers="check" aria-label="Answer for question 5">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q6"><span class="q-num">6</span> apply_refund defaults to human_approved=False -- fail-______, the same discipline Chapter 6's own LedgerBot session corrected.</label>
+      <div class="fib-row">
+        <input type="text" id="q6" class="fib-blank" data-answers="closed" aria-label="Answer for question 6">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q7"><span class="q-num">7</span> grounded_reflect checks that specific required facts (order_id, amount, resolution) are present in free text -- applying Chapter 5's "retry is not ______" lesson to a hard-to-verify output.</label>
+      <div class="fib-row">
+        <input type="text" id="q7" class="fib-blank" data-answers="reflection" aria-label="Answer for question 7">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q8"><span class="q-num">8</span> commit_once replays the first result for a repeated key instead of re-running the effect function -- proving the overnight commit applies exactly ______.</label>
+      <div class="fib-row">
+        <input type="text" id="q8" class="fib-blank" data-answers="once" aria-label="Answer for question 8">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q9"><span class="q-num">9</span> The capstone rubric lives in assessments/architecture-______, confirmed reserved for exactly this deliverable in Chapter 12's own audit.</label>
+      <div class="fib-row">
+        <input type="text" id="q9" class="fib-blank" data-answers="challenges" aria-label="Answer for question 9">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div class="quiz-question">
+      <label for="q10"><span class="q-num">10</span> This chapter deliberately ran no live Ollama call, because the skill being exercised is architecture judgment and proof-of-______ against written facts, not a model's own behavior.</label>
+      <div class="fib-row">
+        <input type="text" id="q10" class="fib-blank" data-answers="design" aria-label="Answer for question 10">
+        <button type="button" class="check-btn">Check</button>
+        <span class="fib-feedback" aria-live="polite"></span>
+      </div>
+    </div>
+
+    <div id="check-all-wrap">
+      <button type="button" id="check-all-btn" class="check-btn">Check All Answers</button>
+      <span id="quiz-score"></span>
+    </div>
+
+    <div class="quiz-celebration" id="quiz-celebration" aria-live="polite">
+      Perfect score. Chapter complete -- and so is the course.
+    </div>
+  </form>
+
+  <div class="chapter-nav">
+    <a href="lesson.html">&larr; Back to Lesson</a>
+    <a href="exercises/index.html">Exercises &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/quiz-engine.js"></script>
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

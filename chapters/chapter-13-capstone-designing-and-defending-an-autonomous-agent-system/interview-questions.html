@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capstone Interview Questions — Agentic AI for Everyone</title>
+<meta name="description" content="Interview questions for the Capstone: Designing and Defending an Autonomous Agent System.">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-13">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="practice/index.html">&larr; Back to practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 13 Interview Questions</span>
+    <span class="reading-time">~25 min</span>
+  </div>
+  <h1>Interview Questions: Capstone — Designing and Defending an Autonomous Agent System</h1>
+  <p>Grouped by level — beginner, intermediate, senior, architect. Each includes a strong answer, a red flag, a follow-up, and what the question actually proves.</p>
+
+  <div class="lesson-card">
+    <h2>1. (Beginner) What makes this chapter's problem an L4 Architecture Challenge rather than a bigger L3 Independent project?</h2>
+    <p><strong>Strong answer:</strong> L3 ("design and implement a reliability-</p>
+    <p>instrumented, cost-bounded AGENT for a given problem, no scaffold")</p>
+    <p>is about a single agent, however many mechanisms it needs. L4</p>
+    <p>("design and defend a complete MULTI-COMPONENT autonomous agent</p>
+    <p>SYSTEM; business/system problem only") requires the problem to</p>
+    <p>plausibly need genuine multi-agent coordination — more than one agent</p>
+    <p>acting, not just one agent with more tools. Thornwick Marketplace</p>
+    <p>Collective's three components (Buyer Concierge, Maker Fulfillment,</p>
+    <p>Fraud & Dispute Review) are distinct, specialized, and two of them</p>
+    <p>race each other on shared state — properties Chapter 12's own L3</p>
+    <p>project (Driftlight) deliberately did not have.</p>
+    <p><strong>Red flag:</strong> Says L4 is "just L3 but bigger" or "with more code,"</p>
+    <p>without naming the actual difference in kind (multi-component</p>
+    <p>coordination, not scale).</p>
+    <p><strong>Follow-up:</strong> "If Thornwick had only ONE component instead of three,</p>
+    <p>would it still be a valid L4 submission?"</p>
+    <p><strong>What this proves:</strong> Understands that L4's defining property is</p>
+    <p>coordination need, not size or difficulty alone.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>2. (Beginner) Name the two SEPARATE facts that justify multi-agent dispatch and peer communication, and say which of Thornwick's own facts trigger each.</h2>
+    <p><strong>Strong answer:</strong> Chapter 9's dispatch test: distinct, specialized</p>
+    <p>subtasks that can run independently (Buyer Concierge's conversational</p>
+    <p>skill vs. Maker Fulfillment's batch logistics vs. Fraud Review's</p>
+    <p>judgment — three different skills). Chapter 10's coordination test:</p>
+    <p>concurrent independent actors on shared state (Buyer Concierge and</p>
+    <p>Maker Fulfillment both read/write the same inventory ledger at the</p>
+    <p>same time). Thornwick triggers both, which is why it needs BOTH</p>
+    <p>mechanisms, not just one.</p>
+    <p><strong>Red flag:</strong> Treats "multi-agent justified" as a single yes/no fact</p>
+    <p>rather than two independently-checkable tests, or can't name which</p>
+    <p>Thornwick fact triggers which test.</p>
+    <p><strong>Follow-up:</strong> "If Maker Fulfillment were removed entirely, which of</p>
+    <p>the two tests would stop firing?"</p>
+    <p><strong>What this proves:</strong> Can distinguish dispatch justification from</p>
+    <p>coordination justification, not just recognize "multi-agent: True."</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>3. (Beginner) Why does this chapter import Chapter 12's five framework functions instead of rewriting them?</h2>
+    <p><strong>Strong answer:</strong> `characterize_problem`, `select_mechanisms`,</p>
+    <p>`reliability_cost_budget`, `architecture_smell_check`, and `build_adr`</p>
+    <p>are already built and tested; rewriting them would risk silent drift</p>
+    <p>from the original logic and would violate the course's own stated</p>
+    <p>rule (this chapter's brief explicitly says not to redefine them a</p>
+    <p>third time). Module 6's own assessment already proved this import</p>
+    <p>pattern works for a sixth scenario — this chapter reuses the same</p>
+    <p>pattern for a seventh.</p>
+    <p><strong>Red flag:</strong> Thinks reusing the functions is "cheating" or "less</p>
+    <p>thorough" than writing new ones, missing that reuse of a validated</p>
+    <p>decision tool is exactly what a real architecture practice does.</p>
+    <p><strong>Follow-up:</strong> "What would you have to prove differently if you</p>
+    <p>rewrote `select_mechanisms` from scratch for this chapter?"</p>
+    <p><strong>What this proves:</strong> Understands code reuse as a deliberate</p>
+    <p>engineering discipline, not corner-cutting.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>4. (Intermediate) Why is `InventoryLedger.try_claim`'s lock check (`if sku in claimed_this_tick`) placed BEFORE the stock check, not after?</h2>
+    <p><strong>Strong answer:</strong> Placing the lock check first means a second</p>
+    <p>concurrent claim is rejected immediately, before it ever re-reads</p>
+    <p>stock — which is what makes it a genuine claim-CHECK (Chapter 10's</p>
+    <p>own fix) rather than an unlocked "read stock, then decrement"</p>
+    <p>sequence that could still let both claims see enough stock and both</p>
+    <p>succeed. If the stock check ran first, two concurrent claims could</p>
+    <p>both read "1 unit available" before either one commits its</p>
+    <p>decrement, and both could then claim the same unit.</p>
+    <p><strong>Red flag:</strong> Can't explain why ORDER matters here, or thinks any</p>
+    <p>read-then-write sequence is equivalent to a lock.</p>
+    <p><strong>Follow-up:</strong> "What's the smallest change to `try_claim` that would</p>
+    <p>silently reintroduce the overselling race?"</p>
+    <p><strong>What this proves:</strong> Understands locking order as the actual</p>
+    <p>mechanism of correctness, not an incidental implementation detail.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>5. (Intermediate) `grounded_reflect` checks for the literal substrings "order_id", "amount", and "resolution" in a free-text explanation. What's a real weakness of this specific implementation, and how would you defend keeping it anyway for this chapter's purpose?</h2>
+    <p><strong>Strong answer:</strong> A real weakness: a model could satisfy the check</p>
+    <p>by including the words without actually using them meaningfully</p>
+    <p>(e.g., "order_id does not matter here"), so this is a necessary-but-</p>
+    <p>not-sufficient grounding check, not a full correctness proof. The</p>
+    <p>defense: this chapter's own point (per its disclosed Ollama decision)</p>
+    <p>is proving the ARCHITECTURE composes, not building a production-grade</p>
+    <p>grounding verifier — a stronger check is a legitimate extension, not</p>
+    <p>required to prove this capstone's own claim that reflection is</p>
+    <p>load-bearing and implementable.</p>
+    <p><strong>Red flag:</strong> Either claims the check is fully robust with no</p>
+    <p>weakness, or dismisses it as "wrong" without acknowledging what it</p>
+    <p>does correctly prove (that reflection can be grounded in named facts</p>
+    <p>rather than being a bare retry).</p>
+    <p><strong>Follow-up:</strong> "What's one additional check you'd add to make this</p>
+    <p>harder to satisfy by accident?"</p>
+    <p><strong>What this proves:</strong> Can critique their own/the course's</p>
+    <p>implementation honestly, distinguishing "proves the concept" from</p>
+    <p>"production-ready."</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>6. (Intermediate) A teammate proposes dropping the claim-check and instead just "running Maker Fulfillment's batch after business hours so it never overlaps with Buyer Concierge." Evaluate this.</h2>
+    <p><strong>Strong answer:</strong> This reduces the RISK of the race but doesn't</p>
+    <p>eliminate the FACT that justifies the mechanism — Buyer Concierge</p>
+    <p>could still process a late order during the batch window, a batch</p>
+    <p>could run long, or a future change could add a second overnight</p>
+    <p>process. The architecture-smell check doesn't have a rule for "risk</p>
+    <p>reduced by scheduling," and for good reason: a timing-based mitigation</p>
+    <p>is fragile and invisible in the ADR, while a claim-check is a</p>
+    <p>structural guarantee that holds regardless of scheduling.</p>
+    <p><strong>Red flag:</strong> Accepts the scheduling fix as equivalent to the</p>
+    <p>claim-check, or can't articulate why a structural fix is preferred</p>
+    <p>over a timing-based one.</p>
+    <p><strong>Follow-up:</strong> "Would you accept the scheduling fix as a TEMPORARY</p>
+    <p>mitigation while the claim-check is being built? Why or why not?"</p>
+    <p><strong>What this proves:</strong> Distinguishes risk reduction from risk</p>
+    <p>elimination, and prefers structural guarantees over timing</p>
+    <p>assumptions.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>7. (Senior) Thornwick selects all eight of Chapter 1-11's non-foundational mechanisms as load-bearing. How do you defend that this isn't itself an architecture smell (over-engineering), given the smell check doesn't flag it?</h2>
+    <p><strong>Strong answer:</strong> The smell check tests whether each SELECTED</p>
+    <p>mechanism is backed by a stated fact, not whether the overall COUNT</p>
+    <p>of selected mechanisms is high — a high count is only a smell if one</p>
+    <p>or more of those mechanisms lacks a supporting fact, which the check</p>
+    <p>already verifies, mechanism by mechanism, and found none. Thornwick's</p>
+    <p>own problem statement was deliberately built so all nine problem</p>
+    <p>facts are true; the high count is a consequence of the problem's own</p>
+    <p>shape, not a default over-addition. The real test for over-</p>
+    <p>engineering isn't "how many mechanisms," it's "is each one backed by</p>
+    <p>a fact" — and this chapter's own Section 10 proves that explicitly for</p>
+    <p>all eight.</p>
+    <p><strong>Red flag:</strong> Either agrees the chapter IS over-engineered without</p>
+    <p>checking whether each mechanism is backed by a fact, or claims a high</p>
+    <p>mechanism count can never be a smell (missing that it CAN be, when</p>
+    <p>the facts don't support it — which is exactly what Section 11</p>
+    <p>demonstrates by dropping guardrails).</p>
+    <p><strong>Follow-up:</strong> "If you removed ONE problem fact — say,</p>
+    <p>`runs_unattended` — which mechanism would the smell check start</p>
+    <p>flagging, and as which kind of smell?"</p>
+    <p><strong>What this proves:</strong> Understands the smell check's actual criterion</p>
+    <p>(fact-backed, not count-based) and can apply it under a stress case.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>8. (Senior) How would you extend this chapter's harness to prove the claim-check holds under MANY concurrent claims, not just the two demonstrated in the lesson?</h2>
+    <p><strong>Strong answer:</strong> Generalize `simulate_thornwick_run`'s</p>
+    <p>`maker_fulfillment_claim_race` task to spin up N simulated claims</p>
+    <p>(not just two) against a stock count smaller than N, in the same</p>
+    <p>simulated "tick," and assert that the number of successful claims</p>
+    <p>exactly equals the starting stock count, never more. This proves the</p>
+    <p>INVARIANT (claims granted never exceed supply) rather than just one</p>
+    <p>hand-picked two-actor scenario, the same generalization Chapter 7's</p>
+    <p>own `pass_at_k` represents over a single pass/fail trial.</p>
+    <p><strong>Red flag:</strong> Proposes adding more claims without stating what</p>
+    <p>invariant is actually being checked, or conflates "runs more trials"</p>
+    <p>with "proves a stronger guarantee."</p>
+    <p><strong>Follow-up:</strong> "What would it mean if, under N=10 concurrent claims</p>
+    <p>against 3 units of stock, you measured exactly 3 successful claims</p>
+    <p>every single run, but ALSO exactly 3 when stock was 0? What would</p>
+    <p>that tell you about the test?"</p>
+    <p><strong>What this proves:</strong> Can design a stronger, generalized proof for an</p>
+    <p>existing mechanism, and can reason about whether a test is actually</p>
+    <p>discriminating correct from incorrect behavior.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>9. (Senior) The capstone rubric lives in `assessments/architecture-challenges/`, separate from the project's own `README.md`/`solution.py`. Defend why these are two different documents rather than one.</h2>
+    <p><strong>Strong answer:</strong> `project/README.md` and `solution.py` are the</p>
+    <p>DELIVERABLE (the problem statement and the reference answer) — the</p>
+    <p>same role Chapter 12's L3 project's `README.md`/`solution.py` played.</p>
+    <p>`assessments/architecture-challenges/RUBRIC.md` is the GRADING</p>
+    <p>instrument applied to that deliverable, following the exact</p>
+    <p>separation `assessments/module-assessments/` already uses for every</p>
+    <p>module (a problem+solution pair plus a separate rubric). Keeping them</p>
+    <p>in different directories also matches the explicit, audited decision</p>
+    <p>that `architecture-challenges/` is reserved specifically for this</p>
+    <p>course's L4 capstone rubric, distinct from Module 6's own</p>
+    <p>Chapter-12-scoped assessment.</p>
+    <p><strong>Red flag:</strong> Can't articulate the deliverable/rubric distinction, or</p>
+    <p>thinks they should be merged into one file "for simplicity."</p>
+    <p><strong>Follow-up:</strong> "What would go wrong if the rubric criteria were</p>
+    <p>embedded directly inside `solution.py` as comments instead?"</p>
+    <p><strong>What this proves:</strong> Understands the deliberate separation between a</p>
+    <p>reference answer and the instrument used to grade attempts against</p>
+    <p>it.</p>
+  </div>
+
+  <div class="lesson-card">
+    <h2>10. (Architect) Defend, end to end, why Thornwick Marketplace Collective is a legitimate L4 capstone and not merely "Chapter 12's framework applied to a bigger example." Include what would have made it illegitimate.</h2>
+    <p><strong>Strong answer:</strong> A legitimate L4 capstone has to do three things</p>
+    <p>Chapter 12's own L3 project did not: (1) characterize as genuinely</p>
+    <p>multi-agent, for BOTH of Chapter 9's and Chapter 10's own tests at</p>
+    <p>once, not just one; (2) require the FULL Chapter 1-11 mechanism</p>
+    <p>inventory simultaneously, proving the decision framework composes</p>
+    <p>under maximum load, not just on an easier subset; and (3) prove a</p>
+    <p>genuinely cross-component failure mode (the shared-inventory</p>
+    <p>overselling race) with a real, executed claim-check — a risk that</p>
+    <p>simply does not exist in any single-agent system, however many</p>
+    <p>mechanisms it has. It would have been ILLEGITIMATE if, for example,</p>
+    <p>Thornwick's three "components" never actually shared state or never</p>
+    <p>needed to coordinate at all (making it three independent single-agent</p>
+    <p>systems bolted together under one name with no real multi-agent</p>
+    <p>property), or if the claim-check were asserted in prose without a</p>
+    <p>harness that actually races two concurrent claims and shows the</p>
+    <p>result. The distinguishing test throughout is the same one this</p>
+    <p>course's own smell check applies at the mechanism level: is each</p>
+    <p>claimed property backed by something that was actually checked, not</p>
+    <p>just described plausibly.</p>
+    <p><strong>Red flag:</strong> Defends the capstone by appeal to its size or mechanism</p>
+    <p>count alone, without naming the specific cross-component coordination</p>
+    <p>property that makes it genuinely different in kind from a scaled-up</p>
+    <p>single-agent project, or can't state what would have made the same</p>
+    <p>scenario illegitimate.</p>
+    <p><strong>Follow-up:</strong> "Driftlight (Ch.12's L3) also has real stakes and real</p>
+    <p>code. What is the ONE property Thornwick has that Driftlight</p>
+    <p>structurally cannot, no matter how many mechanisms Driftlight adds?"</p>
+    <p><strong>What this proves:</strong> Can defend an architecture decision's category</p>
+    <p>(not just its content) with the same rigor Section 9 of the lesson</p>
+    <p>demands for rejecting an alternative — a named property, not a vibe.</p>
+  </div>
+
+  <div class="chapter-nav">
+    <a href="practice/index.html">&larr; Back to Practice Bank</a>
+    <a href="project/index.html">Project &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

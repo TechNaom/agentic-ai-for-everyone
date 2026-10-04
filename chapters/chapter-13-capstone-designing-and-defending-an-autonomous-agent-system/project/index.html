@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capstone Project — Agentic AI for Everyone</title>
+<meta name="description" content="The L4 Architecture Challenge: a full Architecture Decision Record plus a working reference implementation for Thornwick Marketplace Collective's three-component agent system.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-13">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../practice/index.html">&larr; Back to practice</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">L4 Architecture Challenge (the capstone — this course's FINAL project)</span>
+    <span class="reading-time">~120 min, independent, no scaffold</span>
+  </div>
+  <h1>Project: Thornwick Marketplace Collective — the L4 Architecture Challenge</h1>
+  <p>
+    This IS Chapter 13's whole deliverable — not a chapter mini-project
+    alongside a separate lesson. L4's own definition: "design and defend
+    a complete multi-component autonomous agent system; business/system
+    problem only." There is deliberately no <code>starter.py</code> —
+    L4, like L3 before it, hands you a problem statement, not a
+    fill-in-the-blank file.
+  </p>
+
+  <h2>The problem, in short</h2>
+  <p>
+    <strong>Thornwick Marketplace Collective</strong>, a fictional
+    artisan marketplace, has three coordinating components: a
+    conversational <strong>Buyer Concierge</strong> (with a persisted
+    allergy preference), an overnight <strong>Maker Fulfillment</strong>
+    batch, and a <strong>Fraud &amp; Dispute Review</strong> process
+    gating refunds behind human approval. Buyer Concierge and Maker
+    Fulfillment both read/write the SAME shared inventory ledger and
+    can race each other for the same sku's last unit — Chapter 10's
+    coordination problem, not just Chapter 9's dispatch problem.
+  </p>
+
+  <h2>What the reference solution proves, end to end</h2>
+  <ol>
+    <li>Characterizes the problem as multi-agent, naming the specific subtask-independence fact.</li>
+    <li>Selects ALL EIGHT of Chapters 4-11's mechanisms as load-bearing — the full inventory.</li>
+    <li>States a reliability/cost budget (95% minimum task-success, 8-cent maximum cost per run).</li>
+    <li>Implements a real <code>MemoryStore</code>, a locked <code>InventoryLedger.try_claim</code> claim-check, a fail-closed <code>apply_refund</code> guardrail, an idempotent <code>commit_once</code> commit layer, and a grounded <code>grounded_reflect</code> check.</li>
+    <li>Instruments all three task types with a deterministic harness, including a real claim-check race proving no overselling, and measures real numbers against the stated budget.</li>
+    <li>Assembles the Architecture Decision Record, naming three rejected alternatives.</li>
+  </ol>
+
+  <h2>Files</h2>
+  <ul>
+    <li><code>solution.py</code> &mdash; the reference deliverable, no scaffold; scores 14/14.</li>
+    <li><code>ai-paired.html</code> &mdash; a solo-build-then-critique exercise using a second, unnamed marketplace.</li>
+  </ul>
+  <p>The formal grading rubric lives in <code>assessments/architecture-challenges/RUBRIC.md</code>, not in this directory — see this chapter's own quality audit for why.</p>
+
+  <div class="chapter-nav">
+    <a href="../practice/index.html">&larr; Back to Practice</a>
+    <a href="ai-paired.html">AI-Paired Exercise &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

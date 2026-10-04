@@ -141,7 +141,8 @@ window.AAFE_MODULES = [
         id: "chapter-13",
         num: 13,
         title: "Capstone: Designing and Defending an Autonomous Agent System",
-        description: "A Level 4 architecture challenge composing loop design, planning, tools, memory, guardrails, evaluation, and cost control into one system."
+        description: "A Level 4 architecture challenge composing loop design, planning, tools, memory, guardrails, evaluation, and cost control into one system.",
+        path: "chapters/chapter-13-capstone-designing-and-defending-an-autonomous-agent-system/lesson.html"
       }
     ]
   }

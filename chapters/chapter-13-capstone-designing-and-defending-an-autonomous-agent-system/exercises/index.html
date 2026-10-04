@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capstone Exercises — Agentic AI for Everyone</title>
+<meta name="description" content="Hands-on exercises for the Capstone: Designing and Defending an Autonomous Agent System.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-13">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../lesson.html">&larr; Back to the lesson</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 13 Exercises</span>
+    <span class="reading-time">~35 min, decision-framework-hands-on</span>
+  </div>
+  <h1>Exercises: Capstone — Designing and Defending an Autonomous Agent System</h1>
+  <p>
+    These exercises use a <strong>subset</strong> of the lesson's own
+    <strong>Thornwick Marketplace Collective</strong> — just Buyer
+    Concierge and Fraud &amp; Dispute Review, with the Maker
+    Fulfillment component removed — against the SAME decision
+    framework the lesson applies at full scale. Removing one
+    component removes BOTH the overnight-unattended fact and the
+    shared-inventory race, which should flip two mechanisms from
+    load-bearing to not. Recalling the lesson's full-system verdicts
+    by heart will get half of this wrong.
+  </p>
+
+  <h2>How to run</h2>
+  <pre><code>python3 starter.py</code></pre>
+  <p>It prints a score report. Fill in each <code># TODO</code>, re-run, and watch your score climb toward the total (17 points across 7 tasks).</p>
+
+  <h2>The seven tasks</h2>
+  <ol>
+    <li><strong>Map facts to decision-framework concepts</strong> &mdash; assign the correct concept to five subset facts.</li>
+    <li><strong>Reasoning question</strong> &mdash; decide whether removing Maker Fulfillment also removes the justification for multi-agent dispatch.</li>
+    <li><strong><code>characterize_problem</code> on the subset</strong> &mdash; confirm multi-agent still applies, for which reason.</li>
+    <li><strong><code>select_mechanisms</code> on the subset</strong> &mdash; confirm memory, reflection, guardrails, and dispatch stay load-bearing; peer communication and the operating layer do not.</li>
+    <li><strong><code>reliability_cost_budget</code> on the subset</strong> &mdash; confirm the tighter, irreversible-action tier still applies.</li>
+    <li><strong><code>architecture_smell_check</code></strong> &mdash; confirm a correct selection raises zero flags and a forgotten memory mechanism raises one.</li>
+    <li><strong><code>build_adr</code></strong> &mdash; assemble a consistent Architecture Decision Record for the subset.</li>
+  </ol>
+
+  <h2>Files</h2>
+  <ul>
+    <li><code>starter.py</code> &mdash; the scaffold with 9 <code># TODO</code>s and the score report.</li>
+    <li><code>solution.py</code> &mdash; the fully filled-in reference; scores 17/17.</li>
+    <li><code>ai-paired.html</code> &mdash; a solo-build-then-critique exercise using a second, unnamed marketplace.</li>
+  </ul>
+
+  <div class="chapter-nav">
+    <a href="../lesson.html">&larr; Back to Lesson</a>
+    <a href="ai-paired.html">AI-Paired Exercise &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capstone: Designing and Defending an Autonomous Agent System — Agentic AI for Everyone</title>
+<meta name="description" content="The L4 Architecture Challenge: a genuinely multi-component problem (Thornwick Marketplace Collective) that needs the FULL Chapter 1-11 mechanism inventory, defended as a full Architecture Decision Record plus a working, instrumented reference implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-13">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../../index.html">&larr; Back to all chapters</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 13 of 13 — the FINAL chapter</span>
+    <span class="badge-difficulty">Architect</span>
+    <span class="reading-time">70 min read, capstone -- design + working implementation</span>
+  </div>
+  <h1>Capstone: Designing and Defending an Autonomous Agent System</h1>
+  <p class="lede">This is the L4 Architecture Challenge, this course's final deliverable: design and defend a complete MULTI-COMPONENT autonomous agent system for a business/system problem only. Chapter 12 taught the decision framework and proved it on three worked examples, each of which needed at most five of Chapters 1-11's eight non-foundational mechanisms. This chapter applies that SAME framework -- imported, never redefined a third time -- to one new system built specifically to need all eight at once, then proves the resulting design out with a real, instrumented reference implementation. There is no separate lesson-vs-project split this time: this page, the project directory it walks through, and the capstone rubric together ARE Chapter 13.</p>
+
+  <nav class="page-toc" aria-label="On this page">
+    <span class="toc-label">On this page</span>
+    <a href="#handoff">1. Hand-off: from choosing mechanisms (Ch12) to defending a whole system (Ch13)</a>
+    <a href="#ollama-note">2. Why this chapter runs no live model call, and says so</a>
+    <a href="#l4-shape">3. What makes this genuinely L4, not a bigger L3</a>
+    <a href="#problem">4. The problem: Thornwick Marketplace Collective</a>
+    <a href="#characterization">5. Step 1 -- characterization, imported unchanged from Chapter 12</a>
+    <a href="#both-justifications">6. Why Thornwick needs BOTH Chapter 9's test AND Chapter 10's test</a>
+    <a href="#mechanism-selection">7. Step 2 -- mechanism selection: all eight, one at a time</a>
+    <a href="#budget">8. Step 3 -- the reliability/cost budget</a>
+    <a href="#tradeoffs">9. Step 4 -- the trade-off defense: three alternatives, named and rejected</a>
+    <a href="#smell-good">10. The smell check on the correct, full selection</a>
+    <a href="#smell-bad">11. The smell check catching a deliberately bad capstone design</a>
+    <a href="#adr">12. Assembling the Architecture Decision Record</a>
+    <a href="#from-adr-to-code">13. From ADR to code: the reference-implementation plan</a>
+    <a href="#memory-impl">14. Implementing memory (Ch4): a buyer preference that survives a separate session</a>
+    <a href="#peer-impl">15. Implementing peer coordination (Ch10): a claim-check that prevents overselling</a>
+    <a href="#guardrail-impl">16. Implementing guardrails (Ch6): a fail-closed refund gate</a>
+    <a href="#operating-impl">17. Implementing the operating layer (Ch11): an idempotent overnight commit</a>
+    <a href="#reflection-impl">18. Implementing reflection (Ch5): a grounded check on free text</a>
+    <a href="#dispatch-note">19. Multi-agent dispatch (Ch9): why three components, not three copies of one agent</a>
+    <a href="#instrumenting">20. Instrumenting the design: Chapter 7 and 8's own vocabulary, proving the budget is met</a>
+    <a href="#self-check">21. The full self-check: fourteen claims, all proven</a>
+    <a href="#cross-check">22. Cross-check: Copperfield, Harrowgate, and Thornwick through the same pipeline</a>
+    <a href="#boundary">23. What this chapter does NOT re-teach, on purpose</a>
+    <a href="#thought-process">24. GenAI Builder Thought Process</a>
+    <a href="#calibration">25. Three calibration checks before the exercises</a>
+    <a href="#recap">26. Points to remember -- and the course's own closing note</a>
+  </nav>
+
+  <div class="hook">
+    <p>Chapter 12's own Section 21 made a promise: "Chapter 13's capstone is where a reader applies this same framework to a full, previously-unseen system end to end." Every worked example Chapter 12 used -- Copperfield, Harrowgate, Wrenfield -- needed SOME of Chapters 1-11's mechanisms, never all of them at once. A real capstone has to force the full inventory into play on one system, not just restate the framework on an easier problem. That is this chapter's entire job.</p>
+  </div>
+
+  <section id="handoff" class="subtopic">
+    <h2>1. Hand-off: from choosing mechanisms (Ch12) to defending a whole system (Ch13)</h2>
+    <p>Chapter 12 built five functions -- <code>characterize_problem</code>, <code>select_mechanisms</code>, <code>reliability_cost_budget</code>, <code>architecture_smell_check</code>, <code>build_adr</code> -- and proved them on Copperfield Municipal Utilities (single-agent), a contrasting Harrowgate-shaped multi-agent case, and its own L3 project (Driftlight Energy Cooperative). This chapter imports all five UNCHANGED, the same way Module 6's own assessment already did, rather than redefining them a third time.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">import_ch12_framework.py</span></div>
+      <pre><code>import importlib.util, os
+
+def _load(name, rel_path, repo_root):
+    spec = importlib.util.spec_from_file_location(name, os.path.join(repo_root, rel_path))
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    return mod
+
+REPO_ROOT = os.path.abspath(os.getcwd())
+ch12 = _load("ch12_solution", "chapters/chapter-12-designing-agent-architectures/project/solution.py", REPO_ROOT)
+
+characterize_problem = ch12.characterize_problem
+select_mechanisms = ch12.select_mechanisms
+reliability_cost_budget = ch12.reliability_cost_budget
+architecture_smell_check = ch12.architecture_smell_check
+build_adr = ch12.build_adr
+print("Imported 5 functions, 0 redefined:",
+      [f.__name__ for f in (characterize_problem, select_mechanisms,
+                             reliability_cost_budget, architecture_smell_check, build_adr)])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Imported 5 functions, 0 redefined: ['characterize_problem', 'select_mechanisms', 'reliability_cost_budget', 'architecture_smell_check', 'build_adr']</code></pre>
+    </div>
+    <p>This is the same <code>importlib.util.spec_from_file_location</code> pattern <code>assessments/module-assessments/module-6-architecture-design-exercise/solution.py</code> already used to reuse Chapter 12's framework for a sixth scenario. This chapter's own <code>project/solution.py</code> uses it a seventh time, for the capstone itself.</p>
+  </section>
+
+  <section id="ollama-note" class="subtopic">
+    <h2>2. Why this chapter runs no live model call, and says so</h2>
+    <p>Chapter 12 ran no live Ollama call because the skill it exercised -- judgment against written problem facts -- is not a model's live behavior. This chapter's own capstone has the SAME property: characterizing a multi-component problem, selecting mechanisms, stating a budget, and proving a reference implementation meets that budget are all architecture judgment and proof-of-design, exactly like Chapter 12's own L3 project (Driftlight), which also implemented real memory/guardrail/idempotency code with zero live model calls. A live call here would illustrate nothing the deterministic harness below doesn't already prove, and would make grading depend on a running Ollama server for no benefit -- so this session made none, honestly, the same disclosed decision Chapter 12 made.</p>
+    <div class="go-deeper">
+      <span class="label">Go deeper</span>
+      Contrast this with a hypothetical capstone that instead asked "build a real agent LOOP that plans, calls tools, and reflects on a live model's own output for a brand-new task." THAT capstone would genuinely need a live call, because the thing being proven would be the model's actual behavior, not just the architecture around it. This capstone's own deliverable is the architecture and its proof, not a model's live reasoning -- which is why the "live call or not" decision has to be made explicitly, every time, rather than defaulted either way.
+    </div>
+  </section>
+
+  <section id="l4-shape" class="subtopic">
+    <h2>3. What makes this genuinely L4, not a bigger L3</h2>
+    <p>Per <code>docs/curriculum/CURRICULUM_MAP.md</code>'s project ladder, L3 reads "design and implement a reliability-instrumented, cost-bounded AGENT for a given problem, no scaffold" (singular agent). L4 reads "design and defend a COMPLETE MULTI-COMPONENT autonomous agent SYSTEM; business/system problem only." The difference is not size -- it's that L4's own problem has to plausibly need more than one agent, coordinating, which is exactly the property Chapter 12's own L3 project (Driftlight) deliberately did NOT have.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">l3_vs_l4.py</span></div>
+      <pre><code>PROJECT_LADDER_DEFINITIONS = {
+    "L3 Independent": "reliability-instrumented, cost-bounded AGENT, "
+                       "no scaffold (SHIPPED at Ch.12 -- Driftlight Energy Cooperative)",
+    "L4 Architecture Challenge": "complete MULTI-COMPONENT agent SYSTEM, "
+                                  "business/system problem only (this chapter)",
+}
+for level, definition in PROJECT_LADDER_DEFINITIONS.items():
+    print(f"{level}: {definition}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>L3 Independent: reliability-instrumented, cost-bounded AGENT, no scaffold (SHIPPED at Ch.12 -- Driftlight Energy Cooperative)
+L4 Architecture Challenge: complete MULTI-COMPONENT agent SYSTEM, business/system problem only (this chapter)</code></pre>
+    </div>
+    <p>Driftlight needed memory, guardrails, reliability measurement, cost control, and the operating layer -- five mechanisms, zero of them multi-agent. An L4 problem that also characterized as single-agent would be a bigger L3, not a genuine L4. This chapter's own problem (Section 4) is built so that BOTH of Chapter 9's and Chapter 10's own multi-agent tests fire, which no prior chapter's worked example did at once.</p>
+  </section>
+
+  <section id="problem" class="subtopic">
+    <h2>4. The problem: Thornwick Marketplace Collective</h2>
+    <p><strong>Thornwick Marketplace Collective</strong> is a fictional online marketplace connecting independent makers to buyers, built from three distinct, specialized components:</p>
+    <ul>
+      <li><strong>Buyer Concierge</strong> -- conversational: product Q&amp;A, order placement, return requests. A buyer's stated allergy or preference at one order must correctly inform every LATER, separate order.</li>
+      <li><strong>Maker Fulfillment</strong> -- processes maker-side packing confirmations and inventory decrements, batched OVERNIGHT, with no staff watching.</li>
+      <li><strong>Fraud &amp; Dispute Review</strong> -- evaluates chargeback disputes; refunds above a threshold need explicit human approval, and the written resolution explanation sent to a maker or buyer is free text that can't be checked by a simple rule.</li>
+    </ul>
+    <p>Buyer Concierge and Maker Fulfillment both read and write the SAME shared inventory ledger -- a buyer's checkout and the overnight fulfillment batch can both try to claim the same sku's last unit at the same time. This is the fact that makes Thornwick genuinely different from every one of Chapter 12's own worked examples.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">thornwick_problem.py</span></div>
+      <pre><code>THORNWICK_PROBLEM = {
+    "_context": "Thornwick Marketplace Collective runs three coordinating "
+                "components -- a conversational Buyer Concierge, an "
+                "overnight Maker Fulfillment batch, and a Fraud & Dispute "
+                "Review process -- all reading/writing a SHARED inventory "
+                "ledger, with irreversible refund/credit actions and "
+                "unattended overnight fulfillment.",
+    "distinct_specialized_subtasks": True,
+    "subtasks_can_run_independently": True,
+    "requires_concurrent_independent_actors": True,
+    "facts_must_persist_across_separate_sessions": True,
+    "has_a_hard_to_verify_free_text_output": True,
+    "has_an_irreversible_or_costly_action": True,
+    "failures_are_costly_enough_to_measure": True,
+    "runs_at_volume_or_has_a_cost_ceiling": True,
+    "runs_unattended": True,
+}
+print(len(THORNWICK_PROBLEM) - 1, "problem facts stated (excluding _context)")
+print(sum(1 for k, v in THORNWICK_PROBLEM.items() if k != "_context" and v is True), "of those facts are True")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>9 problem facts stated (excluding _context)
+9 of those facts are True</code></pre>
+    </div>
+    <p>Every single fact is True, by design -- this is deliberate, not an accident of a lazily-written scenario. An L4 capstone that leaves several facts ambiguous or False has under-shot its own job of exercising the full mechanism inventory.</p>
+  </section>
+
+  <section id="characterization" class="subtopic">
+    <h2>5. Step 1 -- characterization, imported unchanged from Chapter 12</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">characterize_thornwick.py</span></div>
+      <pre><code>verdict = characterize_problem(THORNWICK_PROBLEM)
+print(verdict)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'multi_agent_justified': True, 'reason': 'distinct, specialized subtasks that can proceed independently'}</code></pre>
+    </div>
+    <p>Note which branch fired: <code>characterize_problem</code> checks the subtask-independence test FIRST, so that's the reason it reports -- even though the concurrent-actors fact is ALSO true here. Section 6 makes the second justification explicit, because an architect who only reports the first branch that happens to fire is missing half of why this problem needs multi-agent.</p>
+  </section>
+
+  <section id="both-justifications" class="subtopic">
+    <h2>6. Why Thornwick needs BOTH Chapter 9's test AND Chapter 10's test</h2>
+    <p>Chapter 12's own Harrowgate-shaped contrast example (Section 12 of that chapter) showed a problem where BOTH facts were true, same as Thornwick -- but Harrowgate was a standalone two-peer-agent system, not embedded inside a three-component capstone alongside memory, reflection, and guardrails all firing at once. Stating both reasons explicitly, not just the one <code>characterize_problem</code> happens to report first, is part of this chapter's own defense.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">both_justifications.py</span></div>
+      <pre><code>justification_1 = (THORNWICK_PROBLEM["distinct_specialized_subtasks"] and
+                    THORNWICK_PROBLEM["subtasks_can_run_independently"])
+justification_2 = THORNWICK_PROBLEM["requires_concurrent_independent_actors"]
+print(f"Ch9 dispatch justification (distinct, independent subtasks): {justification_1}")
+print(f"Ch10 coordination justification (concurrent actors, shared state): {justification_2}")
+print(f"Both hold at once: {justification_1 and justification_2}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Ch9 dispatch justification (distinct, independent subtasks): True
+Ch10 coordination justification (concurrent actors, shared state): True
+Both hold at once: True</code></pre>
+    </div>
+    <p>Buyer Concierge, Maker Fulfillment, and Fraud &amp; Dispute Review are three genuinely different skills (Ch9's dispatch case) -- AND Buyer Concierge and Maker Fulfillment also race each other on the same shared inventory ledger (Ch10's coordination case). Neither fact alone would require BOTH chapters' own machinery; together, they do.</p>
+  </section>
+
+  <section id="mechanism-selection" class="subtopic">
+    <h2>7. Step 2 -- mechanism selection: all eight, one at a time</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">select_thornwick_mechanisms.py</span></div>
+      <pre><code>selection = select_mechanisms({**THORNWICK_PROBLEM,
+                                 "multi_agent_justified": verdict["multi_agent_justified"]})
+for name, needed in selection.items():
+    print(f"{name}: {'LOAD-BEARING' if needed else 'not needed'}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>memory (Ch4): LOAD-BEARING
+reflection (Ch5): LOAD-BEARING
+guardrails (Ch6): LOAD-BEARING
+reliability measurement (Ch7): LOAD-BEARING
+cost control (Ch8): LOAD-BEARING
+multi-agent dispatch (Ch9): LOAD-BEARING
+peer communication (Ch10): LOAD-BEARING
+operating layer (Ch11): LOAD-BEARING</code></pre>
+    </div>
+    <p>All eight. Not one of Chapter 12's own three worked examples reached this -- Copperfield had three load-bearing mechanisms, Driftlight had five, the Harrowgate contrast case didn't examine memory/reflection/guardrails at all. This is the point of an L4 problem: force every mechanism the course built to earn its place on the SAME system, simultaneously, not spread one or two across several easier examples.</p>
+  </section>
+
+  <section id="budget" class="subtopic">
+    <h2>8. Step 3 -- the reliability/cost budget</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">thornwick_budget.py</span></div>
+      <pre><code>budget = reliability_cost_budget(THORNWICK_PROBLEM)
+print(budget)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'min_task_success_rate': 0.95, 'max_cost_per_run': 0.08}</code></pre>
+    </div>
+    <p>The tight, irreversible-action tier -- the SAME formula Chapter 12 built and its own L3 project reused, applied a third time, unchanged. Section 20 proves a real harness actually meets both numbers.</p>
+  </section>
+
+  <section id="tradeoffs" class="subtopic">
+    <h2>9. Step 4 -- the trade-off defense: three alternatives, named and rejected</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">thornwick_tradeoffs.py</span></div>
+      <pre><code>TRADEOFFS_REJECTED = [
+    {"alternative": "one single agent, many tools, for all three components "
+         "(Buyer Concierge, Maker Fulfillment, Fraud Review)",
+     "why_rejected": "the three components need genuinely different skills "
+         "(conversational dialogue, overnight batch logistics, fraud "
+         "judgment) that CAN proceed independently -- Ch9's own test for "
+         "when dispatch overhead is worth paying"},
+    {"alternative": "an unlocked read-then-write stock check instead of a "
+         "claim-check",
+     "why_rejected": "Buyer Concierge and Maker Fulfillment both read/write "
+         "the SAME shared inventory ledger concurrently; an unlocked check "
+         "is exactly the overselling race Ch10's claim-check exists to "
+         "prevent"},
+    {"alternative": "skip reflection on the dispute-resolution text, since "
+         "the refund AMOUNT itself is already guardrail-checked",
+     "why_rejected": "the amount being checked doesn't make the WRITTEN "
+         "explanation sent to the maker/buyer correct -- a hard-to-verify "
+         "free-text output still needs a grounded check, independent of "
+         "the numeric guardrail"},
+]
+for t in TRADEOFFS_REJECTED:
+    print(t["alternative"][:55] + "...")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>one single agent, many tools, for all three componen...
+an unlocked read-then-write stock check instead of a ...
+skip reflection on the dispute-resolution text, since...</code></pre>
+    </div>
+    <p>Each alternative is the thing a rushed design would actually propose: one agent "to keep it simple," an unlocked stock check "it'll probably be fine," skipping reflection "since the amount's already checked." Each is rejected for a specific, stated reason tied to a Thornwick fact, not a general preference.</p>
+  </section>
+
+  <section id="smell-good" class="subtopic">
+    <h2>10. The smell check on the correct, full selection</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">smell_check_good.py</span></div>
+      <pre><code>flags_good = architecture_smell_check(THORNWICK_PROBLEM, selection)
+print(flags_good)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>[]</code></pre>
+    </div>
+    <p>Zero flags, same as every correctly-selected design Chapter 12 ever checked -- the smell check is just as useful at full-inventory scale as it was on Copperfield's three-mechanism selection.</p>
+  </section>
+
+  <section id="smell-bad" class="subtopic">
+    <h2>11. The smell check catching a deliberately bad capstone design</h2>
+    <p>A bigger system doesn't mean the smell check needs to get smarter -- it means there are MORE ways to under- or over-build it. Here, the guardrail is dropped on purpose, despite the refund action being irreversible and costly.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">smell_check_bad.py</span></div>
+      <pre><code>bad_selection = dict(selection)
+bad_selection["guardrails (Ch6)"] = False
+flags_bad = architecture_smell_check(THORNWICK_PROBLEM, bad_selection)
+for f in flags_bad:
+    print("-", f)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>- UNDER-ENGINEERED: an irreversible/costly action exists with NO guardrail</code></pre>
+    </div>
+    <p>Caught immediately, pointing straight back at Chapter 6's own fail-safe-default lesson -- the same smell check, run against a bigger selected-mechanisms dict, still isolates the ONE mechanism that was dropped, without false-flagging any of the other seven that are still correctly selected.</p>
+  </section>
+
+  <section id="adr" class="subtopic">
+    <h2>12. Assembling the Architecture Decision Record</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">build_thornwick_adr.py</span></div>
+      <pre><code>adr = build_adr("Thornwick Marketplace Collective", THORNWICK_PROBLEM,
+                 verdict, selection, budget, TRADEOFFS_REJECTED, flags_good)
+print(adr)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>ARCHITECTURE DECISION RECORD -- Thornwick Marketplace Collective
+============================================================
+
+CONTEXT
+Thornwick Marketplace Collective runs three coordinating components -- a conversational Buyer Concierge, an overnight Maker Fulfillment batch, and a Fraud & Dispute Review process -- all reading/writing a SHARED inventory ledger, with irreversible refund/credit actions and unattended overnight fulfillment.
+
+DECISION
+  multi-agent: True (distinct, specialized subtasks that can proceed independently)
+  load-bearing: memory (Ch4)
+  load-bearing: reflection (Ch5)
+  load-bearing: guardrails (Ch6)
+  load-bearing: reliability measurement (Ch7)
+  load-bearing: cost control (Ch8)
+  load-bearing: multi-agent dispatch (Ch9)
+  load-bearing: peer communication (Ch10)
+  load-bearing: operating layer (Ch11)
+
+RELIABILITY/COST BUDGET
+  min_task_success_rate: 0.95
+  max_cost_per_run: 0.08
+
+ALTERNATIVES CONSIDERED AND REJECTED
+  - one single agent, many tools, for all three components: the three components need genuinely different skills that CAN proceed independently
+  - an unlocked read-then-write stock check instead of a claim-check: Buyer Concierge and Maker Fulfillment both read/write the SAME shared inventory ledger concurrently
+  - skip reflection on the dispute-resolution text: a hard-to-verify free-text output still needs a grounded check, independent of the numeric guardrail
+
+SMELL CHECK
+  flags: none</code></pre>
+    </div>
+    <p>This is the document a reviewer who wasn't in the room reads. It is also NOT the end of the deliverable -- Section 13 onward turns every line of this ADR into real, tested code.</p>
+  </section>
+
+  <section id="from-adr-to-code" class="subtopic">
+    <h2>13. From ADR to code: the reference-implementation plan</h2>
+    <p>An L4 capstone that stops at the ADR has designed a system, not defended one. "Defending" a design means proving, with real executed code, that each load-bearing mechanism actually does what the ADR claims it does.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">implementation_plan.py</span></div>
+      <pre><code>IMPLEMENTATION_PLAN = {
+    "memory (Ch4)": "MemoryStore -- a buyer allergy preference persisted "
+                     "to a JSON file, read back in a SEPARATE instantiation",
+    "peer communication (Ch10)": "InventoryLedger.try_claim -- a locked "
+                     "claim-check on the shared sku ledger",
+    "guardrails (Ch6)": "apply_refund -- fail-closed above a dollar "
+                     "threshold, opens only on explicit human_approved=True",
+    "operating layer (Ch11)": "idempotency_key + commit_once -- an "
+                     "exactly-once commit for the overnight fulfillment "
+                     "side effect",
+    "reflection (Ch5)": "grounded_reflect -- checks specific required "
+                     "facts are present in a free-text dispute explanation",
+    "reliability measurement (Ch7) + cost control (Ch8)": "a deterministic "
+                     "harness across three task types, proving the Section "
+                     "8 budget is actually met",
+}
+for mechanism, plan in IMPLEMENTATION_PLAN.items():
+    print(f"{mechanism}: {plan}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>memory (Ch4): MemoryStore -- a buyer allergy preference persisted to a JSON file, read back in a SEPARATE instantiation
+peer communication (Ch10): InventoryLedger.try_claim -- a locked claim-check on the shared sku ledger
+guardrails (Ch6): apply_refund -- fail-closed above a dollar threshold, opens only on explicit human_approved=True
+operating layer (Ch11): idempotency_key + commit_once -- an exactly-once commit for the overnight fulfillment side effect
+reflection (Ch5): grounded_reflect -- checks specific required facts are present in a free-text dispute explanation
+reliability measurement (Ch7) + cost control (Ch8): a deterministic harness across three task types, proving the Section 8 budget is actually met</code></pre>
+    </div>
+    <p>Multi-agent dispatch (Ch9) is covered by the shape of the system itself (Section 19) rather than a standalone class -- Sections 14-20 below build and prove every row above, in the same order.</p>
+  </section>
+
+  <section id="memory-impl" class="subtopic">
+    <h2>14. Implementing memory (Ch4): a buyer preference that survives a separate session</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">memory_store.py</span></div>
+      <pre><code>class MemoryStore:
+    """Same JSON-file-backed, read-modify-write shape as Ch4's CoachBot
+    and Ch12's own Driftlight MemoryStore."""
+
+    def __init__(self, path):
+        self.path = path
+        if not os.path.exists(path):
+            with open(path, "w") as f:
+                json.dump({}, f)
+
+    def set_preference(self, buyer_id, allergy):
+        data = self._read(); data[buyer_id] = {"allergy": allergy}; self._write(data)
+
+    def get_preference(self, buyer_id):
+        record = self._read().get(buyer_id)
+        return record["allergy"] if record else None
+
+mem_path = tempfile.mktemp(suffix=".json")
+session_1 = MemoryStore(mem_path)
+session_1.set_preference("B-100", "shellfish")
+del session_1                                   # the first session ends
+session_2 = MemoryStore(mem_path)                # a GENUINELY separate instance
+print(f"get_preference('B-100') from a separate session -> {session_2.get_preference('B-100')!r}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>get_preference('B-100') from a separate session -> 'shellfish'</code></pre>
+    </div>
+    <p>Deleting <code>session_1</code> before creating <code>session_2</code> is the point -- this proves the fact survives the PROCESS, not just the one Python object that happened to set it.</p>
+  </section>
+
+  <section id="peer-impl" class="subtopic">
+    <h2>15. Implementing peer coordination (Ch10): a claim-check that prevents overselling</h2>
+    <p>This is the mechanism no prior chapter's worked example combined with memory, reflection, and guardrails all at once -- Thornwick's own central proof.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">inventory_ledger.py</span></div>
+      <pre><code>class InventoryLedger:
+    def try_claim(self, sku, qty, claimed_this_tick):
+        """claimed_this_tick is a set shared across BOTH racing actors in
+        a single simulated instant -- the lock. A sku already claimed
+        this tick is rejected outright, before even checking stock."""
+        if sku in claimed_this_tick:
+            return {"claimed": False, "reason": "sku already claimed this tick"}
+        data = self._read_data()
+        available = data.get(sku, 0)
+        if available < qty:
+            return {"claimed": False, "reason": "insufficient stock"}
+        claimed_this_tick.add(sku)
+        data[sku] = available - qty
+        self._write_data(data)
+        return {"claimed": True, "remaining": data[sku]}
+
+ledger = InventoryLedger(tempfile.mktemp(suffix=".json"))
+ledger.set_stock("SKU-LAST", 1)       # exactly one unit left
+tick = set()
+buyer_claim = ledger.try_claim("SKU-LAST", 1, tick)       # Buyer Concierge
+maker_claim = ledger.try_claim("SKU-LAST", 1, tick)       # Maker Fulfillment, SAME tick
+print("Buyer Concierge claim:", buyer_claim)
+print("Maker Fulfillment claim (same tick):", maker_claim)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Buyer Concierge claim: {'claimed': True, 'remaining': 0}
+Maker Fulfillment claim (same tick): {'claimed': False, 'reason': 'sku already claimed this tick'}</code></pre>
+    </div>
+    <p>Exactly one unit existed; exactly one claim won. This is NOT an unlocked "read stock, then decrement" sequence -- the lock (<code>claimed_this_tick</code>) rejects the second claim BEFORE it ever re-checks stock, which is what makes this a claim-CHECK (Chapter 10's own fix) rather than a race with a lucky outcome.</p>
+  </section>
+
+  <section id="guardrail-impl" class="subtopic">
+    <h2>16. Implementing guardrails (Ch6): a fail-closed refund gate</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">apply_refund.py</span></div>
+      <pre><code>GUARDRAIL_REFUND_THRESHOLD = 40.00
+
+def apply_refund(dispute_id, amount, human_approved=False):
+    if amount > GUARDRAIL_REFUND_THRESHOLD and not human_approved:
+        return {"applied": False, "reason": "blocked: exceeds guardrail threshold without human approval"}
+    return {"applied": True, "amount": amount}
+
+blocked = apply_refund("D-1", 60.00, human_approved=False)
+approved = apply_refund("D-1", 60.00, human_approved=True)
+small = apply_refund("D-2", 10.00, human_approved=False)
+print("blocked:", blocked)
+print("approved:", approved)
+print("small (no approval needed):", small)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>blocked: {'applied': False, 'reason': 'blocked: exceeds guardrail threshold without human approval'}
+approved: {'applied': True, 'amount': 60.0}
+small (no approval needed): {'applied': True, 'amount': 10.0}</code></pre>
+    </div>
+    <p>Default is <code>human_approved=False</code> -- fail-CLOSED, the same discipline Chapter 6's own LedgerBot session corrected after first getting it backwards.</p>
+  </section>
+
+  <section id="operating-impl" class="subtopic">
+    <h2>17. Implementing the operating layer (Ch11): an idempotent overnight commit</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">commit_once.py</span></div>
+      <pre><code>def idempotency_key(sku, order_id):
+    return f"{sku}:{order_id}"      # keyed on what DEFINES the effect
+
+def commit_once(key, committed_keys, effect_fn):
+    if key in committed_keys:
+        return {"replayed": True, "result": committed_keys[key]}
+    result = effect_fn()
+    committed_keys[key] = result
+    return {"replayed": False, "result": result}
+
+committed = {}
+calls = {"n": 0}
+def effect():
+    calls["n"] += 1
+    return {"committed": True}
+
+key = idempotency_key("SKU-9", "order-77")
+first = commit_once(key, committed, effect)
+second = commit_once(key, committed, effect)     # simulates a RETRIED call
+print("first commit:", first)
+print("second (retried) commit:", second)
+print("effect() actually called:", calls["n"], "time(s)")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>first commit: {'replayed': False, 'result': {'committed': True}}
+second (retried) commit: {'replayed': True, 'result': {'committed': True}}
+effect() actually called: 1 time(s)</code></pre>
+    </div>
+    <p>A network blip retrying the SAME overnight fulfillment call -- unwatched, since Maker Fulfillment runs with no staff present -- replays the first result instead of committing the side effect a second time, exactly Chapter 11's own fix.</p>
+  </section>
+
+  <section id="reflection-impl" class="subtopic">
+    <h2>18. Implementing reflection (Ch5): a grounded check on free text</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">grounded_reflect.py</span></div>
+      <pre><code>REQUIRED_DISPUTE_FACTS = ["order_id", "amount", "resolution"]
+
+def grounded_reflect(explanation_text, required_facts=REQUIRED_DISPUTE_FACTS):
+    missing = [fact for fact in required_facts if fact not in explanation_text]
+    return (len(missing) == 0, missing)
+
+good = "order_id D-11, amount 55.00, resolution denied"
+bad = "We looked into this and decided it was fine."
+print("good explanation ->", grounded_reflect(good))
+print("bad explanation ->", grounded_reflect(bad))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>good explanation -> (True, [])
+bad explanation -> (False, ['order_id', 'amount', 'resolution'])</code></pre>
+    </div>
+    <p>This is "retry is not reflection" (Chapter 5's own lesson) applied to free text: the check looks for SPECIFIC required facts, not just that an explanation exists. A fluent paragraph mentioning none of them still fails -- which is exactly what distinguishes reflection from a bare re-ask.</p>
+  </section>
+
+  <section id="dispatch-note" class="subtopic">
+    <h2>19. Multi-agent dispatch (Ch9): why three components, not three copies of one agent</h2>
+    <p>Chapter 9's own dispatch mechanism is a routing/attribution concern: a supervisor sends each incoming request to the specialized worker that owns it, and every result is traceable back to which worker produced it. Thornwick's own three components ARE that pattern -- Buyer Concierge, Maker Fulfillment, and Fraud &amp; Dispute Review each own a distinct queue of work, and nothing routes an order-placement request to the fraud reviewer or a dispute to the buyer-facing agent.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">dispatch_table.py</span></div>
+      <pre><code>DISPATCH_TABLE = {
+    "order_placement": "Buyer Concierge",
+    "return_request": "Buyer Concierge",
+    "overnight_packing_confirmation": "Maker Fulfillment",
+    "chargeback_dispute": "Fraud & Dispute Review",
+}
+for request_type, owner in DISPATCH_TABLE.items():
+    print(f"{request_type} -> {owner}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>order_placement -> Buyer Concierge
+return_request -> Buyer Concierge
+overnight_packing_confirmation -> Maker Fulfillment
+chargeback_dispute -> Fraud & Dispute Review</code></pre>
+    </div>
+    <p>Dispatch alone would be enough if these three components never touched shared state -- it's Section 15's claim-check, not this table, that proves the harder, genuinely new part of this capstone's own coordination story.</p>
+  </section>
+
+  <section id="instrumenting" class="subtopic">
+    <h2>20. Instrumenting the design: Chapter 7 and 8's own vocabulary, proving the budget is met</h2>
+    <p>A deterministic harness across Thornwick's three task types (one per component), in the same spirit as Chapter 7's <code>run_harness</code>/<code>pass_at_k</code> and Chapter 8's <code>is_within_budget</code>/<code>cost_per_success</code> -- reused in LOGIC, the same convention Chapter 12's own Driftlight harness used.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">run_thornwick_harness.py</span></div>
+      <pre><code>harness_results = run_thornwick_harness()      # 20 trials per task type
+for task, r in harness_results.items():
+    print(f"{task}: success_rate={r['task_success_rate']:.2f}, avg_cost=${r['avg_cost']:.4f}")
+print("cost_per_success:", cost_per_success(harness_results))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>buyer_order_with_preference: success_rate=1.00, avg_cost=$0.0304
+maker_fulfillment_claim_race: success_rate=1.00, avg_cost=$0.0500
+dispute_review_with_refund: success_rate=1.00, avg_cost=$0.0609
+cost_per_success: {'buyer_order_with_preference': 0.030376, 'maker_fulfillment_claim_race': 0.050024, 'dispute_review_with_refund': 0.06091}</code></pre>
+    </div>
+    <p>Every task's average cost lands comfortably under the Section 8 budget's $0.08 ceiling, and every measured success rate clears the harness's own 0.80 small-sample floor (the SAME convention Chapter 12's own Driftlight harness used, since 20 trials/task carries real sampling noise) -- these are real numbers the budget is CHECKED against, not an aspiration restated as fact.</p>
+  </section>
+
+  <section id="self-check" class="subtopic">
+    <h2>21. The full self-check: fourteen claims, all proven</h2>
+    <p><code>project/solution.py</code> assembles every section above into one script and runs a fourteen-point self-check -- every claim this capstone makes, checked by code, not asserted in prose.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">run_self_check.sh</span></div>
+      <pre><code>$ python3 project/solution.py | tail -18</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>[PASS] 1. characterize_problem reaches multi-agent for Thornwick, for the subtask-independence reason
+[PASS] 2. select_mechanisms selects ALL EIGHT mechanisms as load-bearing (the full inventory)
+[PASS] 3. reliability_cost_budget states the tight (irreversible-action) tier
+[PASS] 4. architecture_smell_check raises zero flags on the correct full selection
+[PASS] 5. architecture_smell_check catches guardrails dropped despite an irreversible action
+[PASS] 6. buyer allergy preference persists across two separate MemoryStore sessions
+[PASS] 7. InventoryLedger claim-check lets exactly one concurrent actor win the last unit
+[PASS] 8. apply_refund guardrail is fail-closed by default, opens on explicit approval
+[PASS] 9. apply_refund allows below-threshold refunds with no approval gate
+[PASS] 10. commit_once applies an overnight fulfillment commit exactly once across a retried call
+[PASS] 11. grounded_reflect accepts a fact-complete explanation, rejects a fact-free one
+[PASS] 12. run_thornwick_harness meets the stated reliability/cost budget
+[PASS] 13. cost_per_success computes a valid per-task figure
+[PASS] 14. build_adr assembles a consistent, complete ADR naming the full mechanism set
+======================================================================
+Score: 14/14</code></pre>
+    </div>
+    <p>14/14. Every mechanism Section 7 selected is independently proven in Sections 14-20, not just claimed in the ADR -- the whole point of "defend," not just "design."</p>
+  </section>
+
+  <section id="cross-check" class="subtopic">
+    <h2>22. Cross-check: Copperfield, Harrowgate, and Thornwick through the same pipeline</h2>
+    <p>Chapter 12's own Section 19 ran five already-shipped systems through its pipeline as a consistency check. Here, the same three functions run against Copperfield Municipal Utilities (single-agent, three load-bearing mechanisms), a Harrowgate-shaped multi-agent case (multi-agent, three load-bearing mechanisms, no memory/reflection/guardrails at all), and this chapter's own Thornwick (multi-agent, EIGHT load-bearing mechanisms) -- one call per system, each independent.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">cross_check_three_systems.py</span></div>
+      <pre><code>for name, problem in [("Copperfield", copperfield_problem),
+                      ("Harrowgate", harrowgate_problem),
+                      ("Thornwick", THORNWICK_PROBLEM)]:
+    v = characterize_problem(problem)
+    sel = select_mechanisms({**problem, "multi_agent_justified": v["multi_agent_justified"]})
+    flags = architecture_smell_check(problem, sel)
+    load_bearing_count = sum(1 for needed in sel.values() if needed)
+    print(f"{name}: multi_agent={v['multi_agent_justified']}, "
+          f"load_bearing_mechanisms={load_bearing_count}/8, flags={len(flags)}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Copperfield: multi_agent=False, load_bearing_mechanisms=3/8, flags=0
+Harrowgate: multi_agent=True, load_bearing_mechanisms=3/8, flags=0
+Thornwick: multi_agent=True, load_bearing_mechanisms=8/8, flags=0</code></pre>
+    </div>
+    <p>Zero flags on all three, and the load-bearing count rises exactly where it should: Copperfield and Harrowgate each needed three of eight mechanisms (for different reasons -- one single-agent, one multi-agent), and Thornwick needed all eight, because it was built specifically to combine every fact that makes each one load-bearing. The SAME five functions, never redefined, produce a correct, internally-consistent verdict whether the problem needs three mechanisms or all eight.</p>
+  </section>
+
+  <section id="boundary" class="subtopic">
+    <h2>23. What this chapter does NOT re-teach, on purpose</h2>
+    <p>This chapter re-teaches none of Chapters 1-12's own mechanics, and redefines none of Chapter 12's five framework functions -- every one is imported. It does not teach deep evaluation methodology (deferred to <code>llm-evaluation-for-everyone</code>), context-window construction (deferred to <code>context-engineering-for-everyone</code>), or infrastructure-layer production engineering (deferred to <code>ai-engineering-for-everyone</code>) -- the same boundaries every prior chapter held. What it adds, once, is proof that the full Chapter 1-11 mechanism inventory composes correctly on one genuinely multi-component system, end to end.</p>
+    <div class="real-world">
+      <span class="label">Real-world link</span>
+      This is what a staff-level architecture review actually asks for: not a slide describing a design, and not a single mechanism demoed in isolation, but a system where every claimed capability is backed by code that a reviewer can run and watch pass.
+    </div>
+  </section>
+
+  <section id="thought-process" class="subtopic">
+    <h2>24. GenAI Builder Thought Process</h2>
+    <p>When you ask an AI assistant to design a multi-component system, the highest-value follow-up is not "what should the architecture look like" -- it's "which TWO facts, independently, justify multi-agent here, and do they both hold, or just one?" An AI that jumps to a tidy three-box diagram without naming which of Chapter 9's or Chapter 10's own tests apply -- or worse, applies both without checking either -- has skipped the characterization step this chapter's own Section 6 insists on doing explicitly.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">prompt_for_capstone_review.txt</span></div>
+      <pre><code>"Here is my multi-component problem: [paste it]. Before proposing an
+architecture, state separately whether (a) the components have
+distinct, specialized subtasks that can run independently, and (b)
+whether any two components act concurrently on the SAME shared
+resource. Name which of (a)/(b) hold, with the specific fact for
+each. Then, for every one of Chapters 4-11's mechanisms, name the
+ONE fact that makes it load-bearing or not. Then show me the code
+that PROVES your claim about the shared resource, not just a
+paragraph asserting it's handled safely."</code></pre>
+    </div>
+    <p>This forces the same two-part characterization Section 6 makes explicit, and -- critically -- demands PROOF for the coordination claim specifically, since that's the single most common place a plausible-sounding AI answer substitutes a confident sentence for a working claim-check.</p>
+  </section>
+
+  <section id="calibration" class="subtopic">
+    <h2>25. Three calibration checks before the exercises</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">calibration_1.py</span></div>
+      <pre><code>print(select_mechanisms({"has_an_irreversible_or_costly_action": True,
+    "runs_unattended": False, "multi_agent_justified": False})["operating layer (Ch11)"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>False</code></pre>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">calibration_2.py</span></div>
+      <pre><code>sel = select_mechanisms({"multi_agent_justified": True,
+    "requires_concurrent_independent_actors": False})
+print(sel["peer communication (Ch10)"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>False</code></pre>
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">calibration_3.py</span></div>
+      <pre><code>flags = architecture_smell_check(
+    {"has_an_irreversible_or_costly_action": False},
+    {"guardrails (Ch6)": True})
+print(len(flags))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>0</code></pre>
+    </div>
+    <p>Calibration 2 is the one worth pausing on: multi-agent being justified does NOT automatically make peer communication load-bearing -- it still needs the SEPARATE concurrent-actors fact, exactly the distinction Section 6 draws between Chapter 9's and Chapter 10's own tests.</p>
+  </section>
+
+  <section id="recap" class="subtopic">
+    <h2>26. Points to remember -- and the course's own closing note</h2>
+    <ul class="recap-list">
+      <li>An L4 Architecture Challenge differs from L3 in KIND, not just size: it has to plausibly need genuine multi-agent coordination, not just a bigger single-agent problem.</li>
+      <li>Chapter 9's dispatch justification (distinct, independently-runnable subtasks) and Chapter 10's coordination justification (concurrent independent actors on shared state) are SEPARATE facts -- a real system can need one, the other, both, or neither, and an architect has to check both, not stop at the first that fires.</li>
+      <li>A capstone that exercises every mechanism Chapters 1-11 built, on one system, proves the decision framework composes -- not just that it works on easy, mostly-independent worked examples.</li>
+      <li>"Defending" a design means proving each load-bearing mechanism with real, executed code -- a claim-check that actually races two concurrent claims, a memory store that actually survives a separate process, a guardrail that actually blocks by default -- not asserting the design is safe in prose.</li>
+      <li>This chapter imported Chapter 12's five framework functions unchanged, the third reuse of the same functions in this course (after Chapter 12's own exercises and Module 6's own assessment) -- a real architecture practice reuses its own decision tools, it doesn't reinvent them per project.</li>
+      <li>This chapter deliberately ran no live model call, for the same reason Chapter 12 did not: the skill being exercised is architecture judgment and proof-of-design against written facts, not a model's live behavior.</li>
+    </ul>
+    <div class="real-world">
+      <span class="label">Course complete</span>
+      This is the final chapter of <strong>Agentic AI for Everyone</strong>. Thirteen chapters across six modules took the agent loop from a single perceive-reason-act-observe cycle (Chapter 1) through planning, tools, memory, reflection, guardrails, reliability measurement, cost control, multi-agent orchestration and communication, production operating, and finally the decision layer for choosing among all of it (Chapters 2-12) -- to this chapter, where every one of those mechanisms had to compose correctly on one genuinely multi-component system, designed AND defended with real, executed proof. There is no Chapter 14. If you've built and run every project in this course's own ladder -- L1 through this L4 capstone -- you've done, end to end, what an architect is actually asked to do: take a new problem, decide what it needs, build it, and prove the result meets the bar you set for it.
+    </div>
+  </section>
+
+</main>
+<script src="../../assets/sidebar.js"></script>
+<script src="../../assets/progress.js"></script>
+</body>
+</html>

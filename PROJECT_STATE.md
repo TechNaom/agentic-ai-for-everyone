@@ -1,21 +1,18 @@
 # PROJECT_STATE.md — Agentic AI for Everyone
 
-Last updated: 2026-10-04 (Session 12 — Chapter 12, "Designing Agent
-Architectures," complete and live. This OPENS Module 6 — Architecture
-and Capstone is now **In Progress**: Chapter 12 shipped the
-architecture-decision framework, Module 6's own Chapter-12-scoped
-assessment (`assessments/module-assessments/module-6-architecture-
-design-exercise/`), AND — closing a FIVE-session deferral — the **L3
-Independent project**, at `chapters/chapter-12-designing-agent-
-architectures/project/` (Driftlight Energy Cooperative). The L3
-question is now CLOSED; see `docs/curriculum/CURRICULUM_MAP.md`'s
-project-ladder section and `quality-audits/chapter-12-audit.md` for
-the full decision record. Modules 1-5 (Chapters 1-11) remain fully
-complete. Chapter 13, the capstone (L4 Architecture Challenge), is
-scaffolded (`.gitkeep`'d directory), not yet built — it is the ONLY
-remaining chapter in this entire 13-chapter course. Nothing has been
-pushed to GitHub — all work is local-only, matching every prior
-session's explicit instructions.)
+Last updated: 2026-10-04 (Session 13 — Chapter 13, "Capstone: Designing
+and Defending an Autonomous Agent System," complete and live. **THE
+COURSE IS COMPLETE**: all 13 chapters and all 6 modules are live and
+Complete. Chapter 13 is the L4 Architecture Challenge — a full
+Architecture Decision Record plus a working, instrumented reference
+implementation for Thornwick Marketplace Collective, a genuinely
+multi-component system needing all eight Chapter 1-11 mechanisms at
+once. The capstone rubric ships at
+`assessments/architecture-challenges/`. There is no Chapter 14. See
+the "Course Complete" section near the end of this file for the
+closing summary, and `quality-audits/chapter-13-audit.md` for the
+full decision record. Nothing has been pushed to GitHub — all work is
+local-only, matching every prior session's explicit instructions.)
 
 ## Course Objective
 
@@ -1716,7 +1713,13 @@ pre-verification of what already existed on disk.
   `docs/curriculum/index.html` and root `index.html` both reflect
   Chapter 12 live, Module 6 in progress.
 
-## Next Recommended Task: Chapter 13 — "Capstone: Designing and Defending an Autonomous Agent System"
+## Chapter 13 Brief — CLOSED (built in Session 13; the course is complete)
+
+**Status: DONE.** This was the Session 12 hand-off brief for Chapter 13.
+It was built in full in Session 13 (see "Session 13" and "Chapter 13 —
+COMPLETE" below). There is no next recommended task: this is the final
+chapter of the course, and no Chapter 14 exists. The brief is kept below
+as a historical record of what Chapter 13 was specified to do.
 
 Read this whole section before writing anything. It is written to be
 picked up cold, with zero memory of Session 12.
@@ -1877,3 +1880,164 @@ Chapter 12 (see `docs/curriculum/CURRICULUM_MAP.md`'s project-ladder
 section and `quality-audits/chapter-12-audit.md`). Chapter 13's own
 session does not need to revisit it; only L4 (the capstone itself)
 remains open.
+
+## Session 13 — Chapter 13, the Capstone (L4), and the Course Closing (2026-10-04)
+
+**What was built, in order:**
+
+1. Read this file's full Chapter 13 brief, `docs/curriculum/CURRICULUM_MAP.md`
+   (Module 6, Chapter Roadmap, Projects L1-L4), `chapter-12-audit.md`'s
+   50-org exclusion list, Chapter 12's own `lesson.html`, `project/solution.py`,
+   and the Module 6 assessment's `importlib` reuse pattern.
+2. Designed the capstone problem: **Thornwick Marketplace Collective**, a
+   fictional artisan marketplace with THREE coordinating components — a
+   conversational Buyer Concierge (memory of a buyer's allergy preference),
+   an overnight Maker Fulfillment batch, and a Fraud & Dispute Review process
+   (fail-closed refund guardrail, free-text dispute explanation). Buyer
+   Concierge and Maker Fulfillment race on one shared inventory ledger. This
+   fires BOTH Chapter 9's dispatch test AND Chapter 10's coordination test,
+   and all EIGHT Chapter 1-11 mechanisms come out load-bearing at once — the
+   property no prior chapter's worked example had.
+3. Built `project/solution.py` (the L4 deliverable). It IMPORTS Chapter 12's
+   five framework functions via `importlib` (not redefined a third time),
+   then implements every selected mechanism as real code: `MemoryStore`
+   (proven across two separate instantiations), `InventoryLedger.try_claim`
+   (a locked claim-check, proven by a real two-claim race), `apply_refund`
+   (fail-closed guardrail), `idempotency_key` + `commit_once` (exactly-once
+   overnight commit), `grounded_reflect` (grounded check on free text), and a
+   deterministic reliability/cost harness across three task types. Scores
+   **14/14**.
+4. Built `project/README.md` (full problem statement), `project/index.html`,
+   `project/ai-paired.html`. Deliberately **no** `project/starter.py` and **no**
+   `project/RUBRIC.md` — L4, like L3, is "business/system problem only," and
+   the grading rubric lives in `assessments/architecture-challenges/`.
+5. Built `lesson.html` as the walkthrough of that build (60 `<pre>`/`<code>`
+   matches via `grep -c`, meeting the minimum; 121 tag occurrences). Every
+   output block was captured from real execution, not written from memory.
+6. Built the standard per-chapter file set, adapted: `quiz.html` (10 fib
+   questions), `interview-questions.md` + `.html` (10 questions across four
+   levels, including an architect-level defense of why Thornwick is a
+   legitimate L4 and not a relabeled L3), `exercises/` (a two-component
+   SUBSET of Thornwick, `solution.py` 17/17, `starter.py` 0/17 no crash,
+   `ai-paired.html`, `index.html`, `README.md`), `practice/` (eight
+   abstract-named scenarios, `solution.py` 8/8, `starter.py` 0/8 no crash,
+   `ai-paired.html`, `index.html`, `README.md`).
+7. Built the capstone rubric: `assessments/architecture-challenges/RUBRIC.md`
+   (five criteria, 5 points each, 25 total, passing bar 20/25 with zero
+   criteria at 0) plus `assessments/architecture-challenges/README.md`.
+8. Wired the site: `assets/chapters-data.js` (Chapter 13's real `path`),
+   `docs/curriculum/index.html` (Chapter 13 card linked "Live", Module 6
+   "Complete", the stale intro paragraph corrected), root `index.html`
+   (see the course-complete decision below), and `assets/style.css` (one new
+   `.course-complete-banner` rule).
+9. Wrote `quality-audits/chapter-13-audit.md` with an honest self-critique,
+   the Ollama decision, the scenario/exclusion list extended to 51 orgs,
+   the density decision, and the capstone-shape decision.
+10. Ran `bash scripts/local_check.sh < /dev/null` ALONE, with nothing else
+    running — all six checks passed clean.
+11. Re-ran every regression — all unchanged (see below).
+
+**Ollama decision: NO live model call.** Stated and reasoned in `lesson.html`
+Section 2 and `quality-audits/chapter-13-audit.md`. The capstone's own skill
+is architecture judgment and proof-of-design against written facts, the same
+property Chapter 12's L3 project (Driftlight) had — which also implemented
+real memory/guardrail/idempotency code with zero live calls. A live call
+would add nothing the deterministic harness does not already prove, and would
+make grading depend on a running Ollama server. No warm-up, sanity check, or
+live request was made.
+
+**Home-page course-complete decision: YES, add one.** Made explicitly, not by
+default. Changes to root `index.html`: the hero eyebrow reads "complete, all
+13 chapters" (not "in progress"); the hero lede now describes a complete
+course ending in the capstone; the hero stats read **13 of 13 chapters live**
+and **6 of 6 modules complete**; the primary CTA "Go straight to the capstone"
+replaces a secondary one; a yellow `course-complete-banner` (one sentence,
+linking to the capstone and the roadmap) sits directly beneath the hero; and
+the "All Chapters" intro paragraph describes all 13 chapters and all six
+modules as live. Kicker "Learning path, in progress" → "Learning path,
+complete".
+
+**Regression check (all unchanged, re-run this session, each alone):**
+
+- Ch4 / L2 `chapters/chapter-04-memory-and-state/project/solution.py`: **10/10**
+- Ch7 `chapters/chapter-07-evaluating-agent-reliability/project/solution.py`: **8/8**
+- Ch8 `chapters/chapter-08-cost-and-latency-control-of-agent-loops/project/solution.py`: **9/9**
+- Ch9 `chapters/chapter-09-multi-agent-orchestration-patterns/project/solution.py`: **9/9**
+- Ch10 `chapters/chapter-10-multi-agent-coordination-and-communication/project/solution.py`: **9/9**
+- Ch11 `chapters/chapter-11-operating-agents-in-production/project/solution.py`: **9/9**
+- Ch12 / L3 `chapters/chapter-12-designing-agent-architectures/project/solution.py`: **12/12**
+- Module 1-6 assessments: **4/4, 5/5, 3/3, 3/3, 4/4, 6/6**
+- New in Session 13: Ch13 `project/solution.py` **14/14**; Ch13 `exercises/solution.py` **17/17** (starter 0/17); Ch13 `practice/solution.py` **8/8** (starter 0/8); capstone rubric (`assessments/architecture-challenges/RUBRIC.md`) self-graded against the reference implementation **25/25**.
+
+## Chapter 13 — COMPLETE
+
+- `lesson.html`: 60 lines match `<pre\|<code` (121 total tag occurrences),
+  meeting the 60+ requirement. Adapted, not copied, from Chapter 12's own
+  density pattern — see `quality-audits/chapter-13-audit.md` for why.
+- `quiz.html`: 10 fill-in-the-blank questions.
+- `interview-questions.html` + `.md`: 10 questions across beginner,
+  intermediate, senior, and architect levels.
+- `exercises/`: Thornwick subset (Buyer Concierge + Fraud Review, no Maker
+  Fulfillment). `solution.py` 17/17; `starter.py` 0/17 no crash.
+- `practice/`: eight abstract-named multi-component scenarios. `solution.py`
+  8/8; `starter.py` 0/8 no crash.
+- `project/` (**the L4 Architecture Challenge — the capstone itself**):
+  Thornwick Marketplace Collective. `solution.py` 14/14; `README.md` problem
+  statement; `ai-paired.html` (second, unnamed marketplace). No `starter.py`,
+  no `project/RUBRIC.md` — the rubric is in `assessments/architecture-challenges/`.
+- **Capstone rubric**: `assessments/architecture-challenges/RUBRIC.md`, the
+  curriculum map's "capstone rubric (Ch. 13, architecture challenge, Level 4)"
+  — the directory `chapter-12-audit.md` confirmed reserved for exactly this.
+- Wired into `assets/chapters-data.js` with a real `path`;
+  `docs/curriculum/index.html` and root `index.html` both reflect Chapter 13
+  live and Module 6 Complete.
+
+## Course Complete — Closing Summary
+
+**Agentic AI for Everyone** is complete: 13 chapters, 6 modules, 4 project
+levels (L1 Guided, L2 Assisted, L3 Independent, L4 Architecture Challenge),
+and one capstone rubric, all live, all local-only (nothing pushed to
+GitHub, matching every session's explicit instructions).
+
+- **Module 1 — Foundations of the Agent Loop** (Ch 1-2): the perceive-reason-
+  act-observe loop; planning and task decomposition.
+- **Module 2 — Giving Agents Capabilities** (Ch 3-4): tool use and function
+  calling; memory and state.
+- **Module 3 — Making Agents Reliable** (Ch 5-6): reflection and self-
+  correction; guardrails and safety.
+- **Module 4 — Measuring and Controlling Agents** (Ch 7-8): reliability
+  evaluation; cost and latency control.
+- **Module 5 — Multi-Agent Systems** (Ch 9-11): orchestration patterns;
+  coordination and communication; operating agents in production.
+- **Module 6 — Architecture and Capstone** (Ch 12-13): the architecture-
+  decision framework (Ch 12, L3 Independent project shipped there); and the
+  L4 Architecture Challenge capstone (Ch 13, Thornwick Marketplace
+  Collective) — a full Architecture Decision Record plus a working,
+  instrumented reference implementation for a system that needs the entire
+  mechanism inventory at once.
+
+**What the course gives a reader:** a working, verified mental model of an
+autonomous agent as a SYSTEM — every mechanism built from scratch in
+readable Python with no heavy framework dependency, every mechanism proven
+by code rather than asserted in prose, and a decision layer (Ch 12) for
+choosing which mechanisms a given problem actually needs, defended in
+writing (Ch 13). Every chapter's own harness is deterministic and offline,
+so grading never depends on a running model server; live Ollama calls were
+used only where a chapter's own skill required a model's live behavior, and
+each such call was disclosed.
+
+**Honest limits, stated plainly so a future reader can judge the course's own
+claims:** the harnesses are deterministic and synthetic by design, so their
+measured numbers prove the mechanisms are wired correctly, not that a real
+production model meets the same budgets; `grounded_reflect` is a substring
+check, not a semantic verifier; and the smell check only flags missing
+mechanisms plus a short list of over-engineering cases. These limits are
+recorded in each chapter's own audit, not hidden.
+
+**Where to go next (outside this course):** the sibling courses named in
+`docs/discovery-notes.md` cover what this course deliberately deferred —
+deep evaluation methodology (`llm-evaluation-for-everyone`), context-window
+construction (`context-engineering-for-everyone`), and infrastructure-layer
+production engineering (`ai-engineering-for-everyone`).
+
+The course is closed. There is no Chapter 14.

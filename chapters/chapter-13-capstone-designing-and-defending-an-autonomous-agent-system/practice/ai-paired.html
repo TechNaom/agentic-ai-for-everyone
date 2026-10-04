@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 13 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose a ninth multi-component scenario yourself, then critique an AI's plausible-but-flawed snap judgment.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-13">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to practice</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 13 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, "QuotaSpan" (an unnamed employer's internal tool, matching this course's own convention for a quick diagnostic left generic): it runs a document-intake component and a compliance-review component, both writing to the SAME shared case file, with the review step gating an irreversible filing action. First decide, yourself, whether this needs multi-agent, which mechanisms are load-bearing, and whether anything looks like a smell. Then ask an AI assistant for the same snap judgment and compare.</p>
+  </div>
+
+  <h2>A reference prompt</h2>
+  <div class="genai-prompt-box">
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>QuotaSpan has a document-intake component and a compliance-review component that both write to the SAME shared case file, and the review step gates an irreversible filing action. In one pass: (1) state whether this needs multi-agent and the specific fact that decides it; (2) name every Chapter 1-11 mechanism that's load-bearing and why; (3) run an architecture-smell check against your own selection and report any flags.</pre></div>
+    </details>
+  </div>
+
+  <h2>Review checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed answer tends to miss</span>
+    <ul>
+      <li>Does it correctly identify that writing to the SAME shared case file, with no concurrent independent actors, does NOT by itself justify peer communication (Ch10) -- the two components can still be sequential, not racing?</li>
+      <li>Does it name the guardrail as load-bearing BEFORE naming anything else, since the irreversible filing action is the single highest-stakes fact here?</li>
+      <li>Does it actually run a smell check against its own selection, or just assert the design is correct with no cross-check?</li>
+    </ul>
+  </div>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice</a>
+    <a href="../project/index.html">Project &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

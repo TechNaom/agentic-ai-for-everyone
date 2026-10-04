@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 13 Project: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design and instrument the capstone yourself, then critique an AI's plausible-but-flawed L4-shaped build.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-13">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the project</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 13 Project &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">30 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked through the L4 Architecture Challenge yourself on Thornwick Marketplace Collective. Now a second, unnamed regional artisan marketplace (left generic, matching this course's own convention for quick AI-paired variants) gets a full capstone-shaped deliverable — characterization, mechanism selection, budget, implementation, and instrumentation — built a second way: by prompting an AI assistant for the whole thing, and reviewing what it hands back with the same skepticism a design-review panel would bring to a capstone defense.</p>
+  </div>
+
+  <h2>Step 1: Design and instrument it yourself, first</h2>
+  <p>The second marketplace runs the same three-component shape: a conversational buyer agent whose stated dietary preference must persist across separate orders, an overnight seller-fulfillment batch sharing ONE stock ledger with the buyer agent, and a dispute-review step gating refunds above a dollar threshold behind human approval, with the written resolution explanation as free text. Before reading further: characterize this problem yourself, select all eight mechanisms, state a budget, and sketch how you'd implement and PROVE the shared-ledger claim-check prevents overselling. There's no grading here — compare your own attempt against Step 3's checklist and against this chapter's own <code>solution.py</code>.</p>
+
+  <h2>Step 2: Ask an AI assistant to build the same deliverable</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> an L4-shaped prompt has to force the AI through all five framework steps for a MULTI-component system, demand it name BOTH justifications for multi-agent where both apply, and demand a real, executed proof that the shared-resource race is actually prevented — not just a design narrative that asserts safety.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Design and implement a multi-component marketplace agent system for..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this chapter's own project pattern.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>I need a complete multi-component agent architecture AND a working reference implementation for a second artisan marketplace: a conversational buyer agent (a dietary preference stated once must inform every LATER order), an overnight seller-fulfillment batch sharing ONE stock ledger with the buyer agent, and a dispute-review step (refunds above a threshold need human approval; the written resolution is free text). Do all of the following, in order: (1) characterize multi-agent need, naming BOTH possible justifying facts and which apply; (2) for each of memory, reflection, guardrails, reliability measurement, cost control, multi-agent dispatch, peer communication, and the operating layer, state whether it's load-bearing and why; (3) state a reliability/cost budget; (4) implement a LOCKED claim-check (not an unlocked read-then-write) for the shared stock ledger, a fail-CLOSED refund guardrail, an idempotent overnight commit, and a grounded check on the dispute explanation text; (5) write a harness that actually races two concurrent claims on the same last unit and PROVES only one wins, plus measures real success-rate and cost-per-success against the budget -- don't just assert the numbers.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated L4 submission tends to get wrong</span>
+    <ul>
+      <li><strong>An unlocked stock check instead of a claim-check.</strong> Does the inventory code LOCK the sku before checking stock, or does it "check, then decrement" unlocked -- which oversells the moment two components race it for real, exactly the gap Chapter 10's own claim-check closes?</li>
+      <li><strong>Only one of the two multi-agent justifications named.</strong> Does the response name BOTH the subtask-independence fact (Ch9) AND the shared-state-concurrency fact (Ch10), or stop after the first one it happens to find?</li>
+      <li><strong>Reflection claimed but not grounded.</strong> Does the dispute-text check actually verify specific required facts are present, or just re-ask the model to "review this" with no concrete criterion?</li>
+      <li><strong>A budget asserted, not measured, or a harness that never actually races the claim-check.</strong> Does the harness run two concurrent claims on the SAME last unit and print which one won, or just claim the design "prevents overselling" with nothing that could prove or disprove it?</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's full deliverable against this chapter's own <code>solution.py</code> and the capstone rubric in <code>assessments/architecture-challenges/RUBRIC.md</code>. Did it implement and PROVE the full mechanism set, or just describe one plausibly?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Project</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

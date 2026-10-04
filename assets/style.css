@@ -396,6 +396,28 @@ pre code {
   margin-top: 2px;
 }
 
+/* ---------- Course-complete banner (all 13 chapters live) ---------- */
+.course-complete-banner {
+  background: var(--color-yellow);
+  color: var(--color-navy);
+}
+
+.course-complete-banner .page {
+  padding: 14px 20px;
+}
+
+.course-complete-banner p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.course-complete-banner a {
+  color: var(--color-navy);
+  text-decoration: underline;
+}
+
 /* ---------- Feature grid ("why this course") ---------- */
 .feature-grid {
   display: grid;
