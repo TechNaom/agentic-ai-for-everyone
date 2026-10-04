@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 11 Project: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Build an overnight operating harness yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-11">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the project</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 11 Project &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">25 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already built the project yourself on Wrenfield Dispatch Alliance's ClaimScout and ShipScout. Now a fourth scenario, <strong>Hollowgate Courier Network</strong> (a fictional regional courier network) and its two peer agents <strong>PickupScout</strong> and <strong>DropoffScout</strong>, gets built a second way: by prompting an AI assistant for an overnight operating harness, and reviewing what it hands back with the same skepticism you'd bring to a coworker's pull request before trusting its retry handling with real side effects.</p>
+  </div>
+
+  <h2>Step 1: Design it yourself, first</h2>
+  <p>PickupScout and DropoffScout must confirm overnight pickups and drop-offs unattended. Before reading further, sketch your own design: what should happen if the SAME confirmation call is retried and its arguments drift slightly between attempts (a genuine live quirk, not a hypothetical)? What should happen if a call fails every single time it's attempted? There's no grading here, just your own design to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant to build the same thing</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to state explicitly that the idempotency key must be built from a NARROW set of fields that define the side effect, not the full call-argument payload, and that retries must be bounded with every attempt logged -- otherwise a rushed AI answer tends to write a "safe-looking" retry wrapper that de-duplicates on raw argument equality, which still leaves the exact double-commit risk this chapter's own Section 4 found live wide open, just harder to spot on a quick read.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write Python production-operating code for PickupScout and DropoffScout that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this chapter's own lesson pattern.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write Python stdlib-only production-operating code for two agents, pickupscout and dropoffscout, confirming overnight courier steps unattended. I need: (1) an idempotency_key(agent, order_id, action) function built from exactly those three fields, NOT the raw call arguments; (2) a commit_once(key, effect_fn) function where the check-for-existing-key and the write happen inside ONE single lock -- not two separately-locked steps -- and a repeated key replays the FIRST result without re-running effect_fn; (3) a call_with_retries(fn, max_attempts, base_delay) function with exponential backoff that logs every attempt (success or failure) and raises a RetriesExhausted exception, never silently returning None, if every attempt fails; (4) a run_harness(cases) function that walks a list of confirmation cases through call_with_retries and commit_once together, reporting which cases succeeded, which were replayed (not double-committed), and which exhausted their retries. Use only the Python standard library -- no LangGraph, CrewAI, AutoGen, or external logging/observability framework.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated operating harness tends to get wrong</span>
+    <ul>
+      <li><strong>An idempotency key built from raw arguments.</strong> Does the generated code de-duplicate by comparing the full call-argument payload rather than a deliberately narrow key -- the exact gap this chapter's own Section 4 live result exposes?</li>
+      <li><strong>Two separately-locked steps instead of one atomic commit.</strong> Does the generated <code>commit_once</code> acquire a lock, check, release it, then acquire AGAIN to write -- leaving a window where a second call can slip through and re-run <code>effect_fn</code> -- or is the check-and-write genuinely one locked block, matching this chapter's own Section 5 pattern?</li>
+      <li><strong>A retry wrapper that swallows total failure silently.</strong> Does the generated code return <code>None</code> or an empty result with no error and no log line when every attempt fails, or does it raise a specific exception AND log the exhaustion, matching this chapter's own Section 6 pattern?</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against this chapter's own lesson pattern (Sections 4-6, 11) and against <code>solution.py</code> in the project folder. Where do they differ? Does the AI's version genuinely key idempotency on a narrow, deliberate set of fields, or does it just add a check that LOOKS safe on a quick read?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Project</a>
+    <a href="../../../index.html">All Chapters &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

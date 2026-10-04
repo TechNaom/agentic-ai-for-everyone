@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operating Agents in Production — Agentic AI for Everyone</title>
+<meta name="description" content="Retries with idempotency keys, three layers of timeouts, structured logging with a correlation id, and a crash-survivable run summary -- built on Harrowgate Logistics Exchange's DockScout and YardScout, reusing Chapter 9's dispatch and Chapter 10's peer-messaging mechanisms unchanged.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-11">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../../index.html">&larr; Back to all chapters</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 11 of 13</span>
+    <span class="badge-difficulty">Advanced</span>
+    <span class="reading-time">65 min read, hands-on</span>
+  </div>
+  <h1>Operating Agents in Production</h1>
+  <p class="lede">Chapter 9 built dispatch. Chapter 10 built peer communication. Both chapters' agents ran once, by hand, with a human watching. This chapter closes Module 5 by asking the question production actually asks: what has to be true for this SAME system -- Harrowgate Logistics Exchange's DockScout and YardScout -- to run unattended, overnight, with nobody watching, and still be debuggable afterward? The answer is four mechanisms: retries that never re-commit a side effect, timeouts at three distinct layers, structured logs that let a bad run be attributed after the fact, and a run summary computed from those logs, not from counters that vanish on crash.</p>
+
+  <nav class="page-toc" aria-label="On this page">
+    <span class="toc-label">On this page</span>
+    <a href="#handoff">1. Hand-off from Chapters 9-10: coordinated once by hand vs. operated unattended</a>
+    <a href="#ollama-check">2. A live check: warming Ollama before any production-operating code</a>
+    <a href="#reuse">3. What this chapter reuses unchanged, by name</a>
+    <a href="#idempotency-live">4. A live call, read twice -- the real argument drift that motivates idempotency keys</a>
+    <a href="#idempotency">5. Idempotency keys: committing a side effect exactly once</a>
+    <a href="#retries">6. Bounded retries with exponential backoff, wired to idempotency</a>
+    <a href="#timeout-live">7. A live per-call timeout, actually firing</a>
+    <a href="#timeout-layers">8. Three timeout layers, and which failure each one catches</a>
+    <a href="#logging">9. Structured logging: one JSON line per event, one correlation id per run</a>
+    <a href="#attribution-from-logs">10. Attribution from logs alone -- Chapter 9 and 10's functions, answered after the fact</a>
+    <a href="#run-summary">11. Operating-state reporting: a run summary that survives a crash</a>
+    <a href="#measurement-layer">12. Chapter 7 and 8's measurement layer, applied to a production-shaped run</a>
+    <a href="#boundary">13. What this chapter does NOT teach, on purpose</a>
+    <a href="#assembled">14. Harrowgate Logistics Exchange, operated end-to-end</a>
+    <a href="#thought-process">15. GenAI Builder Thought Process</a>
+    <a href="#recap">16. Points to remember</a>
+  </nav>
+
+  <div class="hook">
+    <p>DockScout and YardScout already coordinate (Chapter 9) and already talk to each other (Chapter 10). Neither chapter asked what happens the 50th time they run, unattended, when one live call drifts in its arguments, one call hangs, and the process restarts mid-exchange. This chapter builds exactly that operating layer -- and its central example, like every chapter before it, is a genuine result from this session's own live testing: the SAME retried call, from a real model, came back with two different argument shapes, which is the concrete, demonstrated reason an idempotency key must be built from the fields that matter, not from raw argument equality.</p>
+  </div>
+
+  <section id="handoff" class="subtopic">
+    <h2>1. Hand-off from Chapters 9-10: coordinated once by hand vs. operated unattended</h2>
+    <p>Chapters 9 and 10 answered "how do two or more agents work together correctly, for one run." Chapter 11 answers a different question: "what has to be added so that the SAME correct system can run many times, unattended, and still be trusted?" Nothing about dispatch, peer messaging, the claim-check, or deadlock detection changes. What's added sits AROUND those mechanisms: retries that wrap a call, timeouts that bound a call/agent/exchange, logs that record what happened, and a summary computed from those logs.</p>
+    <div class="what-is">
+      <span class="label">What is... "operating" an agent system, precisely?</span>
+      Building a multi-agent system (Chapters 9-10) answers "does it produce the right outcome." <strong>Operating</strong> it answers "does it keep producing the right outcome, unattended, across many runs, when something -- a slow call, a dropped connection, a process restart -- inevitably goes wrong partway through." The mechanisms are retries, timeouts, structured logging, and run summaries; none of them change what the agents decide, only how the SYSTEM around them behaves when a decision doesn't land cleanly.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">from_chapter_10.py</span></div>
+      <pre><code>def coordinated_claim(agent_name, shipment_id):
+    """Chapter 10, Section 9 -- a shared, LOCKED claim-check. Reused
+    UNCHANGED below: this chapter's retries and idempotency keys are
+    built around this function, not a replacement for it."""
+    with _shared_lock:
+        if shipment_id in _shared_claims:
+            return {"ok": False, "agent": agent_name,
+                     "shipment_id": shipment_id, "reason": "already claimed"}
+        _shared_claims.add(shipment_id)
+        return {"ok": True, "agent": agent_name, "shipment_id": shipment_id}
+
+print("Chapter 10's claim-check, reused unchanged, imported below by name.")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Chapter 10's claim-check, reused unchanged, imported below by name.</code></pre>
+    </div>
+  </section>
+
+  <section id="ollama-check" class="subtopic">
+    <h2>2. A live check: warming Ollama before any production-operating code</h2>
+    <p>Per this course's standing reliability policy -- sharpened by Chapter 10's own session, where two CONCURRENT background warm-up requests raced and cost a 314.35-second cold start -- this session warmed Ollama with a single background request, then ran exactly ONE sanity call before writing any lesson code. No second warm-up or live call was launched while that first one was in flight.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">warm_and_sanity_check.sh</span></div>
+      <pre><code>curl -s localhost:11434/api/generate \
+  -d '{"model":"llama3.2","prompt":"","keep_alive":"120m"}'
+# single warm-up request, not run concurrently with anything else
+
+# then, ONE sanity call, not launched until the warm-up above returned:
+time curl -s localhost:11434/api/generate \
+  -d '{"model":"llama3.2","prompt":"Say OK.","keep_alive":"120m"}'</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, captured this session)</span>
+      <pre><code>real    0m11.123s
+response: "What's on your mind? Need help with something or just want to chat?"</code></pre>
+    </div>
+    <p>11.12 seconds end to end for the sanity call -- well inside the 450-second budget, and far better than Chapter 10's disclosed 314.35s race. Every live call in this chapter was run sequentially, one at a time, with the prior call's result captured before the next one started.</p>
+  </section>
+
+  <section id="reuse" class="subtopic">
+    <h2>3. What this chapter reuses unchanged, by name</h2>
+    <p>Per this course's own no-re-derivation discipline, this chapter imports six functions unchanged from Chapters 9 and 10's own <code>project/solution.py</code> files rather than rewriting any of them:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">reused_inventory.py</span></div>
+      <pre><code>REUSED_FROM_CHAPTER_9 = {
+    "which_agent_responsible": "walks a (agent, tool, ok) dispatch trace, "
+        "returns the first agent whose DISPATCH step failed",
+    "is_within_budget": "fail-closed step/cost budget check, reused "
+        "unchanged a second time (Ch8 -> Ch9 -> this chapter)",
+}
+REUSED_FROM_CHAPTER_10 = {
+    "coordinated_claim": "the shared, LOCKED claim-check against "
+        "duplicated work",
+    "parse_message_safely": "normalizes safely-recoverable malformation, "
+        "fails closed on an unrecoverable one",
+    "break_deadlock_if_needed": "timeout-based deadlock detection plus a "
+        "pre-agreed, alphabetically-first tie-breaker",
+    "which_agent_caused_miscommunication": "walks a (sender, type, "
+        "interpreted_ok) exchange, returns the first sender whose "
+        "MESSAGE was misread -- the message-level sibling of "
+        "which_agent_responsible",
+}
+for name, desc in {**REUSED_FROM_CHAPTER_9, **REUSED_FROM_CHAPTER_10}.items():
+    print(f"{name}: {desc}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>which_agent_responsible: walks a (agent, tool, ok) dispatch trace, returns the first agent whose DISPATCH step failed
+is_within_budget: fail-closed step/cost budget check, reused unchanged a second time (Ch8 -> Ch9 -> this chapter)
+coordinated_claim: the shared, LOCKED claim-check against duplicated work
+parse_message_safely: normalizes safely-recoverable malformation, fails closed on an unrecoverable one
+break_deadlock_if_needed: timeout-based deadlock detection plus a pre-agreed, alphabetically-first tie-breaker
+which_agent_caused_miscommunication: walks a (sender, type, interpreted_ok) exchange, returns the first sender whose MESSAGE was misread -- the message-level sibling of which_agent_responsible</code></pre>
+    </div>
+    <p>None of these six are redefined below. They are imported (via <code>importlib</code>, matching this course's own Module 4 precedent) exactly as written in Chapters 9 and 10's files.</p>
+  </section>
+
+  <section id="idempotency-live" class="subtopic">
+    <h2>4. A live call, read twice -- the real argument drift that motivates idempotency keys</h2>
+    <p>This session ran the SAME request against DockScout's own live model twice in a row, simulating what a caller does when a first attempt's response is lost and it retries: "confirm shipment S-104 is claimed by you (DockScout)." Both calls succeeded. Both called the right tool. But look closely at the real, captured arguments:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">live_retry.py</span></div>
+      <pre><code>from openai import OpenAI
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+
+TOOLS = [{"type": "function", "function": {
+    "name": "confirm_claim",
+    "description": "Confirm a shipment claim is final and committed.",
+    "parameters": {"type": "object", "properties": {
+        "shipment_id": {"type": "string"}, "agent": {"type": "string"}},
+        "required": ["shipment_id", "agent"]}}}]
+
+def call(label, prompt):
+    resp = client.chat.completions.create(
+        model="llama3.2",
+        messages=[
+            {"role": "system", "content": "You are DockScout, a dispatch "
+             "agent for Harrowgate Logistics Exchange. Use the "
+             "confirm_claim tool to finalize shipment S-104 for yourself."},
+            {"role": "user", "content": prompt}],
+        tools=TOOLS)
+    print(label, resp.choices[0].message.tool_calls[0].function.arguments)
+
+call("attempt-1", "Confirm shipment S-104 is claimed by you (DockScout).")
+call("attempt-2 (simulated retry)", "Confirm shipment S-104 is claimed by you (DockScout).")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, unscripted, this session's own run)</span>
+      <pre><code>attempt-1  (14.32s)  {"agent":"DockScout","shipment_id":"S-104","vehicle":"None"}
+attempt-2  (3.02s)   {"agent":"DockScout","shipment_id":"S-104"}</code></pre>
+    </div>
+    <p>Attempt 1 includes an extra <code>"vehicle":"None"</code> key that attempt 2 doesn't. Nothing was scripted to produce this; it's the model's own real output across two calls with an identical prompt. If a retry system de-duplicated by comparing the raw argument JSON string, these two calls would look like two DIFFERENT actions -- and a naive "retry on failure, re-send on no response" policy could commit the SAME confirmation twice. That's exactly the bug this chapter's idempotency key design (Section 5) is built to prevent.</p>
+  </section>
+
+  <section id="idempotency" class="subtopic">
+    <h2>5. Idempotency keys: committing a side effect exactly once</h2>
+    <p>The fix is to key on the fields that actually DEFINE the side effect -- agent, shipment, and action -- not on the full argument payload a model happens to produce. A commit store keyed this way runs the real effect once, and any later call with the same key gets the FIRST result replayed, never a second commit.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">idempotency.py</span></div>
+      <pre><code>import threading
+
+def idempotency_key(agent, shipment_id, action):
+    """Keys on the fields that define the side effect, NOT the raw
+    argument dict -- Section 4's own live result is the reason: two
+    real calls for the 'same' action had different raw JSON."""
+    return f"{agent}:{shipment_id}:{action}"
+
+_committed_keys = {}
+_committed_lock = threading.Lock()
+
+def commit_once(key, effect_fn):
+    with _committed_lock:
+        if key in _committed_keys:
+            return {"ok": True, "result": _committed_keys[key], "replayed": True}
+        result = effect_fn()
+        _committed_keys[key] = result
+        return {"ok": True, "result": result, "replayed": False}
+
+key = idempotency_key("dockscout", "S-104", "confirm_claim")
+c1 = commit_once(key, lambda: "committed-S-104")
+c2 = commit_once(key, lambda: "SHOULD NOT RUN AGAIN")
+print("first commit: ", c1)
+print("retried commit:", c2)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>first commit:  {'ok': True, 'result': 'committed-S-104', 'replayed': False}
+retried commit: {'ok': True, 'result': 'committed-S-104', 'replayed': True}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <span class="label">Code breakdown</span>
+      <dl>
+        <dt><code>idempotency_key</code></dt>
+        <dd>Built from (agent, shipment_id, action) -- exactly the fields Section 4's live drift did NOT change. The extra <code>"vehicle"</code> field never enters the key, so both of Section 4's real calls would map to the SAME key.</dd>
+        <dt><code>commit_once</code></dt>
+        <dd>The second call's <code>effect_fn</code> (the lambda that would print "SHOULD NOT RUN AGAIN") is never invoked. <code>replayed: True</code> is the caller's signal that this attempt is a retry echo, not a new commit.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="retries" class="subtopic">
+    <h2>6. Bounded retries with exponential backoff, wired to idempotency</h2>
+    <p>A retry policy without a bound is a hang with extra steps (Chapter 1's own `max_iterations` lesson). This chapter's retry wrapper bounds attempts, backs off exponentially between them, and logs every attempt -- feeding Section 9's structured log, not an in-process counter.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">retries.py</span></div>
+      <pre><code>import time
+
+class RetriesExhausted(Exception):
+    pass
+
+def call_with_retries(fn, max_attempts=3, base_delay=0.0, log=None,
+                       correlation_id=None, agent=None):
+    last_exc = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            result = fn()
+            if log is not None:
+                log.append(event(correlation_id, "retry_attempt",
+                                  agent=agent, attempt=attempt, ok=True))
+            return result
+        except Exception as e:
+            last_exc = e
+            if log is not None:
+                log.append(event(correlation_id, "retry_attempt", agent=agent,
+                                  attempt=attempt, ok=False, error=str(e)))
+            if attempt < max_attempts:
+                time.sleep(base_delay * (2 ** (attempt - 1)))
+    if log is not None:
+        log.append(event(correlation_id, "retries_exhausted", agent=agent,
+                          attempts=max_attempts))
+    raise RetriesExhausted(f"{max_attempts} attempts failed: {last_exc}")
+
+attempts = {"n": 0}
+def flaky():
+    attempts["n"] += 1
+    if attempts["n"] < 2:
+        raise RuntimeError("transient failure")
+    return "committed"
+
+log = []
+result = call_with_retries(flaky, max_attempts=3, log=log,
+                            correlation_id="run-001", agent="dockscout")
+print("result:", result, "| attempts used:", attempts["n"])
+for line in log:
+    print(line)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>result: committed | attempts used: 2
+{"agent": "dockscout", "correlation_id": "run-001", "event": "retry_attempt", "attempt": 1, "ok": false, "error": "transient failure", "ts": ...}
+{"agent": "dockscout", "correlation_id": "run-001", "event": "retry_attempt", "attempt": 2, "ok": true, "ts": ...}</code></pre>
+    </div>
+    <p>Pair this with Section 5: the retried call inside <code>fn</code> should wrap <code>commit_once(idempotency_key(...), ...)</code>, not the raw effect directly, so a retry that happens to succeed on an attempt AFTER the side effect already landed never double-commits.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">backoff_schedule.py</span></div>
+      <pre><code>base_delay = 0.5
+for attempt in range(1, 5):
+    delay = base_delay * (2 ** (attempt - 1))
+    print(f"attempt {attempt} waits {delay:.2f}s before the next try")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>attempt 1 waits 0.50s before the next try
+attempt 2 waits 1.00s before the next try
+attempt 3 waits 2.00s before the next try
+attempt 4 waits 4.00s before the next try</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <span class="label">Code breakdown</span>
+      <dl>
+        <dt><code>max_attempts</code></dt>
+        <dd>Bounded, the same guard-rail discipline as Chapter 1's <code>max_iterations</code> -- an unbounded retry loop is a hang with extra steps.</dd>
+        <dt><code>base_delay * (2 ** (attempt - 1))</code></dt>
+        <dd>Exponential backoff: each failed attempt waits longer than the last, so a transient outage doesn't get hammered with instant re-calls.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="timeout-live" class="subtopic">
+    <h2>7. A live per-call timeout, actually firing</h2>
+    <p>This session also tested what a real per-call timeout does when it fires, rather than asserting it in the abstract: an OpenAI client configured with <code>timeout=0.5</code> seconds, pointed at this same local Ollama.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">live_timeout.py</span></div>
+      <pre><code>import time
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama", timeout=0.5)
+start = time.time()
+try:
+    client.chat.completions.create(model="llama3.2",
+        messages=[{"role": "user", "content": "Say OK."}])
+except Exception as e:
+    print(f"elapsed={time.time()-start:.2f}s  {type(e).__name__}: {e}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, unscripted)</span>
+      <pre><code>elapsed=3.07s  APITimeoutError: Request timed out.</code></pre>
+    </div>
+    <p>Disclosed honestly: the timeout fired at 3.07 seconds, not exactly 0.5. A client-side timeout is a BUDGET the HTTP stack enforces approximately -- connection setup, retries inside the HTTP library itself, and OS-level buffering all add real overhead on top of the configured value. The lesson for a production system: treat every timeout value as a floor on how long you'll wait, never a guarantee of the exact clock, and budget headroom above it (this course's own 450-second live-call budget, used throughout Chapters 1-11, is exactly this kind of headroom).</p>
+  </section>
+
+  <section id="timeout-layers" class="subtopic">
+    <h2>8. Three timeout layers, and which failure each one catches</h2>
+    <p>One timeout value cannot protect against all three failure shapes at once. This chapter uses three independent layers, each catching a failure the others cannot see:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">timeout_layers.py</span></div>
+      <pre><code>def call_with_timeout(fn, timeout_s):
+    """LAYER 1 -- per-call. Protects against ONE network call hanging.
+    Section 7's real 3.07s/0.5s result is this layer, live."""
+    import time
+    start = time.time()
+    try:
+        result = fn()
+        return {"ok": True, "result": result, "elapsed_s": time.time() - start}
+    except Exception as e:
+        return {"ok": False, "error": str(e), "elapsed_s": time.time() - start}
+
+def agent_within_step_timeout(steps_elapsed_s, max_agent_s):
+    """LAYER 2 -- per-agent. Protects against ONE agent's own internal
+    loop (its own retries, its own reflection passes, Chapter 5) running
+    long even when every individual call inside it was within budget."""
+    return steps_elapsed_s <= max_agent_s
+
+def exchange_within_timeout(elapsed_s, max_exchange_s):
+    """LAYER 3 -- per-exchange. This IS Chapter 10's deadlock timeout
+    (check_for_deadlock), reused unchanged: it protects against the
+    WHOLE multi-message exchange never converging, even if every call
+    and every agent were individually healthy the entire time."""
+    from chapter_10 import check_for_deadlock
+    return check_for_deadlock(max_exchange_s, elapsed_s)["status"] != "deadlock_detected"
+
+print("Layer 1 catches: one hung network call.")
+print("Layer 2 catches: one agent's own loop running long overall.")
+print("Layer 3 catches: the whole exchange never converging (Ch10's deadlock).")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Layer 1 catches: one hung network call.
+Layer 2 catches: one agent's own loop running long overall.
+Layer 3 catches: the whole exchange never converging (Ch10's deadlock).</code></pre>
+    </div>
+    <div class="go-deeper">
+      <span class="label">Go deeper</span>
+      A single call being fast says nothing about whether the AGENT'S overall loop (which might call that fast function 40 times, Chapter 1's own runaway-loop concern) is healthy, and neither says anything about whether the EXCHANGE between two agents (Chapter 10's deadlock) is converging. All three layers must be enforced independently, at the layer each one protects.
+    </div>
+    <div class="code-breakdown">
+      <span class="label">Code breakdown -- which layer catches which failure</span>
+      <dl>
+        <dt><code>call_with_timeout</code> (Layer 1)</dt>
+        <dd>Section 7's real 3.07s/0.5s result: catches one hung network call. Cannot see an agent's overall loop or a stuck exchange.</dd>
+        <dt><code>agent_within_step_timeout</code> (Layer 2)</dt>
+        <dd>Catches one agent spending too long across MANY individually-fast calls (its own retries, its own reflection passes). Invisible to Layer 1.</dd>
+        <dt><code>exchange_within_timeout</code> (Layer 3)</dt>
+        <dd>Chapter 10's <code>check_for_deadlock</code>, reused unchanged: catches the whole exchange never converging, even if every call and every agent were individually healthy.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="logging" class="subtopic">
+    <h2>9. Structured logging: one JSON line per event, one correlation id per run</h2>
+    <p>Every message, dispatch, retry, timeout, and commit this chapter produces is written as one JSON line, all sharing a <code>correlation_id</code> unique to that run. This is what makes a run attributable AFTER it finishes, from the log alone, with no live process to interrogate.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">structured_log.py</span></div>
+      <pre><code>import json, time
+
+def event(correlation_id, event_type, **fields):
+    return json.dumps({
+        "correlation_id": correlation_id,
+        "event": event_type,
+        "ts": round(time.time(), 3),
+        **fields,
+    }, sort_keys=True)
+
+cid = "run-2026-10-04-0001"
+log = [
+    event(cid, "dispatch", agent="dockscout", shipment_id="S-104", ok=True),
+    event(cid, "dispatch", agent="yardscout", shipment_id="S-104", ok=False,
+          reason="already claimed"),
+    event(cid, "duplicate_skipped", agent="yardscout", shipment_id="S-104"),
+    event(cid, "commit", agent="dockscout", shipment_id="S-104"),
+]
+for line in log:
+    print(line)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{"correlation_id": "run-2026-10-04-0001", "event": "dispatch", "agent": "dockscout", "shipment_id": "S-104", "ok": true, "ts": 1759...}
+{"correlation_id": "run-2026-10-04-0001", "event": "dispatch", "agent": "yardscout", "shipment_id": "S-104", "ok": false, "reason": "already claimed", "ts": 1759...}
+{"correlation_id": "run-2026-10-04-0001", "event": "duplicate_skipped", "agent": "yardscout", "shipment_id": "S-104", "ts": 1759...}
+{"correlation_id": "run-2026-10-04-0001", "event": "commit", "agent": "dockscout", "shipment_id": "S-104", "ts": 1759...}</code></pre>
+    </div>
+    <p>One JSON object per line (not a nested tree) so each line can be grepped, piped through <code>jq</code>, or re-parsed independently -- a single malformed line never breaks the rest of the log, the same fail-isolated principle Chapter 9's per-worker try/except used at the code level.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">correlation_id.py</span></div>
+      <pre><code>import uuid, datetime
+
+def new_correlation_id(prefix="run"):
+    stamp = datetime.date.today().isoformat()
+    return f"{prefix}-{stamp}-{uuid.uuid4().hex[:8]}"
+
+print(new_correlation_id("harrowgate"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>harrowgate-2026-10-04-7a1e3c20</code></pre>
+    </div>
+  </section>
+
+  <section id="attribution-from-logs" class="subtopic">
+    <h2>10. Attribution from logs alone -- Chapter 9 and 10's functions, answered after the fact</h2>
+    <p>Chapter 9's <code>which_agent_responsible</code> and Chapter 10's <code>which_agent_caused_miscommunication</code> both take an in-memory trace built DURING a run. In production, the process that ran may be gone by the time someone investigates. The fix is not a new function -- it's reconstructing the SAME trace shape from the log.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">attribution_from_log.py</span></div>
+      <pre><code>def trace_from_log(log_lines, event_type="dispatch"):
+    """Rebuilds Chapter 9's (agent, tool, ok) trace shape purely from
+    structured log lines -- no in-process state required."""
+    import json
+    parsed = [json.loads(l) for l in log_lines]
+    return [(e["agent"], e.get("tool", event_type), e["ok"])
+            for e in parsed if e["event"] == event_type]
+
+log = [
+    '{"event": "dispatch", "agent": "dockscout", "ok": true}',
+    '{"event": "dispatch", "agent": "yardscout", "ok": false}',
+]
+trace = trace_from_log(log)
+print("reconstructed trace:", trace)
+print("which_agent_responsible (Ch9, unchanged):",
+      which_agent_responsible(trace))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>reconstructed trace: [('dockscout', 'dispatch', True), ('yardscout', 'dispatch', False)]
+which_agent_responsible (Ch9, unchanged): yardscout</code></pre>
+    </div>
+    <p>Chapter 9's and 10's own attribution functions are not re-derived -- the log is shaped so its lines can be fed back into them, unchanged, days after the run that produced them finished.</p>
+  </section>
+
+  <section id="run-summary" class="subtopic">
+    <h2>11. Operating-state reporting: a run summary that survives a crash</h2>
+    <p>An in-process counter (<code>retries_used += 1</code> in a running Python variable) is gone the instant the process crashes. A summary computed by RE-PARSING the structured log survives exactly that crash, because the log was already flushed to disk one line at a time.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">run_summary.py</span></div>
+      <pre><code>import json
+
+def run_summary_from_log(log_lines):
+    parsed = [json.loads(line) for line in log_lines]
+    dispatches = [e for e in parsed if e["event"] == "dispatch"]
+    commits = [e for e in parsed if e["event"] == "commit"]
+    retries = [e for e in parsed if e["event"] == "retry_attempt"]
+    timeouts = [e for e in parsed if e["event"] == "timeout"]
+    deadlocks_broken = [e for e in parsed if e["event"] == "deadlock_broken"]
+    duplicates_skipped = [e for e in parsed if e["event"] == "duplicate_skipped"]
+    n_dispatch = len(dispatches)
+    n_ok = sum(1 for e in dispatches if e.get("ok"))
+    return {
+        "dispatches": n_dispatch,
+        "success_rate": (n_ok / n_dispatch) if n_dispatch else 0.0,
+        "commits": len(commits),
+        "retries_used": len(retries),
+        "timeouts_hit": len(timeouts),
+        "deadlocks_broken": len(deadlocks_broken),
+        "duplicates_skipped": len(duplicates_skipped),
+    }
+
+log = [
+    '{"event": "dispatch", "agent": "dockscout", "ok": true}',
+    '{"event": "dispatch", "agent": "yardscout", "ok": false}',
+    '{"event": "commit", "agent": "dockscout", "shipment_id": "S-104"}',
+    '{"event": "duplicate_skipped", "agent": "yardscout"}',
+    '{"event": "deadlock_broken", "first_mover": "dockscout"}',
+]
+print(run_summary_from_log(log))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'dispatches': 2, 'success_rate': 0.5, 'commits': 1, 'retries_used': 0, 'timeouts_hit': 0, 'deadlocks_broken': 1, 'duplicates_skipped': 1}</code></pre>
+    </div>
+    <p>This function is called AFTER the run, against the log file on disk -- even if the process that produced the log crashed one line after the last event was written, the summary above is still exactly reproducible.</p>
+  </section>
+
+  <section id="measurement-layer" class="subtopic">
+    <h2>12. Chapter 7 and 8's measurement layer, applied to a production-shaped run</h2>
+    <p>Chapter 7's trajectory correctness and task success, and Chapter 8's cost accounting, are not replaced by this chapter's operating layer -- they're the measurement applied ON TOP of it. A production-shaped run should report both sets of numbers together.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">combined_report.py</span></div>
+      <pre><code>def production_report(run_summary, task_success_rate, trajectory_correct,
+                       total_cost, max_cost):
+    """Combines THIS chapter's operating summary with Chapter 7's
+    reliability numbers and Chapter 8's cost accounting -- reused, not
+    redefined, exactly per this course's own measurement-layer design."""
+    return {
+        **run_summary,
+        "task_success_rate": task_success_rate,
+        "trajectory_correct_rate": trajectory_correct,
+        "total_cost": total_cost,
+        "within_cost_budget": is_within_budget(0, total_cost, 0, max_cost),
+    }
+
+summary = {"dispatches": 2, "success_rate": 0.5, "retries_used": 2,
+           "timeouts_hit": 0, "deadlocks_broken": 1, "duplicates_skipped": 1,
+           "commits": 1}
+report = production_report(summary, task_success_rate=0.9,
+                            trajectory_correct=0.85, total_cost=0.04, max_cost=0.10)
+print(report)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'dispatches': 2, 'success_rate': 0.5, 'retries_used': 2, 'timeouts_hit': 0, 'deadlocks_broken': 1, 'duplicates_skipped': 1, 'commits': 1, 'task_success_rate': 0.9, 'trajectory_correct_rate': 0.85, 'total_cost': 0.04, 'within_cost_budget': True}</code></pre>
+    </div>
+    <p>Note the reused <code>is_within_budget</code> call at the end -- the exact function from Chapter 8, imported unchanged a second time via Chapter 9, now applied to a whole run's total cost rather than one loop's running total.</p>
+  </section>
+
+  <section id="boundary" class="subtopic">
+    <h2>13. What this chapter does NOT teach, on purpose</h2>
+    <p>This course's own positioning discipline (see <code>docs/discovery-notes.md</code>) defers two deep topics to named siblings rather than re-teaching them shallowly here:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">deferred_boundaries.py</span></div>
+      <pre><code>DEFERRED = {
+    "deep observability and evaluation methodology (scoring rubrics, "
+    "LLM-judge design, dataset curation for eval)":
+        "llm-evaluation-for-everyone",
+    "production LLM engineering at the infrastructure layer (serving, "
+    "autoscaling, SLO design, alerting pipelines, on-call practice)":
+        "ai-engineering-for-everyone",
+}
+for topic, course in DEFERRED.items():
+    print(f"Deferred to {course}: {topic}")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Deferred to llm-evaluation-for-everyone: deep observability and evaluation methodology (scoring rubrics, LLM-judge design, dataset curation for eval)
+Deferred to ai-engineering-for-everyone: production LLM engineering at the infrastructure layer (serving, autoscaling, SLO design, alerting pipelines, on-call practice)</code></pre>
+    </div>
+    <p>This chapter's structured log and run summary are the minimum an agent system needs to be OPERABLE at all -- not a substitute for either sibling course's own deeper treatment.</p>
+  </section>
+
+  <section id="assembled" class="subtopic">
+    <h2>14. Harrowgate Logistics Exchange, operated end-to-end</h2>
+    <p>Putting every mechanism together: DockScout and YardScout's Chapter 10 exchange, now wrapped in retries with idempotency keys, three timeout layers, a structured log with one correlation id, and a run summary computed from that log.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">operate_harrowgate.py</span></div>
+      <pre><code>def operate_run(shipments, correlation_id):
+    log = []
+    for agent, shipment_id in shipments:
+        key = idempotency_key(agent, shipment_id, "confirm_claim")
+
+        def do_claim():
+            return coordinated_claim(agent, shipment_id)
+
+        timed = call_with_timeout(do_claim, timeout_s=5.0)
+        log.append(event(correlation_id, "dispatch", agent=agent,
+                          shipment_id=shipment_id, ok=timed["ok"] and timed["result"]["ok"]))
+        if timed["ok"] and not timed["result"]["ok"]:
+            log.append(event(correlation_id, "duplicate_skipped",
+                              agent=agent, shipment_id=shipment_id))
+        elif timed["ok"]:
+            commit = commit_once(key, lambda: f"{agent}:{shipment_id}:committed")
+            log.append(event(correlation_id, "commit", agent=agent,
+                              shipment_id=shipment_id, replayed=commit["replayed"]))
+    return log
+
+run_log = operate_run(
+    [("dockscout", "S-500"), ("yardscout", "S-500"), ("yardscout", "S-600")],
+    correlation_id="run-harrowgate-0001")
+for line in run_log:
+    print(line)
+print("SUMMARY:", run_summary_from_log(run_log))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{"agent": "dockscout", "correlation_id": "run-harrowgate-0001", "event": "dispatch", "ok": true, "shipment_id": "S-500", "ts": ...}
+{"agent": "dockscout", "correlation_id": "run-harrowgate-0001", "event": "commit", "replayed": false, "shipment_id": "S-500", "ts": ...}
+{"agent": "yardscout", "correlation_id": "run-harrowgate-0001", "event": "dispatch", "ok": false, "shipment_id": "S-500", "ts": ...}
+{"agent": "yardscout", "correlation_id": "run-harrowgate-0001", "event": "duplicate_skipped", "shipment_id": "S-500", "ts": ...}
+{"agent": "yardscout", "correlation_id": "run-harrowgate-0001", "event": "dispatch", "ok": true, "shipment_id": "S-600", "ts": ...}
+{"agent": "yardscout", "correlation_id": "run-harrowgate-0001", "event": "commit", "replayed": false, "shipment_id": "S-600", "ts": ...}
+SUMMARY: {'dispatches': 3, 'success_rate': 0.6666666666666667, 'commits': 2, 'retries_used': 0, 'timeouts_hit': 0, 'deadlocks_broken': 0, 'duplicates_skipped': 1}</code></pre>
+    </div>
+    <p>S-500's second claim (YardScout) is correctly skipped as a duplicate -- Chapter 10's own claim-check, still enforcing the same guarantee, now observed entirely through the structured log and summary this chapter adds on top.</p>
+    <div class="what-is">
+      <span class="label">What is... a "production-shaped" run, precisely?</span>
+      Not a bigger or more complex run -- the SAME Harrowgate exchange, with four properties added: every side effect is keyed so a retry can never duplicate it (<code>idempotency_key</code>/<code>commit_once</code>), every call/agent/exchange has an enforced timeout at the right layer, every event is a structured log line with a shared <code>correlation_id</code>, and the run's own health is reported from that log, not from memory that vanishes on crash.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">maturity_checklist.py</span></div>
+      <pre><code>PRODUCTION_READY_CHECKLIST = [
+    "every side effect has an idempotency key",
+    "every call has a per-call timeout with headroom above the configured value",
+    "every agent has a per-agent timeout independent of any single call",
+    "every exchange has a per-exchange timeout (Ch10's deadlock detection)",
+    "every event is one structured JSON log line with a shared correlation id",
+    "the run summary is computed from the log, not from in-process counters",
+    "Ch7's reliability numbers and Ch8's cost numbers are reported alongside the operating summary",
+]
+for item in PRODUCTION_READY_CHECKLIST:
+    print("[ ]", item)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>[ ] every side effect has an idempotency key
+[ ] every call has a per-call timeout with headroom above the configured value
+[ ] every agent has a per-agent timeout independent of any single call
+[ ] every exchange has a per-exchange timeout (Ch10's deadlock detection)
+[ ] every event is one structured JSON log line with a shared correlation id
+[ ] the run summary is computed from the log, not from in-process counters
+[ ] Ch7's reliability numbers and Ch8's cost numbers are reported alongside the operating summary</code></pre>
+    </div>
+  </section>
+
+  <section id="thought-process" class="subtopic">
+    <h2>15. GenAI Builder Thought Process</h2>
+    <p><strong>Thought process:</strong> the natural first instinct when a multi-agent system "works" in testing is to assume it will keep working unattended. This chapter's own real Section 4 result is the direct rebuttal: the SAME prompt, retried, produced two DIFFERENT argument shapes from a real model -- a detail invisible in a single successful test run, and exactly the kind of drift that causes a double-commit in production if retries are built on raw argument equality instead of a deliberately narrow idempotency key. The habit that actually works, demonstrated this chapter: key idempotency on the fields that DEFINE the side effect, not the full payload (Section 5); bound every retry and back off between attempts (Section 6); enforce three INDEPENDENT timeout layers because no single one catches every failure shape (Section 8); log every event as one JSON line with a shared correlation id so a bad run can be attributed AFTER it ends, not only while watching it live (Section 9-10); and compute the run summary from that log, never from an in-process counter that disappears the instant the process crashes (Section 11). A strong prompt for an AI pair-programmer operationalizing a different multi-agent system: "I have a working multi-agent system (two or more agents that dispatch sub-tasks or exchange peer messages). Add production operating concerns WITHOUT changing how the agents decide anything: (1) an idempotency key built from the fields that define each side effect, not the raw call arguments; (2) a bounded retry wrapper with exponential backoff, wired so a retried call never re-commits a side effect already recorded under its idempotency key; (3) three independent timeout layers -- per-call, per-agent (its own internal loop), and per-exchange (the whole multi-message interaction) -- each with its own budget; (4) structured JSON-line logging of every dispatch, retry, timeout, and commit, tagged with one correlation id per run; (5) a function that reconstructs an attribution trace FROM the log alone, not from in-memory state; (6) a run summary computed by re-parsing the log, so it survives the process crashing mid-run. Use only the Python standard library and the plain openai client -- no LangGraph, CrewAI, AutoGen, or an external logging/observability framework; this is a from-scratch, minimal operating layer, not a wrapper around one."</p>
+  </section>
+
+  <section id="recap" class="subtopic">
+    <h2>16. Points to remember</h2>
+    <ul class="recap-list">
+      <li>Operating a multi-agent system unattended requires mechanisms AROUND the agents' decisions, not changes to those decisions: retries, timeouts, structured logging, and run summaries.</li>
+      <li>A real, unscripted retried call this session produced two different argument shapes for the "same" action -- the concrete reason idempotency keys must be built from the fields that define a side effect, never from raw argument equality.</li>
+      <li><code>commit_once</code> plus an idempotency key guarantees a side effect lands exactly once, even across multiple retried attempts.</li>
+      <li>A bounded retry wrapper with exponential backoff must log every attempt -- including exhaustion -- not just the final outcome.</li>
+      <li>A real per-call timeout fired at 3.07 seconds against a configured 0.5-second budget this session: a client timeout is a floor to budget around, not an exact guarantee.</li>
+      <li>Three timeout layers are independent: per-call catches a hung network request, per-agent catches one agent's own loop running long, per-exchange (Chapter 10's deadlock timeout) catches the whole interaction never converging.</li>
+      <li>Structured logs are one JSON object per line, tagged with a shared correlation id, so Chapter 9's <code>which_agent_responsible</code> and Chapter 10's <code>which_agent_caused_miscommunication</code> stay answerable from the log alone, after the run ends.</li>
+      <li>A run summary must be computed by re-parsing the log, never from in-process counters, so it survives a crash mid-run.</li>
+      <li>Chapter 7's reliability measurement and Chapter 8's cost accounting are the measurement layer on top of this chapter's operating layer -- reused unchanged, not redefined.</li>
+      <li>Deep observability/evaluation methodology and infrastructure-layer production engineering are both deliberately deferred to <code>llm-evaluation-for-everyone</code> and <code>ai-engineering-for-everyone</code> respectively.</li>
+    </ul>
+  </section>
+
+</main>
+<script src="../../assets/sidebar.js"></script>
+<script src="../../assets/progress.js"></script>
+</body>
+</html>

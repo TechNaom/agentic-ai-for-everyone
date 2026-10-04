@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operating Agents in Production Exercises — Agentic AI for Everyone</title>
+<meta name="description" content="Hands-on exercises for Operating Agents in Production.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-11">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../quiz.html">&larr; Back to the quiz</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 11 Exercises</span>
+    <span class="reading-time">~40 min, hands-on</span>
+  </div>
+  <h1>Exercises: Operating Agents in Production</h1>
+  <p>
+    These exercises use a second scenario, deliberately different from
+    the lesson's Harrowgate Logistics Exchange/DockScout-YardScout
+    hook: <strong>Cindermoor Parcel Network</strong>, a fictional
+    regional parcel sorting cooperative. Its two PEER agents,
+    <strong>SortScout</strong> and <strong>RouteScout</strong>, must
+    run unattended overnight -- which means every claim needs an
+    idempotency key, every call/agent/exchange needs a timeout at the
+    right layer, and the night's run needs a summary computed from a
+    structured log. Applying this chapter's production-operating
+    concepts to a fresh scenario is the point.
+  </p>
+
+  <h2>How to run</h2>
+  <p>You'll need Python 3 installed. Check with:</p>
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 --version</code></pre>
+  </div>
+  <p>Then run the starter file:</p>
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+  <p>It prints a score report. Fill in each <code># TODO</code>, re-run, and watch your score climb toward the total (19 points across 7 tasks).</p>
+
+  <h2>The seven tasks</h2>
+  <ol>
+    <li><strong>Map facts to production-operating concepts</strong> &mdash; assign the correct concept (idempotency, retries with backoff, per-call timeout, structured logging, crash-survivable run summary) to five Cindermoor facts.</li>
+    <li><strong>Retry de-duplication reasoning</strong> &mdash; decide whether a retry system should de-duplicate by comparing raw call arguments.</li>
+    <li><strong>(Production-gear) <code>idempotency_key</code> + <code>commit_once</code></strong> &mdash; a side effect commits exactly once even across a retried call.</li>
+    <li><strong>(Production-gear) <code>call_with_retries</code></strong> &mdash; bounded attempts with exponential backoff, never silently unbounded.</li>
+    <li><strong>(Production-gear) <code>classify_timeout_layer</code></strong> &mdash; classify a failure description into the per-call, per-agent, or per-exchange layer.</li>
+    <li><strong>(Production-gear) <code>event</code> + <code>run_summary_from_log</code></strong> &mdash; structured JSON-line logging and a summary computed from the log alone.</li>
+    <li><strong>(Production-gear) <code>production_report</code></strong> &mdash; combine a run summary with Chapter 8's <code>is_within_budget</code>, reused unchanged.</li>
+  </ol>
+
+  <h2>Files</h2>
+  <ul>
+    <li><code>starter.py</code> &mdash; the scaffold with 11 <code># TODO</code>s and the score report.</li>
+    <li><code>solution.py</code> &mdash; the fully filled-in reference; scores 19/19.</li>
+    <li><code>ai-paired.html</code> &mdash; a solo-build-then-critique exercise using a third scenario.</li>
+  </ul>
+
+  <div class="chapter-nav">
+    <a href="../quiz.html">&larr; Back to Quiz</a>
+    <a href="ai-paired.html">AI-Paired Exercise &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

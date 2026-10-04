@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 11 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose a layered production-operating bug yourself, then critique an AI's plausible-but-flawed answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-11">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 11 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, not in the eight above: an overnight confirmation system, <strong>"NotaryBot"</strong> (the specific company is left unnamed on purpose, the same way Chapter 10's "NegotiatorBot" scenario did), which confirms document approvals for two peer agents. Two real, layered problems were found in the same incident report. First: a retry wrapper de-duplicated "the same" confirmation call by comparing the FULL raw argument JSON of each attempt -- and a routine retry, whose arguments drifted slightly between attempts, was treated as a brand-new confirmation and committed a second time, double-billing the client. Second, in the same incident: the on-call engineer's only diagnostic was "something failed around 2 AM" -- there was no structured log and no correlation id, so there was no way to tell which agent, which call, or which retry attempt actually caused the duplicate.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>Before reading further: name the two distinct problems here using this chapter's vocabulary (one is about how "sameness" was defined for a retried call; the other is about what's missing to investigate an incident after the fact) and write your own fix for each. There's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> this scenario has two layered problems (a wrong idempotency definition AND missing structured logging), so the prompt needs to ask the AI to find both, not just the more obviously costly one -- a shallow prompt like "why was the client double-billed?" invites an answer that fixates on the idempotency bug (the one with a visible financial consequence) and never questions why the incident took hours to diagnose at all, which is a separate, equally real gap.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here's NotaryBot's incident report... identify every distinct problem, not just one..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice and compare its answer against the critique below.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Here's my production agent's incident report: [paste the scenario above]. Identify EVERY distinct problem in this report, not just the first one you notice -- there are two -- and name each using this chapter's vocabulary (a wrong idempotency-key definition, versus missing structured logging with a correlation id). Propose a concrete, specific fix for each, including exactly what fields the idempotency key should be built from and what the structured log line for each attempt should contain.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <div class="what-is">
+    <span class="label">What a complete diagnosis catches</span>
+    <ul>
+      <li><strong>Problem 1 (idempotency keyed on raw arguments):</strong> this chapter's own Section 4 live result showed the SAME retried request produce two different argument shapes -- de-duplicating by comparing full argument JSON is exactly the mistake that lets a legitimate retry commit twice. The fix is an idempotency key built from the fields that DEFINE the side effect (agent, document id, action), run through <code>commit_once</code>.</li>
+      <li><strong>Problem 2 (no structured log, no correlation id):</strong> this chapter's own Section 9-10 built structured JSON-line logging with a shared correlation id specifically so a bad run can be attributed AFTER it happens, without a live process to interrogate. "Something failed around 2 AM" is the symptom of having none of that.</li>
+      <li>A shallow AI answer often catches only Problem 1 (the more visible, costly bug) and misses that Problem 2 means EVERY future incident on this system will be just as hard to diagnose, not only this one.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's answer against your own Step 1 notes and the two-problem breakdown above. Did it catch both? Did it propose the right fix for each -- a narrower idempotency key and structured logging with a correlation id -- or did it conflate the two into one vague "add better error handling" suggestion?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice Bank</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

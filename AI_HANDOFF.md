@@ -71,16 +71,23 @@ from drifting into duplicating a sibling course over many sessions, and
 it matters more here than in most siblings because this course has more
 adjacent neighbors than most.
 
-## Current state (as of 2026-09-24)
+## Current state (as of 2026-10-04)
 
 **Read `PROJECT_STATE.md` for the authoritative, up-to-date status.**
-Short version: **Chapter 1 of 13 is complete and live**, opening Module
-1 of 6. Chapters 2-13 are scaffolded (`.gitkeep`'d empty directories
-under `chapters/`) and fully specified in
-`docs/curriculum/CURRICULUM_MAP.md`, but not yet built.
-`PROJECT_STATE.md`'s "Next Recommended Task" section has a complete,
-concrete brief for building Chapter 2 — read it before starting any new
-chapter work.
+Short version: **Chapters 1-11 of 13 are complete and live**, closing
+Modules 1-5 of 6 (Module 5's own combined assessment now exists too, at
+`assessments/module-assessments/module-5-multi-agent-coordination-and-
+operations-exercise/`). Chapters 12-13 are scaffolded (`.gitkeep`'d
+empty directories under `chapters/`) and fully specified in
+`docs/curriculum/CURRICULUM_MAP.md`, but not yet built. The **L3
+Independent project** (per the project ladder, due "after Ch. 8") has
+been deferred FIVE consecutive sessions (past Chapters 8, 9, 10, and 11)
+— see `quality-audits/chapter-11-audit.md` and `PROJECT_STATE.md`'s
+Chapter 12 brief, which asks Chapter 12's own session to make a real
+decision rather than defer a sixth time. `PROJECT_STATE.md`'s "Next
+Recommended Task" section has a complete, concrete brief for building
+Chapter 12, "Designing Agent Architectures" — read it before starting
+any new chapter work.
 
 ## The non-negotiable build disciplines (inherited from every sibling course)
 

@@ -1,16 +1,17 @@
 # PROJECT_STATE.md — Agentic AI for Everyone
 
-Last updated: 2026-10-04 (Session 10 — Chapter 10, "Multi-Agent
-Coordination and Communication," complete and live. Module 5 —
-Multi-Agent Systems — remains **In Progress** (Chapter 11 still has to
-ship before it's Complete). Modules 1-4 (Chapters 1-8) remain fully
-complete; Chapters 9-10 are Module 5's first two chapters. This session
-did NOT build the L3 Independent project (still deferred, restated
-explicitly below) or Module 5's own assessment (still deferred — now
-scheduled for Chapter 11's session, see the Chapter 11 brief). Chapters
-11-13 are scaffolded (`.gitkeep`'d directories), not yet built. Nothing
-has been pushed to GitHub — all work is local-only, matching every prior
-session's explicit instructions.)
+Last updated: 2026-10-04 (Session 11 — Chapter 11, "Operating Agents in
+Production," complete and live. This CLOSES Module 5 — Multi-Agent
+Systems is now **Complete**: Chapters 9, 10, and 11 are all live, AND
+Module 5's own combined assessment was built this session, on schedule,
+at `assessments/module-assessments/module-5-multi-agent-coordination-
+and-operations-exercise/`. Modules 1-5 (Chapters 1-11) are now fully
+complete. This session did NOT build the L3 Independent project —
+deferred a FIFTH consecutive time, restated loudly below and in
+`quality-audits/chapter-11-audit.md`. Chapters 12-13 are scaffolded
+(`.gitkeep`'d directories), not yet built. Nothing has been pushed to
+GitHub — all work is local-only, matching every prior session's explicit
+instructions.)
 
 ## Course Objective
 
@@ -1441,176 +1442,313 @@ memory of Session 9.
   project** and **Module 5's own assessment**. Both remain deferred; see the
   Chapter 11 brief below.
 
-## Next Recommended Task: Chapter 11 — "Operating Agents in Production"
+## Session 11 — Chapter 11, "Operating Agents in Production" (2026-10-04)
+
+Built cold, from this file's own "Next Recommended Task" brief, with zero
+memory of Session 10.
+
+1. Read this file's Chapter 11 brief in full, Chapters 9 and 10's own
+   `lesson.html` and `project/solution.py` files for the exact helper
+   functions to reuse, `docs/curriculum/CURRICULUM_MAP.md`, and
+   `quality-audits/chapter-10-audit.md`'s 40-org exclusion list before
+   writing anything.
+2. Warmed Ollama with a single background request, then ran exactly ONE
+   sanity call (11.12s, real) before writing any lesson code -- no second
+   warm-up or live call launched concurrently, the exact discipline
+   Session 10's own disclosed 314.35s race motivated.
+3. Ran live tests in `scratchpad/ch11/` before writing anything into
+   `lesson.html`. Two real, unscripted results became the chapter's
+   central examples:
+   - **A genuine argument-drift result.** The SAME retried request
+     ("confirm shipment S-104 is claimed by you") produced two different
+     real argument shapes across two live calls -- attempt 1 included an
+     extra `"vehicle":"None"` key attempt 2 did not. This is the concrete
+     reason this chapter's idempotency key is built from
+     `(agent, shipment_id, action)`, never raw argument equality.
+   - **A genuine live timeout result.** An OpenAI client configured with
+     `timeout=0.5` seconds raised `APITimeoutError` at 3.07 seconds, not
+     0.5 -- disclosed honestly as the real gap between a configured
+     timeout budget and the actual clock.
+   - No call stalled this session; Ollama was reliable throughout
+     (disclosed either way per this course's policy -- no claim that this
+     generalizes).
+4. Built `lesson.html` around: idempotency keys and `commit_once`,
+   bounded retries with exponential backoff, three independent timeout
+   layers (per-call, per-agent, per-exchange -- the last reusing Chapter
+   10's deadlock timeout unchanged), structured JSON-line logging with a
+   correlation id, attribution reconstructed from logs alone (Chapter 9's
+   `which_agent_responsible` and Chapter 10's
+   `which_agent_caused_miscommunication`, unchanged), a crash-survivable
+   run summary computed by re-parsing the log, Chapter 7/8's measurement
+   layer applied to a production-shaped run, an explicit deferral to
+   `llm-evaluation-for-everyone` and `ai-engineering-for-everyone`, and
+   the fully assembled Harrowgate Logistics Exchange (DockScout/
+   YardScout, reused from Chapter 10) operated end-to-end.
+5. Verified lesson density: **60** lines match `<pre\|<code` via
+   `grep -c '<pre\|<code' lesson.html` (meets the 60+ requirement).
+6. Built the full file set matching Chapter 10's: `quiz.html` (10
+   fill-in-the-blank), `interview-questions.md` + `.html` (10 questions
+   across 4 levels, HTML generated from the `.md` by a one-off script),
+   `exercises/` (Cindermoor Parcel Network, 7 tasks, 19 points,
+   `ai-paired.html` using a third scenario, Thistlebrook Fulfillment
+   Co-op), `practice/` (8 scenarios, 8 points, `ai-paired.html` using a
+   ninth, unnamed "NotaryBot" scenario), and a chapter mini-project
+   `project/` (Wrenfield Dispatch Alliance, 3 TODOs across idempotency,
+   bounded retries, and a crash-survivable run summary; `solution.py`
+   9/9, `starter.py` 3/9 with no crash, `RUBRIC.md` 4 criteria/20 points,
+   `ai-paired.html` using a fourth scenario, Hollowgate Courier Network).
+7. **Built Module 5's own combined assessment this session, on
+   schedule** (not deferred a third time): `assessments/module-
+   assessments/module-5-multi-agent-coordination-and-operations-
+   exercise/` (README, RUBRIC, starter, solution), reusing Chapter 9's
+   `route_subtask`/`which_agent_responsible`, Chapter 10's
+   `parse_message_safely`/`coordinated_claim`, and Chapter 11's
+   `idempotency_key`/`commit_once`/`call_with_retries`, all loaded via
+   `importlib`, exactly matching Module 4's own precedent at Chapter 8.
+   `solution.py` 4/4; `starter.py` 0/4 with no crash.
+8. Wrote `quality-audits/chapter-11-audit.md`, extending (not
+   restarting) the 40-org exclusion list with 4 new orgs, and explicitly
+   restating the L3 deferral as a FIFTH consecutive hand-off, with the
+   reasoning for that decision recorded in full.
+9. Wired Chapter 11 into `assets/chapters-data.js` (real `path` added),
+   `docs/curriculum/index.html` (Chapter 11 card converted to a live
+   link; Module 5's feature card moved to **"Complete"**), and root
+   `index.html` (`hero-stats` chapter count 11 of 13, module-complete
+   count 5 of 6; the stale intro paragraph updated to Chapters 1-11
+   live with Module 5 complete).
+10. Ran `scripts/local_check.sh < /dev/null` for the whole repo, ALONE,
+    with no other command running concurrently: **all six checks passed
+    clean**.
+11. Re-ran all regression checks, each unchanged: L2 Chapter 4 project
+    10/10, Ch7 project 8/8, Ch8 project 9/9, Ch9 project 9/9, Ch10
+    project 9/9, and Modules 1-4's own assessments (4/4, 5/5, 3/3, 3/3
+    respectively) all still pass their own solutions.
+12. Committed Chapter 11, the Module 5 assessment, and all
+    wiring/audit/state changes locally, no remote added, nothing
+    pushed.
+
+## Chapter 11 — COMPLETE
+
+- `lesson.html`: 60 lines match `<pre\|<code` (60+ required). Built
+  around Harrowgate Logistics Exchange's DockScout and YardScout
+  (reused from Chapter 10, per this chapter's own brief's explicit
+  permission). Covers: idempotency keys and `commit_once`, a real live
+  argument-drift result motivating them, bounded retries with
+  exponential backoff, a real live timeout-firing result, three
+  independent timeout layers (per-call, per-agent, per-exchange),
+  structured JSON-line logging with a correlation id, attribution
+  reconstructed from logs alone, a crash-survivable run summary, the
+  Chapter 7/8 measurement layer applied to a production-shaped run, an
+  explicit deferral to two sibling courses, and the fully assembled
+  Harrowgate exchange operated end-to-end.
+- `quiz.html`: 10 fill-in-the-blank questions.
+- `interview-questions.html` + `.md`: 10 questions across
+  beginner/intermediate/senior/architect.
+- `exercises/`: Cindermoor Parcel Network/SortScout+RouteScout
+  scenario, 7 tasks (5 production-gear), 19 points. `solution.py`
+  19/19; `starter.py` 0/19, no crash. `ai-paired.html` uses Thistlebrook
+  Fulfillment Co-op.
+- `practice/`: 8 scenarios, 8 points. `solution.py` 8/8; `starter.py`
+  0/8, no crash. `ai-paired.html` uses a ninth, unnamed scenario
+  ("NotaryBot").
+- `project/` (chapter mini-project, not the L3 project): Wrenfield
+  Dispatch Alliance, 3 TODOs. `solution.py` 9/9; `starter.py` 3/9, no
+  crash. `RUBRIC.md` 4 criteria (20 points). `ai-paired.html` uses
+  Hollowgate Courier Network.
+- Wired into `assets/chapters-data.js` with a real `path`;
+  `docs/curriculum/index.html` and root `index.html` both reflect
+  Chapter 11 live, **Module 5 Complete**.
+- **Module 5's own combined assessment was built this session**, on
+  schedule, NOT deferred further: `assessments/module-assessments/
+  module-5-multi-agent-coordination-and-operations-exercise/`.
+  `solution.py` 4/4; `starter.py` 0/4, no crash.
+- **Explicitly NOT built this session** (restated loudly): the **L3
+  Independent project**, now deferred a FIFTH consecutive time. See
+  `quality-audits/chapter-11-audit.md` for the full reasoning and the
+  Chapter 12 brief below for the restatement.
+
+## Next Recommended Task: Chapter 12 — "Designing Agent Architectures"
 
 Read this whole section before writing anything. It is written to be
-picked up cold, with zero memory of Session 10.
+picked up cold, with zero memory of Session 11.
 
-**What's already true when this session starts:** Chapters 1-10 are live
-and complete. Module 5 (Multi-Agent Systems) is **In Progress**. Chapter 9
-opened it with supervisor/worker dispatch, pipelines, fan-out/fan-in, a
-blackboard, per-agent budgets, failure isolation, content verification,
-idempotent dispatch, and cross-agent attribution. Chapter 10 added the
-COMMUNICATION half: peer-to-peer message exchange over a shared message
-bus, a message schema with validation, a locked shared claim-check against
-duplicated work, deadlock detection by timeout with a pre-agreed
-tie-breaker, consensus by vote, and message-level attribution.
+**What's already true when this session starts:** Chapters 1-11 are live
+and complete. Modules 1-5 are all **Complete**, including Module 5's own
+combined assessment (built at Chapter 11's session). Chapter 9 built
+supervisor/worker dispatch; Chapter 10 added peer-to-peer communication;
+Chapter 11 added production-operating concerns (idempotent retries,
+three-layer timeouts, structured logging, crash-survivable run
+summaries) on top of both. The reader now has a full, tested vocabulary
+for a coordinated, communicating, operable multi-agent system.
 
 **What this chapter must do, per `docs/curriculum/CURRICULUM_MAP.md`:**
-Chapter 11 is Module 5's CLOSING chapter. Its outcome and lab language are:
-"operate an agent system in a production-shaped setting," with the lab
-"add production operating concerns (retries, timeouts, structured logging)
-to a multi-agent system." Build those operating concerns on top of the
-Chapter 9 supervisor harness and the Chapter 10 peer exchange, so the
-system that ends this module is the one that has already been
-coordinated, not a new toy. Concretely, cover:
-- **Retries** with bounded attempts and exponential backoff, applied per
-  agent call, with idempotency keys so a retried call never re-commits a
-  side effect (reuse Chapter 9's `(subtask, worker)` and Chapter 10's
-  claim-check; do not re-derive them).
-- **Timeouts** at three layers: per-call, per-agent, and per-exchange
-  (reuse Chapter 10's deadlock timeout for the exchange layer and Chapter
-  8's timeout concept for the call layer; state which layer each one
-  protects against).
-- **Structured logging** of every message, dispatch, retry, timeout, and
-  commit as one JSON line with a correlation id linking a single run's
-  events together. This is what makes Chapter 9's `which_agent_responsible`
-  and Chapter 10's `which_agent_caused_miscommunication` answerable from
-  logs alone, after the fact, in production.
-- **Operating-state reporting:** a run summary (success rate, retries used,
-  timeouts hit, deadlocks broken, duplicates skipped) computed from the log,
-  not from in-process counters that vanish on crash.
-- **Chapter 7's trajectory evaluation and Chapter 8's cost accounting** are
-  the measurement layer here, applied to a production-shaped run; reuse
-  them, do not redefine them.
-- **Defer deep observability methodology and SLO design** to the sibling
-  courses by name: `llm-evaluation-for-everyone` (evaluation methodology)
-  and `ai-engineering-for-everyone` (production LLM engineering). Say so in
-  the lesson text, per this course's standing positioning discipline.
+Chapter 12, "Designing Agent Architectures," OPENS Module 6 (Architecture
+and Capstone), whose purpose is "architect-level synthesis — designing
+and defending a complete agent system." Chapter 12's own job (Chapter 13
+is the capstone itself, out of scope this session) is teaching the
+DECISION-MAKING layer above all of Chapters 1-11's individual
+mechanisms: given a business/system problem, how does an architect
+choose which mechanisms to include (single-agent vs. multi-agent,
+supervisor/worker vs. peer-to-peer, which guardrails, how much memory,
+what reliability/cost budget) and justify that choice against
+alternatives, in writing, the way a real design review expects.
+Concretely, this likely means:
+- **A structured framework for the architecture decision itself** — at
+  minimum: problem characterization (what makes this a single- vs.
+  multi-agent problem), mechanism selection (which of Chapters 1-11's
+  tools are load-bearing vs. unnecessary for this problem), a stated
+  reliability/cost budget (reusing Chapter 7/8's vocabulary, not
+  reinventing it), and an explicit trade-off discussion (what this
+  design gives up by NOT choosing an alternative).
+- **Reusing, not re-teaching, every mechanism chosen.** An architecture
+  document that says "add a guardrail here" should point at Chapter 6's
+  actual mechanisms by name, not redescribe them. Chapter 12's own new
+  content is the DECISION framework and how to defend it, not the
+  mechanisms themselves.
+- **Module 6's own assessment is "architecture-design exercise,"
+  scoped to Chapter 12 alone** (Chapter 13 has its own separate capstone
+  rubric, per the curriculum map's "Assessment: architecture-design
+  exercise (Ch. 12) + capstone rubric (Ch. 13, architecture challenge,
+  Level 4)" line) — confirm this exact split against
+  `docs/curriculum/CURRICULUM_MAP.md` before building anything, since it
+  differs from Modules 1-5's single-combined-assessment pattern.
+- Check whether `assessments/module-assessments/` or
+  `assessments/architecture-challenges/` (both directories already exist
+  in the repo) is the right home for Chapter 12's own assessment — this
+  session should actually look at `assessments/architecture-challenges/`
+  before assuming the `module-assessments/` naming convention
+  automatically carries over, since Module 6 is explicitly architecture-
+  flavored and the repo already has a dedicated directory for exactly
+  that.
+
+**The L3 Independent project — FLAGGED LOUDLY, deferred FIVE times now.**
+Per the curriculum map, L3 ("design and implement a reliability-
+instrumented, cost-bounded agent for a given problem, no scaffold") was
+supposed to ship "after Ch. 8." It has now been deferred past Chapters 8,
+9, 10, and 11 — **five consecutive sessions** — each time with an explicit
+restatement rather than a silent drop (see `quality-audits/chapter-08
+through -11-audit.md` for the running record). Chapter 11's own session
+judged that folding L3 into Chapter 11 would have compromised either the
+chapter itself or Module 5's own mandatory assessment, and deferred it
+again rather than ship it shallow. **This session (Chapter 12) should
+make a real decision, not defer by default a sixth time:**
+1. First, check whether Chapter 12's own architecture-design material
+   can legitimately absorb L3's definition — an architect choosing a
+   reliability-instrumented, cost-bounded design FOR a given problem is
+   conceptually close to what Chapter 12 already teaches, the same way
+   Chapter 11's own brief considered folding L3 in.
+2. If Chapter 12's own project naturally covers L3's definition with a
+   genuinely independent, no-scaffold deliverable (a README, a RUBRIC,
+   and one reference `solution.py`/design document, NO starter
+   scaffold, per L3's own "independent" definition), build it as L3
+   explicitly, label it as closing that deferral, and update
+   `docs/curriculum/CURRICULUM_MAP.md`'s project-ladder section to show
+   L3 as shipped.
+3. If it does NOT cleanly fit (e.g., if Chapter 12's assessment is
+   prose/design-document-shaped rather than code-shaped, which an
+   architecture exercise plausibly is, and L3's definition wants a
+   working no-scaffold AGENT, not just a design document), then this
+   session must make an explicit, reasoned decision: either (a) build
+   L3 as its OWN separate deliverable this session, outside Chapter 12's
+   own required file set, scoped small and honestly, or (b) defer it a
+   SIXTH time with a clear, specific reason (not just "ran out of
+   session"), and flag that a dedicated, L3-only session may be needed
+   if it keeps slipping. Six deferrals without ever shipping would be a
+   genuine process failure worth naming plainly in that session's audit.
+4. Whatever is decided, restate it explicitly in this file's own
+   Chapter 13 hand-off (written at the end of Chapter 12's session) —
+   do not let it disappear silently.
 
 **Scenario constraints:** pick a fresh fictional organization NOT on the
-running exclusion list in `quality-audits/chapter-10-audit.md` (currently
-40 orgs: Northbeam Outdoors, Summit Gear Co-op, Fernbrook Ski Patrol,
-Wavecrest Marina, Alderleaf Research Group, Pinehurst Realty Group,
-Thistlewood Veterinary Group, Cobblestone Courier Co., Palisade Broadband,
-Thornbury Insurance Group, Wrenhollow Auto Rentals, Kestrel Appliance
-Service, Larkspur Fitness Studio, Driftwood Legal Clinic, Saltmarsh
-Language Academy, Hollowridge Wellness Clinic, Briarcliff Bike Rentals,
-Fenwick Home Repair Co-op, Mossgate Dental Group, Millbrook Credit Union,
-Amberlock Self-Storage, Cascadia Home Security, Greywick Dispatch, Larkmoor
-Archive Service, Thornmere Public Transit, Emberlyn Underwriting,
-Brambleford Analytics, Caldwell Ridge Observatory, Portage Grain
-Cooperative, Marrowvale Textile Mill, Quillmark Journeys, Hadleigh Civic
-Records Bureau, Corvindale Claims Network, Ashgrove Municipal Services,
-Foxglenn Relief Network, Harrowgate Logistics Exchange, Bellcrest Freelance
-Guild, Oakmere Produce Collective, Ravenshollow Talent Agency, Pemberwick
-Salvage Co.). Extend that list, don't restart it. Harrowgate/DockScout-
-YardScout may be reused as the lesson's own continuing scenario, the same
-way Chapter 8 reused Chapter 7's FactScout.
+running exclusion list in `quality-audits/chapter-11-audit.md` (currently
+44 orgs — see that file for the full list). Extend it, don't restart it.
+Chapter 12's architecture-design material may reasonably reference
+MULTIPLE prior chapters' scenarios by name as worked examples (e.g.,
+"CareBot's guardrail choice in Chapter 6" or "Harrowgate's retry design
+in Chapter 11") without that counting as a fresh org needing exclusion
+— only a genuinely NEW scenario built for Chapter 12's own exercises/
+practice/project needs a fresh name.
 
 **Live Ollama discipline (non-negotiable, from this course's reliability
-policy):** warm Ollama in the background with
-`curl -s localhost:11434/api/generate -d '{"model":"llama3.2","prompt":"","keep_alive":"120m"}'`,
-then run ONE sanity call before any lesson code. Do NOT launch two warm-up
-or live requests concurrently: Session 10 found two concurrent background
-warm-ups raced and left the model unloaded, costing a 314s cold start.
-Budget up to 450s per live call. Capture real transcripts, disclose
-honestly, and never re-run until a convenient result appears. If a live
-call stalls, say so in the lesson and fall back to deterministic
-construction, the same way Chapter 10 Section 12 did.
+policy):** if this chapter's own content calls for any live model
+content, warm Ollama with a SINGLE background request
+(`curl -s localhost:11434/api/generate -d '{"model":"llama3.2","prompt":"","keep_alive":"120m"}'`),
+then run ONE sanity call before any lesson code — do NOT launch a second
+warm-up or live request concurrently (Chapter 10's own session found two
+concurrent warm-ups raced and cost a 314s cold start; Chapter 11's
+session avoided this by warming alone and ran a clean 11.12s sanity
+check). Budget up to 450s per live call. Capture real transcripts,
+disclose honestly, and never re-run until a convenient result appears.
+Note that Chapter 12's architecture-focused content may need LESS live
+model content than Chapters 1-11 (the skill being taught is designing
+systems, not running one live), and it is fine to say so explicitly if
+true, rather than forcing in a live call that doesn't serve the chapter's
+own point.
 
 **Build steps:**
 
-1. Re-read `chapters/chapter-10-multi-agent-coordination-and-communication/lesson.html`
-   and `chapters/chapter-09-multi-agent-orchestration-patterns/lesson.html`
-   for the exact helper functions Chapter 11 reuses (`coordinated_claim`,
-   `parse_message_safely`, `break_deadlock_if_needed`, `which_agent_responsible`,
-   `which_agent_caused_miscommunication`, `is_within_budget`). Import or copy
-   them unchanged, and say which is which.
-2. Test every code example for real (local Ollama, `llama3.2:latest`,
-   `base_url="http://localhost:11434/v1"`) in a scratch directory BEFORE
-   writing it into `lesson.html`. Use `scratchpad/` for temp files, never
-   the repo root (the root-level race from Session 10 is the cautionary
-   example).
-3. Build `lesson.html` to the same 60+ `<pre>`/`<code>`-line density bar,
-   verified with `grep -c '<pre\|<code' lesson.html` before calling it done.
-4. Build the full file set matching Chapter 10's exactly: `quiz.html`
-   (10 fill-in-the-blank), `interview-questions.md` + `.html` (10 questions
-   across 4 levels, HTML generated from the .md by a script so they stay in
-   sync), `exercises/` (7 tasks, 19 points, production-gear, `starter.py` and
-   `solution.py` both run and verified, `ai-paired.html` with a third
-   scenario), `practice/` (8 scenarios, `ai-paired.html` with a ninth,
-   unnamed scenario), and a **chapter mini-project** `project/` (real
-   scaffold, 3 TODOs, 9 structural checks, `RUBRIC.md`, `ai-paired.html` with
-   a fourth scenario). The project is NOT the L3 Independent project.
-5. **BUILD MODULE 5's OWN ASSESSMENT THIS SESSION.** This is the explicit
-   scheduled deliverable, carried forward unchanged from Chapters 9 and 10's
-   hand-offs. Module 5's assessment is "multi-agent coordination-pattern
-   exercise," spanning Chapters 9-11. Build it under
-   `assessments/module-assessments/module-5-multi-agent-coordination-and-operations-exercise/`
-   (match the naming of the Module 1-4 assessments already there), following
-   the exact precedent Module 4's assessment set at Chapter 8, its closing
-   chapter. Reuse, via `importlib`, the already-tested functions from
-   Chapters 9, 10, and 11's own `project/solution.py` files, the same way
-   Module 4 reused Chapters 7 and 8. The assessment must have a `solution.py`
-   that passes all of its objectively checkable parts and a `starter.py` that
-   runs without crashing and fails most of them. Record the real scores in
-   `quality-audits/chapter-11-audit.md`.
-6. `assets/chapters-data.js`: add Chapter 11's real `path` only once
-   `lesson.html` exists. Chapters 12-13 stay without one. Set Module 5's
-   `examPath` to the real assessment path ONLY once that assessment actually
-   exists in the repo (per the precedent Module 4 set).
-7. Update `docs/curriculum/index.html`: convert Chapter 11's card from a
+1. Re-read `docs/curriculum/CURRICULUM_MAP.md`'s Module 6 section and
+   Chapter Roadmap table in full, and confirm the exact title ("Designing
+   Agent Architectures") and the Ch.12-vs-Ch.13 assessment split before
+   building anything.
+2. Re-read Chapters 1-11's own `lesson.html` "Points to remember"
+   sections (fast way to re-derive the full mechanism inventory this
+   chapter must teach learners to CHOOSE AMONG, without re-teaching any
+   of them from scratch).
+3. Decide the L3 question (see above) EARLY, before building Chapter
+   12's own file set, since the decision may change what Chapter 12's
+   project actually is.
+4. Build `lesson.html` to the same 60+ `<pre>`/`<code>`-line density bar
+   this course has held every chapter, verified with
+   `grep -c '<pre\|<code' lesson.html` before calling it done — even
+   though this chapter is architect-level and more prose/decision-
+   framework-heavy than Chapters 1-11, the density bar is a standing,
+   non-negotiable requirement, not optional at this difficulty tier.
+5. Build the full file set matching Chapter 11's own pattern as closely
+   as this chapter's different (architecture-document-shaped, not
+   agent-code-shaped) content allows: `quiz.html`, `interview-
+   questions.md` + `.html`, `exercises/`, `practice/`, and `project/`
+   (or, if the L3 decision above routes L3's own deliverable through
+   this project slot, say so explicitly in `project/README.md`).
+6. Build Module 6's OWN assessment for Chapter 12 specifically
+   ("architecture-design exercise," per the curriculum map) — confirm
+   its home directory per the check above before creating files.
+7. `assets/chapters-data.js`: add Chapter 12's real `path` only once
+   `lesson.html` exists. Chapter 13 stays without one.
+8. Update `docs/curriculum/index.html`: convert Chapter 12's card from a
    non-linked "Planned" `<div>` to a linked `<a class="chapter-card">`.
-   Module 5's feature card moves from "In Progress" to **"Complete"**, since
-   Chapter 11 is its closing chapter and its assessment now exists.
-8. Update root `index.html`'s `hero-stats`: chapter count to **11 of 13**,
-   module-complete count to **5 of 6** (Module 5 is now complete). Update the
-   stale "Chapters 1-10" intro paragraph to "Chapters 1-11".
-9. Write `quality-audits/chapter-11-audit.md` following
-   `chapter-10-audit.md`'s exact format. Extend (don't restart) the
-   exclusion list. Restate both deferrals explicitly (see below).
-10. Run `bash scripts/local_check.sh < /dev/null` **alone**, with no other
-    repo command running concurrently. Session 10 saw a false failure in
-    Chapter 4's exercise that was caused by two overlapping runs racing on
-    `test_task5_solution.json` in the repo root. Fix any real flag.
-11. Re-run every regression, each must be unchanged:
+   Module 6's feature card moves from "Planned" to "In Progress" (NOT
+   "Complete" — Chapter 13, the capstone, still has to ship).
+9. Update root `index.html`'s `hero-stats`: chapter count to **12 of
+   13**, module-complete count stays at **5 of 6** (Module 6 isn't
+   complete until Chapter 13 ships). Update the stale "Chapters 1-11"
+   intro paragraph to "Chapters 1-12."
+10. Write `quality-audits/chapter-12-audit.md` following
+    `chapter-11-audit.md`'s exact format. Extend (don't restart) the
+    exclusion list. State the L3 decision explicitly and loudly (built,
+    or deferred a sixth time with a specific reason).
+11. Run `bash scripts/local_check.sh < /dev/null` **alone**, with no
+    other repo command running concurrently.
+12. Re-run every regression, each must be unchanged:
     - `chapters/chapter-04-memory-and-state/project/solution.py` (L2): 10/10
     - `chapters/chapter-07-evaluating-agent-reliability/project/solution.py`: 8/8
     - `chapters/chapter-08-cost-and-latency-control-of-agent-loops/project/solution.py`: 9/9
     - `chapters/chapter-09-multi-agent-orchestration-patterns/project/solution.py`: 9/9
     - `chapters/chapter-10-multi-agent-coordination-and-communication/project/solution.py`: 9/9
-    - `assessments/module-assessments/` (the Module 1-4 assessments): all
-      must still pass their own solutions.
-12. Update this file: "Last updated" line, a new "Session 11" section, a
-    "Chapter 11 — COMPLETE" section, and, per this file's own discipline,
-    restate the deferred items below. Then end the session.
+    - `chapters/chapter-11-operating-agents-in-production/project/solution.py`: 9/9
+    - `assessments/module-assessments/` (Modules 1-5's own assessments):
+      all must still pass their own solutions.
+13. Update this file: "Last updated" line, a new "Session 12" section, a
+    "Chapter 12 — COMPLETE" section, and a fresh "Next Recommended Task"
+    brief for Chapter 13 (the capstone), including the L3 restatement if
+    it is still not resolved. Then end the session.
 
-**Deferred items, restated explicitly (do NOT silently drop either):**
-
-- **The L3 Independent project** ("design and implement a
-  reliability-instrumented, cost-bounded agent for a given problem, no
-  scaffold," per the curriculum map). Deferred past Chapter 8, past Chapter
-  9, past Chapter 10, and **still not built**. This is now flagged for the
-  FOURTH consecutive hand-off. Chapter 11 may fold it in, since its
-  production-operating material is the natural capstone for L3's
-  "reliability-instrumented, cost-bounded" definition, but it is not
-  mandated. If it is NOT built this session, restate the flag a fifth time
-  in this file. If it IS built, it must have a README, a RUBRIC, and one
-  reference `solution.py`, with NO starter scaffold, per L3's own
-  "independent" definition.
-- **Module 5's own assessment.** Per Chapter 8's gap-audit decision,
-  carried forward unchanged by Chapters 9 and 10: scheduled for THIS
-  session, Chapter 11, Module 5's closing chapter. Build it per Build step 5.
-  Do not defer it a third time.
-
-**Do NOT** re-teach Chapters 1-10's own mechanics (the agent loop, tool
-selection, memory, reflection, guardrails, the task-success and
-trajectory-correctness measurement layer, cost/latency control, supervisor
-dispatch, peer messaging, the claim-check, or deadlock detection) from
-scratch. Assume the reader can already coordinate two or more agents and
-measure what they did. Chapter 11's job is what changes when that system
-has to run unattended: retries that don't duplicate side effects, timeouts
-at the right layer, logs that let a bad run be attributed after the fact,
-and a run summary that survives a crash.
+**Do NOT** re-teach Chapters 1-11's own mechanics (the agent loop, tool
+selection, memory, reflection, guardrails, the reliability/cost
+measurement layer, supervisor dispatch, peer messaging, the claim-check,
+deadlock detection, idempotent retries, timeouts, or structured logging)
+from scratch. Assume the reader can already build and operate a
+coordinated multi-agent system. Chapter 12's job is teaching how to
+CHOOSE among everything already built, and defend that choice in
+writing, for a problem the reader hasn't seen before.
 
