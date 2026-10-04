@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 10: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Design a peer-to-peer coordination layer yourself, then critique an AI's plausible-but-flawed implementation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-10">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+  <p><a href="index.html">&larr; Back to the exercises</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 10 &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">20 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>You already worked the exercises yourself on Bellcrest Freelance Guild's DesignScout and DevScout. Now a third scenario, <strong>Oakmere Produce Collective</strong> (a fictional farm-to-market cooperative) and its two peer agents <strong>FarmScout</strong> and <strong>MarketScout</strong>, gets built a second way: by prompting an AI assistant for a peer-to-peer coordination layer, and reviewing what it hands back with the same skepticism you'd bring to a coworker's pull request before trusting its claim-handling.</p>
+  </div>
+
+  <h2>Step 1: Design it yourself, first</h2>
+  <p>FarmScout and MarketScout must agree, by exchanging messages directly, which of them handles each incoming produce lot -- no supervisor adjudicates. Before reading further, sketch your own plan: how would you prevent both agents from independently claiming the same lot? What would you do if both agents were designed to wait for the other to propose a split first? How would you resolve a disagreement when both have already claimed the same lot? There's no grading here, just your own design to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant to build the same thing</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> the prompt needs to state explicitly that the claim-check against shared state must be ATOMIC (check-and-claim in one locked operation, not two separate steps), that a deadlock risk must be handled with a timeout plus a PRE-AGREED tie-breaker rather than a negotiation attempted during the deadlock itself, and that a received message must be validated before being trusted -- otherwise a rushed AI answer tends to produce a "check, then claim" pattern with a race window still open between the two steps, and a retry-forever loop with no deadlock timeout at all, exactly the two failure modes this chapter's own Sections 8-9 and 12-13 demonstrated.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="5" placeholder="e.g. Write Python peer-to-peer coordination code for FarmScout and MarketScout that..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice, save its response separately, and compare it against the checklist below before looking at this chapter's own lesson pattern.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Write Python stdlib-only peer-to-peer coordination code for two EQUAL agents, farmscout and marketscout, who must claim produce lots from a shared pool with no supervisor adjudicating. I need: (1) a message dataclass with sender, recipient, type, and payload fields; (2) a parser that normalizes whitespace-padded keys but returns ok=False (never guesses) when a required field is missing or renamed; (3) a SHARED claim-check function where the check-for-existing-claim and the add-new-claim happen inside ONE lock, so two agents calling it concurrently can never both succeed on the same lot_id; (4) a deadlock-detection function keyed on elapsed waiting time (not step count) that returns a specific status when a timeout is exceeded; (5) a pre-agreed tie-breaker that both agents can compute independently (e.g., sorting their own names) to decide who sends the first message after a detected deadlock, requiring no negotiation; (6) a which_agent_caused_miscommunication function that walks a (sender, type, interpreted_ok) exchange and returns the first sender whose message was misread. Use only the Python standard library -- no LangGraph, CrewAI, AutoGen, or message-queue framework.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Review it against this checklist</h2>
+  <div class="what-is">
+    <span class="label">What a rushed AI-generated coordination layer tends to get wrong</span>
+    <ul>
+      <li><strong>A claim-check with a race window still open.</strong> Does the generated code check whether a lot is claimed and THEN add the claim as two separate operations (even if each is individually "safe"), leaving a window where two concurrent calls can both pass the check -- the exact duplicated-work gap this chapter's own Section 8 demonstrated live?</li>
+      <li><strong>No deadlock timeout at all.</strong> If both agents are told to wait for the other to go first, does the generated code have ANY mechanism to detect that neither has sent a message after some bound, or would it wait indefinitely -- the exact structural risk this chapter's own Section 13 constructed deterministically after a live attempt did not reproduce it?</li>
+      <li><strong>A tie-breaker that requires negotiation to apply.</strong> Does the generated "resolve the conflict" logic require the two deadlocked agents to exchange MORE messages to agree on who breaks the tie (which just risks a second, smaller deadlock), or is it a rule each agent can compute independently from a fixed, shared input (like sorting a roster) -- the distinction this chapter's own Section 14 insists on?</li>
+    </ul>
+  </div>
+  <p>Now compare the AI's code against this chapter's own lesson pattern (Sections 7, 9, 13-14) and against <code>solution.py</code> in the exercises folder. Where do they differ? Does the AI's version actually close the race window atomically, or does it just add a check that LOOKS safe but still has a gap between reading and writing shared state?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Exercises</a>
+    <a href="../practice/index.html">Practice Bank &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

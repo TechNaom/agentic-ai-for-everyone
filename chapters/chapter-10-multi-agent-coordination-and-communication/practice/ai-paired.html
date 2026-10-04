@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chapter 10 Practice: Solo &rarr; AI-Paired &rarr; Critique — Agentic AI for Everyone</title>
+<meta name="description" content="Diagnose a layered peer-to-peer coordination bug yourself, then critique an AI's plausible-but-flawed answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-10">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="index.html">&larr; Back to the practice bank</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 10 Practice &mdash; Solo &rarr; AI-Paired &rarr; Critique</span>
+    <span class="reading-time">15 min</span>
+  </div>
+  <h1>Now Pair With an AI</h1>
+
+  <div class="hook">
+    <p>A ninth scenario, not in the eight above: a two-peer negotiation system, <strong>"NegotiatorBot"</strong> (the specific company is left unnamed on purpose, the same way Chapter 9's "DispatchBot" scenario did), where a buyer-side agent and a seller-side agent exchange messages to agree on a shipping rate. Two real, layered problems were found in the same incident report. First: neither agent checks a SHARED record of already-agreed rates before proposing one, so both agents independently proposed and "locked in" conflicting rates for the same shipment on the same day -- no shared state, no lock, no single source of truth. Second, in the same incident: when the two agents' proposals didn't match, both were configured to wait for the OTHER to send a revised offer first -- and neither ever did, so the negotiation simply stalled with no error, no timeout, and no alert.</p>
+  </div>
+
+  <h2>Step 1: Diagnose it yourself, first</h2>
+  <p>Before reading further: name the two distinct problems here using this chapter's vocabulary (one is about what's missing before either agent commits to a rate; the other is about what's missing once the two agents disagree) and write your own fix for each. There's no grading here, just your own reasoning to compare against Step 3.</p>
+
+  <h2>Step 2: Ask an AI assistant</h2>
+  <div class="genai-prompt-box">
+    <p class="genai-thought"><strong>Thought process:</strong> this scenario has two layered problems (a missing shared claim-check AND a missing deadlock timeout), so the prompt needs to ask the AI to find both, not just the more obviously dramatic one -- a shallow prompt like "why did the negotiation fail?" invites an answer that fixates on the conflicting-rates bug (the one with a visible, costly consequence) and never questions whether the stalled negotiation has any detection mechanism at all, which has no visible symptom unless someone notices the negotiation never actually closed.</p>
+    <div class="genai-try-first">
+      <p class="genai-prompt-label">Write the prompt you'd give an AI assistant:</p>
+      <textarea class="genai-user-attempt" rows="4" placeholder="e.g. Here's NegotiatorBot's incident report... identify every distinct problem, not just one..."></textarea>
+      <button type="button" class="genai-reveal-btn">Reveal a strong reference prompt</button>
+      <div class="genai-compare-note" hidden>
+        Paste your prompt into your assistant of choice and compare its answer against the critique below.
+      </div>
+    </div>
+    <details class="genai-reveal">
+      <summary>Show a strong version of this prompt</summary>
+      <div class="genai-prompt-text"><pre>Here's my two-peer negotiation system's incident report: [paste the scenario above]. Identify EVERY distinct problem in this report, not just the first one you notice -- there are two -- and name each using this chapter's vocabulary (duplicated work from a missing shared claim-check, versus a deadlock with no timeout). Propose a concrete, specific fix for each, including exactly what shared state, lock, or timeout mechanism should have existed before this system shipped.</pre></div>
+    </details>
+  </div>
+
+  <h2>Step 3: Critique what came back</h2>
+  <div class="what-is">
+    <span class="label">What a complete diagnosis catches</span>
+    <ul>
+      <li><strong>Problem 1 (no shared claim-check before committing a rate):</strong> two peers each reasoning correctly about their own half of the negotiation still converged on conflicting committed rates with nothing forcing either one to check a SHARED record first -- exactly the duplicated-work gap this chapter's own Section 8 demonstrated live. The fix is a locked, atomic check-and-commit against shared state, the same discipline Section 9's <code>coordinated_claim</code> used.</li>
+      <li><strong>Problem 2 (no deadlock timeout):</strong> this chapter's own Section 13 explicitly constructed how two agents each waiting for the other to move first can stall forever with zero error signal. The fix is a timeout keyed on elapsed waiting time, plus a pre-agreed tie-breaker (Section 14) that lets ONE agent act without needing the other's permission.</li>
+      <li>A shallow AI answer often catches only Problem 1 (the more visible, costly bug) and misses that Problem 2 means the system has NO mechanism at all for detecting a stalled negotiation, which is arguably the more dangerous gap since it fails completely silently.</li>
+    </ul>
+  </div>
+  <p>Compare the AI's answer against your own Step 1 notes and the two-problem breakdown above. Did it catch both? Did it propose the right fix for each -- a locked shared claim-check and a deadlock timeout with a pre-agreed tie-breaker -- or did it conflate the two into one vague "add better coordination" suggestion?</p>
+
+  <div class="chapter-nav">
+    <a href="index.html">&larr; Back to Practice Bank</a>
+    <a href="../interview-questions.html">Interview Questions &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

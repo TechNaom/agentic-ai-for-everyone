@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent Coordination and Communication Exercises — Agentic AI for Everyone</title>
+<meta name="description" content="Hands-on exercises for Multi-Agent Coordination and Communication.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-10">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../quiz.html">&larr; Back to the quiz</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 10 Exercises</span>
+    <span class="reading-time">~40 min, hands-on</span>
+  </div>
+  <h1>Exercises: Multi-Agent Coordination and Communication</h1>
+  <p>
+    These exercises use a second scenario, deliberately different from
+    the lesson's Harrowgate Logistics Exchange/DockScout-YardScout
+    hook: <strong>Bellcrest Freelance Guild</strong>, a fictional
+    freelance-coordination cooperative. Its two PEER agents,
+    <strong>DesignScout</strong> and <strong>DevScout</strong>, must
+    claim tasks from a shared project backlog by exchanging messages
+    directly -- no supervisor routes work between them. Applying this
+    chapter's peer-to-peer coordination concepts to a fresh scenario is
+    the point.
+  </p>
+
+  <h2>How to run</h2>
+  <p>You'll need Python 3 installed. Check with:</p>
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 --version</code></pre>
+  </div>
+  <p>Then run the starter file:</p>
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+  <p>It prints a score report. Fill in each <code># TODO</code>, re-run, and watch your score climb toward the total (19 points across 7 tasks).</p>
+
+  <h2>The seven tasks</h2>
+  <ol>
+    <li><strong>Map facts to multi-agent communication concepts</strong> &mdash; assign the correct concept (miscommunication, duplicated work, deadlock, fail-closed validation, consensus/tie-breaking) to five Bellcrest facts.</li>
+    <li><strong>Message-validation reasoning</strong> &mdash; decide whether a receiving agent should guess an unrecognized field name maps to a known one.</li>
+    <li><strong>(Production-gear) <code>parse_message_safely</code></strong> &mdash; normalize safe whitespace issues, fail closed on a missing or renamed field.</li>
+    <li><strong>(Production-gear) <code>coordinated_claim</code></strong> &mdash; a shared, locked claim-check preventing duplicated work between two peers.</li>
+    <li><strong>(Production-gear) <code>which_agent_caused_miscommunication</code></strong> &mdash; message-level cross-agent attribution, extending Chapter 9's dispatch-level version.</li>
+    <li><strong>(Production-gear) <code>classify_communication_gap</code></strong> &mdash; classify a peer-to-peer setup's biggest blind spot from a capability dict.</li>
+    <li><strong>(Production-gear) <code>resolve_conflicting_claims</code></strong> &mdash; consensus voting with fail-closed tie handling.</li>
+  </ol>
+
+  <h2>Files</h2>
+  <ul>
+    <li><code>starter.py</code> &mdash; the scaffold with 11 <code># TODO</code>s and the score report.</li>
+    <li><code>solution.py</code> &mdash; the fully filled-in reference; scores 19/19.</li>
+    <li><code>ai-paired.html</code> &mdash; a solo-build-then-critique exercise using a third scenario.</li>
+  </ul>
+
+  <div class="chapter-nav">
+    <a href="../quiz.html">&larr; Back to Quiz</a>
+    <a href="ai-paired.html">AI-Paired Exercise &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

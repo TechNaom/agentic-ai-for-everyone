@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent Coordination and Communication Project — Agentic AI for Everyone</title>
+<meta name="description" content="Chapter mini-project: a peer coordination harness for Ravenshollow Talent Agency's CastingScout and BookingScout.">
+<link rel="stylesheet" href="../../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-10">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../../index.html">All Chapters</a>
+      <a href="../../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../interview-questions.html">&larr; Back to interview questions</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 10 Project (Chapter Mini-Project)</span>
+    <span class="reading-time">~60 min, hands-on</span>
+  </div>
+  <h1>Project: A Peer Coordination Harness for Ravenshollow Talent Agency</h1>
+  <p>
+    This is a <strong>chapter mini-project</strong>, not one of this
+    course's numbered L1-L4 projects — the L3 Independent project was
+    deferred past Chapter 8, past Chapter 9, and is still not yet built
+    as of this chapter (not built here either; see
+    <code>PROJECT_STATE.md</code>). Scenario:
+    <strong>Ravenshollow Talent Agency</strong>, a fictional
+    talent-booking agency, wants <strong>CastingScout</strong> and
+    <strong>BookingScout</strong> -- two genuine PEER agents, not a
+    supervisor and a worker -- coordinated the same way the lesson's
+    DockScout and YardScout were.
+  </p>
+
+  <div class="what-is">
+    <span class="label">The three pillars, combined</span>
+    <ul>
+      <li><strong>Message validation</strong> — normalizes safe whitespace padding in a message's keys, but fails closed on a genuinely missing or renamed field.</li>
+      <li><strong>Atomic shared claim-check</strong> — a single lock guards both the check and the claim, so two peers can never both succeed on the same gig.</li>
+      <li><strong>Assembled, attributed harness</strong> — processes every case's claims, detects and breaks a deadlock, and attributes any duplicate to the specific agent whose claim was rejected.</li>
+    </ul>
+  </div>
+
+  <h2>The three TODOs</h2>
+  <ol>
+    <li><strong>TODO 1</strong> &mdash; <code>parse_message_safely()</code></li>
+    <li><strong>TODO 2</strong> &mdash; <code>coordinated_claim()</code></li>
+    <li><strong>TODO 3</strong> &mdash; <code>run_ravenshollow_harness()</code></li>
+  </ol>
+
+  <h2>How to run it</h2>
+  <div class="code-window">
+    <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">terminal</span></div>
+    <pre><code>python3 starter.py</code></pre>
+  </div>
+  <p>Prints a structural self-check: 9 checks across message validation, the shared claim-check, and the assembled peer-coordination harness.</p>
+
+  <h2>Files</h2>
+  <ul>
+    <li><code>starter.py</code> &mdash; the scaffold with 3 <code># TODO</code>s and the self-check.</li>
+    <li><code>solution.py</code> &mdash; the fully filled-in reference; passes all 9 checks.</li>
+    <li><code>RUBRIC.md</code> &mdash; self-grading criteria.</li>
+    <li><code>ai-paired.html</code> &mdash; a solo-build-then-critique exercise using a fourth scenario.</li>
+  </ul>
+
+  <div class="chapter-nav">
+    <a href="../interview-questions.html">&larr; Back to Interview Questions</a>
+    <a href="ai-paired.html">AI-Paired Build &rarr;</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone — free, visual, engineering-first agent learning.</span>
+  </div>
+</footer>
+
+<script src="../../../assets/progress.js"></script>
+<script src="../../../assets/chapters-data.js"></script>
+<script src="../../../assets/sidebar.js"></script>
+</body>
+</html>

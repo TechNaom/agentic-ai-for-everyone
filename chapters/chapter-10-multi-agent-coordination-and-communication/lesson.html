@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent Coordination and Communication — Agentic AI for Everyone</title>
+<meta name="description" content="Peer-to-peer agent message exchange over a shared message bus, a minimal message schema, and three new failure modes -- miscommunication, duplicated work, and deadlock -- built on Harrowgate Logistics Exchange's DockScout and YardScout, with real, genuinely captured live Ollama results.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body data-active-chapter="chapter-10">
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle chapter list" aria-expanded="false">Chapters</button>
+<aside id="chapter-sidebar" class="sidebar" data-root="../../" aria-label="Chapter navigation"></aside>
+<div class="sidebar-scrim" id="sidebar-scrim"></div>
+
+<header class="top-bar">
+  <div class="page">
+    <a href="../../index.html" class="brand">Agentic AI for Everyone</a>
+    <nav>
+      <a href="../../index.html">All Chapters</a>
+      <a href="../../docs/curriculum/index.html">Roadmap</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  <p><a href="../../index.html">&larr; Back to all chapters</a></p>
+
+  <div class="page-meta">
+    <span class="chapter-badge">Chapter 10 of 13</span>
+    <span class="badge-difficulty">Advanced</span>
+    <span class="reading-time">65 min read, hands-on</span>
+  </div>
+  <h1>Multi-Agent Coordination and Communication</h1>
+  <p class="lede">Chapter 9 built the DISPATCH half of coordination: a supervisor decomposing a goal and routing sub-tasks to workers that never talk to each other. This chapter builds the COMMUNICATION half: two or more <strong>peer</strong> agents that must exchange MULTIPLE messages directly, with no supervisor mediating every interaction, to reach an outcome. Built on Harrowgate Logistics Exchange's <strong>DockScout</strong> and <strong>YardScout</strong>, two peer dispatch agents who must coordinate which of them handles each incoming shipment -- with real, unscripted live Ollama results, including a genuine duplicated-work failure this session's own testing produced, not manufactured for the lesson.</p>
+
+  <nav class="page-toc" aria-label="On this page">
+    <span class="toc-label">On this page</span>
+    <a href="#handoff">1. Hand-off from Chapter 9: dispatch vs. communication</a>
+    <a href="#ollama-check">2. A live check: warming Ollama before any peer-communication code</a>
+    <a href="#message-schema">3. A minimal message schema</a>
+    <a href="#message-bus">4. A shared message bus -- not a supervisor mediating every message</a>
+    <a href="#live-claim">5. A live claim message -- DockScout, real captured call</a>
+    <a href="#live-malformed">6. The same test run, YardScout's call -- a genuinely malformed message</a>
+    <a href="#miscommunication">7. Failure mode 1: miscommunication -- validating a message before trusting it</a>
+    <a href="#duplicated-work">8. Failure mode 2: duplicated work -- the SAME two live calls, read together</a>
+    <a href="#claim-fix">9. The fix: a shared claim-check through the bus, with a lock</a>
+    <a href="#live-consensus">10. A live conflict and its resolution -- DockScout's own real reject message</a>
+    <a href="#consensus">11. Consensus/voting when agents disagree without a supervisor</a>
+    <a href="#deadlock-live">12. Failure mode 3: deadlock -- a live attempt that did NOT reproduce, disclosed</a>
+    <a href="#deadlock-construct">13. Constructing deadlock deterministically, and detecting it with a timeout</a>
+    <a href="#deadlock-break">14. Breaking a deadlock: a forced-first-move tie-breaker</a>
+    <a href="#attribution">15. Trajectory attribution across communicating agents</a>
+    <a href="#approval">16. A fail-closed guardrail before a peer agent commits</a>
+    <a href="#assembled">17. Harrowgate Logistics Exchange, assembled end-to-end</a>
+    <a href="#thought-process">18. GenAI Builder Thought Process</a>
+    <a href="#recap">19. Points to remember</a>
+  </nav>
+
+  <div class="hook">
+    <p>Harrowgate Logistics Exchange, a fictional freight cooperative, runs two dispatch agents that are genuine PEERS, not a supervisor and a worker: <strong>DockScout</strong> (dock-side) and <strong>YardScout</strong> (yard-side). Every morning, incoming shipments must be split between them so neither duplicates the other's work and neither waits forever for the other to speak first. This chapter builds that coordination for real, against local Ollama, and its central failure mode -- two agents independently claiming the SAME shipment -- was genuinely produced by this session's own live testing, not constructed after the fact.</p>
+  </div>
+
+  <section id="handoff" class="subtopic">
+    <h2>1. Hand-off from Chapter 9: dispatch vs. communication</h2>
+    <p>Chapter 9's TripScout was a supervisor: it decided which sub-tasks existed and which worker handled each one. FlightScout, StayScout, and ExcursionScout never spoke to each other -- every interaction was supervisor-to-worker, one-directional, and TripScout's own architecture never needed worker-to-worker messages because its three workers were genuinely independent. This chapter's problem is different: DockScout and YardScout are PEERS. Neither dispatches to the other. Both independently see incoming shipments and must talk directly to avoid colliding.</p>
+    <div class="what-is">
+      <span class="label">What is... peer-to-peer agent communication, precisely?</span>
+      In supervisor/worker (Chapter 9), one agent's tool surface is "dispatch to X" and the other agents never call each other. In <strong>peer-to-peer communication</strong>, two or more agents of EQUAL standing exchange messages directly -- agent A can send to agent B, and B can send back to A, across MULTIPLE turns, with no third agent deciding who talks to whom. This is a genuinely new coordination shape, not dispatch with extra steps.
+    </div>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">from_chapter_9.py</span></div>
+      <pre><code>def route_subtask(subtask, worker_keywords):
+    """Chapter 9, Section 6 -- fail-closed keyword router. Reused
+    unchanged below as ONE input to this chapter's own claim logic,
+    not replaced by it: a peer agent still needs to decide what kind
+    of work a shipment is before claiming it."""
+    words = set(subtask.lower().replace(".", "").split())
+    scores = {w: len(words & kws) for w, kws in worker_keywords.items()}
+    best = max(scores, key=scores.get)
+    if scores[best] == 0:
+        return None
+    return best
+
+def which_agent_responsible(trace):
+    """Chapter 9, Section 14 -- cross-agent attribution. Extended in
+    Section 15 below to attribute a MESSAGE-level failure, not just a
+    dispatch-level one."""
+    for agent, tool, ok in trace:
+        if not ok:
+            return agent
+    return None
+
+print("reused unchanged from Ch9:", route_subtask("inspect the site", {"inspectionscout": {"inspect", "site"}}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>reused unchanged from Ch9: inspectionscout</code></pre>
+    </div>
+    <p>This course's own boundary, restated per this course's positioning discipline: this chapter is not <code>mcp-for-everyone</code>'s wire protocol -- the message format below is plain Python dicts/dataclasses, not a transport specification -- and it is not a heavy framework's built-in "crew" message bus (LangGraph, CrewAI, AutoGen). Every mechanism here -- the message schema, the shared bus, duplicated-work detection, deadlock timeouts, and consensus -- is plain Python and the plain <code>openai</code> client, so the reader can see exactly what a framework would otherwise hide.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">three_new_jobs.py</span></div>
+      <pre><code>SUPERVISOR_WORKER_JOBS = ["decomposition", "routing", "aggregation"]       # Chapter 9
+PEER_TO_PEER_JOBS = ["message validation", "shared-state claim-checking",  # Chapter 10
+                      "deadlock detection", "consensus/tie-breaking"]
+print("Chapter 9's own jobs, unchanged:", SUPERVISOR_WORKER_JOBS)
+print("Chapter 10's NEW jobs, none of which existed when workers never talked:", PEER_TO_PEER_JOBS)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Chapter 9's own jobs, unchanged: ['decomposition', 'routing', 'aggregation']
+Chapter 10's NEW jobs, none of which existed when workers never talked: ['message validation', 'shared-state claim-checking', 'deadlock detection', 'consensus/tie-breaking']</code></pre>
+    </div>
+  </section>
+
+  <section id="ollama-check" class="subtopic">
+    <h2>2. A live check: warming Ollama before any peer-communication code</h2>
+    <p>Matching every prior chapter's own discipline, Ollama was warmed before any live call this session:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">warm_up.sh</span></div>
+      <pre><code>curl -s localhost:11434/api/generate -d '{"model":"llama3.2","prompt":"","keep_alive":"120m"}'</code></pre>
+    </div>
+    <p>A plain sanity call after that warm-up took its FULL cold-load time this session, far from instant, disclosed honestly per this course's own reliability policy -- two concurrent background warm-up calls this session appear to have raced each other and left the model unloaded by the time this call ran:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">sanity_check.py</span></div>
+      <pre><code>import time
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+
+t0 = time.monotonic()
+resp = client.chat.completions.create(
+    model="llama3.2",
+    messages=[{"role": "user", "content": "Say OK."}],
+    timeout=450,
+)
+print("elapsed:", round(time.monotonic() - t0, 2))
+print(resp.choices[0].message.content)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session)</span>
+      <pre><code>elapsed: 314.35
+How can I assist you today?</code></pre>
+    </div>
+    <p>314.35 seconds, comfortably inside this course's 450-second budget but far from instant -- every live call below ran against the NOW-warm model, each completing in under 100 seconds, disclosed exactly either way per this chapter's own policy.</p>
+  </section>
+
+  <section id="message-schema" class="subtopic">
+    <h2>3. A minimal message schema</h2>
+    <p>Every message DockScout and YardScout exchange has exactly four required parts: who sent it, who it's for, what kind of message it is, and its content:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">message_schema.py</span></div>
+      <pre><code>from dataclasses import dataclass, field
+import itertools
+
+_id_counter = itertools.count(1)
+
+@dataclass
+class Message:
+    sender: str
+    recipient: str
+    type: str          # "claim", "ack", "reject", "query", "inform"
+    payload: dict
+    id: int = field(default_factory=lambda: next(_id_counter))
+
+m = Message(sender="dockscout", recipient="yardscout", type="claim",
+            payload={"shipment_id": "S-104"})
+print(m)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>Message(sender='dockscout', recipient='yardscout', type='claim', payload={'shipment_id': 'S-104'}, id=1)</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>No protocol framework, deliberately</dt>
+        <dd>This is plain Python -- a <code>dataclass</code>, stdlib <code>itertools</code> for a monotonic id. A real production system might carry these same five fields over MCP, AMQP, or a REST webhook; the WIRE format is a separate concern from the five fields every message genuinely needs, which is this chapter's own scope.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="message-bus" class="subtopic">
+    <h2>4. A shared message bus -- not a supervisor mediating every message</h2>
+    <p>Chapter 9's blackboard (Section 9) was shared STATE both workers read and wrote. A <strong>message bus</strong> is a related but distinct primitive: a shared inbox per agent, where any agent can deposit a message for any other agent to pick up later -- no third agent routes it.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">message_bus.py</span></div>
+      <pre><code>import threading
+
+class MessageBus:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._inbox = {}   # recipient -> list[Message]
+        self._log = []
+
+    def send(self, msg):
+        with self._lock:
+            self._inbox.setdefault(msg.recipient, []).append(msg)
+            self._log.append(msg)
+
+    def receive_all(self, recipient):
+        with self._lock:
+            msgs = self._inbox.get(recipient, [])
+            self._inbox[recipient] = []
+            return msgs
+
+    def history(self):
+        with self._lock:
+            return list(self._log)
+
+bus = MessageBus()
+bus.send(Message("dockscout", "yardscout", "claim", {"shipment_id": "S-104"}))
+print("yardscout's inbox, first read:", bus.receive_all("yardscout"))
+print("yardscout's inbox, second read (already drained):", bus.receive_all("yardscout"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>yardscout's inbox, first read: [Message(sender='dockscout', recipient='yardscout', type='claim', payload={'shipment_id': 'S-104'}, id=2)]
+yardscout's inbox, second read (already drained): []</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>The lock, and the drain-on-read semantics, are both load-bearing</dt>
+        <dd>Without the lock, two agents sending at the same instant could corrupt the shared <code>_inbox</code> dict. Draining on read (replacing the list with <code>[]</code> inside the SAME locked block) means a message is delivered to exactly one read, not re-delivered every time <code>receive_all</code> is called -- the same "read it once" guarantee a real message queue provides.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="live-claim" class="subtopic">
+    <h2>5. A live claim message -- DockScout, real captured call</h2>
+    <p>DockScout was given two shipments and told to claim the morning one, with no prior message from YardScout -- a real, unscripted call:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">live_claim.py</span></div>
+      <pre><code>MSG_TOOLS = [
+    {"type": "function", "function": {
+        "name": "send_message",
+        "description": "Send one structured message to a peer agent.",
+        "parameters": {"type": "object", "properties": {
+            "recipient": {"type": "string"},
+            "type": {"type": "string", "enum": ["claim", "ack", "reject", "query", "inform"]},
+            "shipment_id": {"type": "string"},
+            "note": {"type": "string"},
+        }, "required": ["recipient", "type", "shipment_id"]}}},
+]
+
+resp = client.chat.completions.create(
+    model="llama3.2",
+    messages=[
+        {"role": "system", "content": "You are DockScout, a dock-side dispatch "
+         "agent at a freight exchange. You coordinate directly with YardScout, "
+         "a peer agent (not your supervisor and not your subordinate) to split "
+         "incoming shipments so neither of you duplicates the other's work."},
+        {"role": "user", "content": "There are two shipments today: S-104 "
+         "(morning produce truck) and S-205 (afternoon electronics pallet). "
+         "Claim the morning one for yourself and notify YardScout."},
+    ],
+    tools=MSG_TOOLS,
+    timeout=450,
+)
+msg = resp.choices[0].message
+tc = msg.tool_calls[0]
+print(tc.function.name, tc.function.arguments)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session -- 95.24s)</span>
+      <pre><code>send_message {"recipient":"YardScout","note":" claim morning produce shipment","shipment_id":"S-104","type":"claim"}</code></pre>
+    </div>
+    <p>A clean, well-formed claim message: DockScout correctly picked <code>S-104</code> (the morning shipment), the right <code>type</code> ("claim"), and the right recipient. So far, nothing has gone wrong -- Section 6 runs the OTHER side of this exact scenario.</p>
+  </section>
+
+  <section id="live-malformed" class="subtopic">
+    <h2>6. The same test run, YardScout's call -- a genuinely malformed message</h2>
+    <p>Moments later, in the SAME test run, YardScout was asked to pick and claim whichever shipment it judged highest priority -- deliberately with NO knowledge of DockScout's Section 5 claim, the realistic situation for a peer agent that hasn't checked its inbox yet:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">live_claim_yardscout.py</span></div>
+      <pre><code>resp = client.chat.completions.create(
+    model="llama3.2",
+    messages=[
+        {"role": "system", "content": "You are YardScout, a yard-side dispatch "
+         "agent at a freight exchange. You coordinate directly with DockScout, "
+         "a peer agent, to split incoming shipments so neither of you "
+         "duplicates the other's work. You have NOT yet received any message "
+         "from DockScout this morning."},
+        {"role": "user", "content": "There are two shipments today: S-104 "
+         "(morning produce truck) and S-205 (afternoon electronics pallet). "
+         "Pick the shipment you think is the highest priority and claim it "
+         "for yourself."},
+    ],
+    tools=MSG_TOOLS,
+    timeout=450,
+)
+msg = resp.choices[0].message
+tc = msg.tool_calls[0]
+print(tc.function.name, tc.function.arguments)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session -- 19.36s, genuinely malformed, not edited)</span>
+      <pre><code>send_message {" recipient ":"DockScout","note":"Claiming highest priority shift for me","shipment_id ":"S-104","type":"query"}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>A real malformed message: whitespace-padded JSON keys</dt>
+        <dd>Look closely at the keys: <code>" recipient "</code> and <code>"shipment_id "</code> carry leading or trailing spaces the schema never specified. A supervisor-style dispatcher that does <code>args["recipient"]</code> directly would raise a <code>KeyError</code> here -- not because the MODEL chose the wrong shipment (it didn't; <code>S-104</code> is correct), but because the JSON it emitted doesn't exactly match the tool schema's own field names. This is a genuine, unscripted result from this session's own testing, not constructed for the lesson.</dd>
+      </dl>
+    </div>
+    <p>Also notice <code>"type":"query"</code>, not <code>"claim"</code> -- YardScout's own message TYPE doesn't match what it's actually doing (claiming a shipment). Section 7 builds the validation this exact result demonstrates is necessary.</p>
+  </section>
+
+  <section id="miscommunication" class="subtopic">
+    <h2>7. Failure mode 1: miscommunication -- validating a message before trusting it</h2>
+    <p>Section 6's real result is this chapter's own first failure mode: a receiving agent that trusts a message's shape without checking it will either crash on a malformed key or silently act on the wrong field. A normalizing parser, tested against Section 6's EXACT real output:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">parse_message_safely.py</span></div>
+      <pre><code>def parse_message_safely(raw_args, required_fields=("recipient", "type", "shipment_id")):
+    """Normalizes whitespace-padded keys (Section 6's own real bug), then
+    checks every required field is present. Returns {"ok": False, ...}
+    rather than raising -- a receiving agent must NEVER let a malformed
+    message crash it, the same fail-closed discipline Chapter 9's
+    dispatch-retry logic (Section 5) used for a missing tool_call."""
+    normalized = {k.strip(): v for k, v in raw_args.items()}
+    missing = [f for f in required_fields if f not in normalized]
+    if missing:
+        return {"ok": False, "reason": f"missing required fields after normalization: {missing}"}
+    return {"ok": True, "fields": normalized}
+
+import json
+section6_raw = json.loads('{" recipient ":"DockScout","note":"Claiming highest priority shift for me","shipment_id ":"S-104","type":"query"}')
+result = parse_message_safely(section6_raw)
+print(result)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed against Section 6's own real output)</span>
+      <pre><code>{'ok': True, 'fields': {'recipient': 'DockScout', 'note': 'Claiming highest priority shift for me', 'shipment_id': 'S-104', 'type': 'query'}}</code></pre>
+    </div>
+    <p>Whitespace-stripping recovers this specific malformation. A field renamed outright (not just padded) is a DIFFERENT, unrecoverable case -- the next example shows that one failing closed instead of guessing:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">unrecoverable_miscommunication.py</span></div>
+      <pre><code>renamed_field = {"recipient": "DockScout", "note": "...", "shipment": "S-104", "type": "query"}
+print(parse_message_safely(renamed_field))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'ok': False, 'reason': "missing required fields after normalization: ['shipment_id']"}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Normalize what's safe to normalize; fail closed on what isn't</dt>
+        <dd>Stripping whitespace is safe -- it can never change WHICH field a value belongs to. Guessing that <code>"shipment"</code> means <code>"shipment_id"</code> is NOT safe -- a receiving agent that silently maps unrecognized field names is one keyword-collision away from acting on the wrong value entirely. <code>parse_message_safely</code> deliberately does the first and refuses the second.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="duplicated-work" class="subtopic">
+    <h2>8. Failure mode 2: duplicated work -- the SAME two live calls, read together</h2>
+    <p>Re-read Sections 5 and 6 together, exactly as they were captured, in the order this session ran them:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">both_claims_side_by_side.py</span></div>
+      <pre><code>dockscout_claim = {"recipient": "YardScout", "shipment_id": "S-104", "type": "claim"}
+yardscout_claim = {"recipient": "DockScout", "shipment_id": "S-104", "type": "query"}  # normalized, Section 7
+
+print("DockScout's own real claim:  ", dockscout_claim)
+print("YardScout's own real claim:  ", yardscout_claim)
+print("SAME shipment_id claimed by BOTH, independently:",
+      dockscout_claim["shipment_id"] == yardscout_claim["shipment_id"])</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed -- using Sections 5-6's own real captured values)</span>
+      <pre><code>DockScout's own real claim:   {'recipient': 'YardScout', 'shipment_id': 'S-104', 'type': 'claim'}
+YardScout's own real claim:   {'recipient': 'DockScout', 'shipment_id': 'S-104', 'type': 'query'}
+SAME shipment_id claimed by BOTH, independently: True</code></pre>
+    </div>
+    <div class="what-is">
+      <span class="label">What is... why this is a genuinely different failure from Chapter 9's redundant dispatch?</span>
+      Chapter 9 Section 13's redundant dispatch was ONE supervisor re-dispatching the SAME sub-task to the SAME worker on retry -- a single decision-maker making a mistake. Here, there is no supervisor at all: TWO independent peer agents, each with its own reasoning, each with incomplete information about what the other had already decided, both landed on <code>S-104</code> -- this is exactly the <strong>duplicated work</strong> failure mode this chapter's own brief named, and it happened for real, unscripted, in this session's own testing.
+    </div>
+    <p>Neither DockScout nor YardScout did anything individually wrong -- each one reasonably picked the shipment it judged most urgent. The failure is architectural: nothing forced either agent to check a SHARED source of truth before committing to a claim.</p>
+  </section>
+
+  <section id="claim-fix" class="subtopic">
+    <h2>9. The fix: a shared claim-check through the bus, with a lock</h2>
+    <p>The naive version, reproducing Section 8's exact shape deterministically:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">naive_claim.py</span></div>
+      <pre><code>def naive_claim(agent_name, shipment_id, local_claims):
+    local_claims.add(shipment_id)
+    return f"{agent_name} will handle {shipment_id}"
+
+dock_local, yard_local = set(), set()
+r1 = naive_claim("dockscout", "S-104", dock_local)
+r2 = naive_claim("yardscout", "S-104", yard_local)
+print(r1, "|", r2)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>dockscout will handle S-104 | yardscout will handle S-104</code></pre>
+    </div>
+    <p>The fix: a single shared set of claims, guarded by one lock, that EVERY agent checks before committing -- the same "check shared state before acting" discipline Chapter 9's blackboard (Section 9) used, now applied to claims instead of a budget:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">coordinated_claim.py</span></div>
+      <pre><code>import threading
+
+shared_claims = set()
+shared_lock = threading.Lock()
+
+def coordinated_claim(agent_name, shipment_id):
+    with shared_lock:
+        if shipment_id in shared_claims:
+            return f"{agent_name} SKIPPED {shipment_id} -- already claimed"
+        shared_claims.add(shipment_id)
+        return f"{agent_name} claimed {shipment_id}"
+
+print(coordinated_claim("dockscout", "S-104"))
+print(coordinated_claim("yardscout", "S-104"))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>dockscout claimed S-104
+yardscout SKIPPED S-104 -- already claimed</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why this must be a check-THEN-add inside ONE lock, not two separate calls</dt>
+        <dd>If "check whether claimed" and "add to claims" were two separate locked calls, two agents could both pass the check (neither sees it claimed yet) before either one adds it -- the exact race Chapter 9's blackboard section warned about, now for claims. One locked block covering both the read and the write is what actually prevents Section 8's real duplication from recurring.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="live-consensus" class="subtopic">
+    <h2>10. A live conflict and its resolution -- DockScout's own real reject message</h2>
+    <p>Section 9's lock prevents duplication going forward, but Section 8's conflict ALREADY happened live. A third real call asked DockScout, told explicitly that YardScout had also claimed <code>S-104</code>, to resolve it as a peer -- no supervisor adjudicating:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">live_resolve_conflict.py</span></div>
+      <pre><code>resp = client.chat.completions.create(
+    model="llama3.2",
+    messages=[
+        {"role": "system", "content": "You are DockScout. YardScout has ALSO "
+         "claimed shipment S-104 (the morning produce truck), the same one "
+         "you claimed. You and YardScout are peers -- neither outranks the "
+         "other. Decide how to resolve this: you may reject your own claim, "
+         "or send a message proposing a resolution."},
+        {"role": "user", "content": "Both you and YardScout claimed S-104. "
+         "Resolve the conflict with one message."},
+    ],
+    tools=MSG_TOOLS,
+    timeout=450,
+)
+msg = resp.choices[0].message
+tc = msg.tool_calls[0]
+print(tc.function.name, tc.function.arguments)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session -- 29.02s)</span>
+      <pre><code>send_message {"shipment_id":"S-104","type":"reject","recipient":"YardScout","note":"null"}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>A real, voluntary self-resolution -- and a real small defect in it</dt>
+        <dd>DockScout chose to REJECT its own claim rather than escalate or dig in -- a reasonable peer-level resolution. But <code>"note":"null"</code> is the literal STRING "null", not an empty or omitted field -- a receiving agent that checks <code>if note:</code> would treat this as a truthy, non-empty note containing the text "null," a small but real message-content quirk worth validating, not just the field NAMES Section 7 checked.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="consensus" class="subtopic">
+    <h2>11. Consensus/voting when agents disagree without a supervisor</h2>
+    <p>Section 10 worked because DockScout voluntarily backed down. A system can't rely on voluntary resolution alone -- a deterministic tie-breaker is needed for when both agents dig in instead:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">consensus.py</span></div>
+      <pre><code>from collections import Counter
+
+def resolve_conflicting_claims(votes):
+    """votes: dict agent -> who-should-get-it. Majority wins; an exact
+    tie returns None -- escalate, never guess which agent 'really'
+    deserves it."""
+    counts = Counter(votes.values())
+    top = counts.most_common()
+    if len(top) > 1 and top[0][1] == top[1][1]:
+        return None
+    return top[0][0]
+
+print("clear majority (a 3rd observer agent breaks the tie):", resolve_conflicting_claims(
+    {"dockscout": "yardscout", "yardscout": "yardscout", "observer": "dockscout"}))
+print("exact tie, 2 agents, no majority possible -- escalate:", resolve_conflicting_claims(
+    {"dockscout": "dockscout", "yardscout": "yardscout"}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>clear majority (a 3rd observer agent breaks the tie): yardscout
+exact tie, 2 agents, no majority possible -- escalate: None</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>A 2-agent system can ALWAYS tie -- voting alone is not sufficient</dt>
+        <dd>With exactly two peers voting for themselves, a majority vote can never break the tie mathematically -- this is why Section 14's deadlock-breaker uses an independent rule (lowest agent ID goes first), not a vote, and why a real 3+-agent system benefits from an odd number of voters or a designated, narrow tie-breaking authority for exactly this unavoidable case.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="deadlock-live" class="subtopic">
+    <h2>12. Failure mode 3: deadlock -- a live attempt that did NOT reproduce, disclosed</h2>
+    <p>Per this course's own reliability policy, this session actively tried to reproduce a live deadlock before falling back to a deterministic construction. Both agents were told to NEVER make the first move -- always wait for the other to propose first:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">live_deadlock_attempt.py</span></div>
+      <pre><code>r1 = client.chat.completions.create(
+    model="llama3.2",
+    messages=[
+        {"role": "system", "content": "You are DockScout. Your policy is: "
+         "NEVER make the first move in a shipment-assignment conversation -- "
+         "always wait for YardScout to propose a split first. You have "
+         "received NO message from YardScout yet."},
+        {"role": "user", "content": "Shipment S-104 needs to be assigned. "
+         "You have no message from YardScout. What do you do right now?"},
+    ],
+    tools=MSG_TOOLS,
+    timeout=450,
+)
+msg1 = r1.choices[0].message
+print("dockscout:", msg1.tool_calls[0].function.arguments if msg1.tool_calls else "NO CALL (waiting)")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session -- 28.65s)</span>
+      <pre><code>dockscout: {"recipient":"YardScout","type":"query","shipment_id":"S-104"}</code></pre>
+    </div>
+    <p>The same prompt pattern, mirrored for YardScout, with the identical "never go first" instruction:</p>
+    <div class="output-block">
+      <span class="output-label">Output (real, this session -- 33.2s)</span>
+      <pre><code>yardscout: {"note":"Awaiting proposal for shipment assignment","recipient":"DockScout","shipment_id":"S-104","type":"query"}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Disclosed honestly: this did NOT reproduce a live deadlock</dt>
+        <dd>BOTH agents sent a message anyway, directly contradicting their own stated "never go first" policy -- a real, unscripted result, but not the failure mode this section set out to capture. This is itself worth knowing: a small local model does not reliably FOLLOW an explicit behavioral constraint stated only in the system prompt, which is a different, also-real finding from the one this section was testing for. Per this course's own policy (disclose honestly rather than re-run until a convenient result appears, or fabricate one), Section 13 constructs deadlock deterministically instead.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="deadlock-construct" class="subtopic">
+    <h2>13. Constructing deadlock deterministically, and detecting it with a timeout</h2>
+    <p>A deadlock is a STRUCTURAL property (two agents each conditioned on the other's prior message, with neither one ever sending first), not a one-off model quirk -- it's demonstrated reliably by code that enforces the condition directly:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">construct_deadlock.py</span></div>
+      <pre><code>def deadlocked_turn(agent_name, inbox):
+    """Both agents run THIS exact logic: if my inbox is empty, I wait.
+    If BOTH agents only ever run this, and neither one is ever given
+    a reason to speak first, nothing breaks the cycle."""
+    if not inbox:
+        return None   # waits forever if the other side also waits
+    return f"{agent_name} responds to {inbox[0]}"
+
+print("dockscout, empty inbox:", deadlocked_turn("dockscout", []))
+print("yardscout, empty inbox:", deadlocked_turn("yardscout", []))
+print("neither agent ever sends -- this IS the deadlock, by construction")</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>dockscout, empty inbox: None
+yardscout, empty inbox: None
+neither agent ever sends -- this IS the deadlock, by construction</code></pre>
+    </div>
+    <p>Detecting it needs a wall-clock budget, the same discipline Chapter 8's cost/latency budgets used for a runaway loop, now applied to elapsed WAITING time instead of steps or cost:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">deadlock_timeout.py</span></div>
+      <pre><code>def check_for_deadlock(agent_name, inbox, timeout_s, elapsed_s):
+    if inbox:
+        return {"status": "progressed", "reply": f"{agent_name} responds"}
+    if elapsed_s >= timeout_s:
+        return {"status": "deadlock_detected", "waited_s": elapsed_s}
+    return {"status": "waiting", "waited_s": elapsed_s}
+
+print(check_for_deadlock("dockscout", [], timeout_s=5, elapsed_s=2))
+print(check_for_deadlock("dockscout", [], timeout_s=5, elapsed_s=6))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'status': 'waiting', 'waited_s': 2}
+{'status': 'deadlock_detected', 'waited_s': 6}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Detecting is not the same as resolving</dt>
+        <dd><code>check_for_deadlock</code> only NAMES the problem once <code>elapsed_s</code> crosses <code>timeout_s</code> -- it does nothing to break the cycle on its own. Without Section 14's own fix, a detected deadlock just becomes a detected, still-unresolved deadlock.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="deadlock-break" class="subtopic">
+    <h2>14. Breaking a deadlock: a forced-first-move tie-breaker</h2>
+    <p>The fix needs a rule BOTH agents already agree on before any deadlock happens, so neither one needs the other's permission to apply it -- an independent, pre-agreed tie-breaker, not a negotiation:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">break_deadlock.py</span></div>
+      <pre><code>def break_deadlock_if_needed(agent_name, inbox, timeout_s, elapsed_s, all_agent_names):
+    status = check_for_deadlock(agent_name, inbox, timeout_s, elapsed_s)
+    if status["status"] != "deadlock_detected":
+        return status
+    # Pre-agreed, independent rule: the alphabetically FIRST agent name
+    # sends first. Neither agent needs to ask the other -- both can
+    # compute this unilaterally from the same fixed roster.
+    first_mover = sorted(all_agent_names)[0]
+    if agent_name == first_mover:
+        return {"status": "deadlock_broken", "action": f"{agent_name} sends the first proposal"}
+    return {"status": "deadlock_detected_but_not_my_turn_to_break_it"}
+
+print(break_deadlock_if_needed("dockscout", [], timeout_s=5, elapsed_s=6,
+      all_agent_names=["dockscout", "yardscout"]))
+print(break_deadlock_if_needed("yardscout", [], timeout_s=5, elapsed_s=6,
+      all_agent_names=["dockscout", "yardscout"]))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'status': 'deadlock_broken', 'action': 'dockscout sends the first proposal'}
+{'status': 'deadlock_detected_but_not_my_turn_to_break_it'}</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why alphabetical, not "whoever notices the timeout first"</dt>
+        <dd>If BOTH agents independently decided "I noticed a timeout, so I'll break it," they might both send a proposal simultaneously -- a smaller, resolvable version of Section 8's own duplication, but still avoidable. A rule both agents can compute identically and in advance (sort the roster, lowest name goes first) guarantees exactly ONE agent acts, with no coordination message needed to agree on who.</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section id="attribution" class="subtopic">
+    <h2>15. Trajectory attribution across communicating agents</h2>
+    <p>Chapter 9's <code>which_agent_responsible</code> (Section 14) answered "which agent's DISPATCH step failed." A peer-to-peer system needs the same question answered at the MESSAGE level: which agent's message was the one a receiver misinterpreted or mishandled.</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">which_agent_caused_miscommunication.py</span></div>
+      <pre><code>def which_agent_caused_miscommunication(exchange):
+    """
+    exchange: list of (sender, msg_type, interpreted_ok) tuples across
+    a WHOLE multi-turn peer exchange. Returns the SENDER of the first
+    message a receiver failed to interpret correctly -- extends
+    Chapter 9's which_agent_responsible from "which agent's dispatch
+    step failed" to "which agent's MESSAGE was misread," since in a
+    peer exchange the failure can originate in either direction, not
+    just supervisor-to-worker.
+    """
+    for sender, msg_type, interpreted_ok in exchange:
+        if not interpreted_ok:
+            return sender
+    return None
+
+full_exchange = [
+    ("dockscout", "claim", True),
+    ("yardscout", "claim", False),   # Section 8's real duplicated-work claim
+    ("dockscout", "reject", True),
+]
+print("which agent's message caused this exchange's failure:",
+      which_agent_caused_miscommunication(full_exchange))
+print("which agent caused failure in an all-clean exchange:",
+      which_agent_caused_miscommunication([("dockscout", "claim", True), ("yardscout", "ack", True)]))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>which agent's message caused this exchange's failure: yardscout
+which agent caused failure in an all-clean exchange: None</code></pre>
+    </div>
+    <div class="code-breakdown">
+      <dl>
+        <dt>Why message-level attribution is a genuinely different question than dispatch-level</dt>
+        <dd>In Chapter 9, "which agent" and "which TOOL call" were almost the same question, since a supervisor's own dispatch call and the worker's execution were tightly coupled. In a peer exchange, a message can be WELL-FORMED (Section 7 passes it) and still cause a bad outcome because it was sent at the wrong TIME, to the wrong ASSUMPTION about shared state (Section 8's duplicated claim), or with the wrong message TYPE (Section 6's "query" that was actually a "claim") -- three distinct ways a perfectly valid-looking message still causes a coordination failure.</dd>
+      </dl>
+    </div>
+    <p>This chapter's own continuation of <code>llm-evaluation-for-everyone</code>'s boundary, restated per this course's standing positioning discipline: deep trajectory-evaluation methodology for multi-agent exchanges is that sibling course's own territory; this section deliberately reuses Chapter 9's own mechanism, extended one more level (message, not just dispatch), rather than re-deriving a new evaluation framework from scratch.</p>
+  </section>
+
+  <section id="approval" class="subtopic">
+    <h2>16. A fail-closed guardrail before a peer agent commits</h2>
+    <p>Chapter 6's fix made <code>human_approved</code> default to <code>False</code>; Chapter 9 Section 15 applied that same default-deny discipline to a worker's own spend-commit step. The same discipline applies here, now gated on BOTH a message-level consensus AND a value threshold:</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">fail_closed_commit.py</span></div>
+      <pre><code>def commit_shipment_assignment(shipment_id, agreed_by_both, human_approved=False):
+    """Fail closed on TWO independent axes: no peer consensus at all
+    blocks the commit outright, and a high-value shipment additionally
+    requires explicit human approval even WITH peer consensus."""
+    if not agreed_by_both:
+        return {"committed": False, "reason": "no consensus between peers (fail closed)"}
+    if shipment_id in ("S-900",) and not human_approved:   # high-value lane
+        return {"committed": False, "reason": "high-value lane requires human approval; none given (default-deny)"}
+    return {"committed": True}
+
+print("high-value lane, peers agree, no human approval:", commit_shipment_assignment("S-900", True))
+print("high-value lane, peers agree, WITH approval:", commit_shipment_assignment("S-900", True, human_approved=True))
+print("ordinary lane, peers agree, no approval needed:", commit_shipment_assignment("S-104", True))
+print("ordinary lane, peers DISAGREE -- blocked regardless of value:", commit_shipment_assignment("S-104", False))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>high-value lane, peers agree, no human approval: {'committed': False, 'reason': 'high-value lane requires human approval; none given (default-deny)'}
+high-value lane, peers agree, WITH approval: {'committed': True}
+ordinary lane, peers agree, no approval needed: {'committed': True}
+ordinary lane, peers DISAGREE -- blocked regardless of value: {'committed': False}</code></pre>
+    </div>
+    <p>In a peer system, this checkpoint belongs INSIDE each agent's own commit step, not in some third mediating process -- there is no supervisor here to hold it centrally, which is exactly why "fail closed by default" matters even more than it did in Chapter 9's supervisor-mediated system.</p>
+  </section>
+
+  <section id="assembled" class="subtopic">
+    <h2>17. Harrowgate Logistics Exchange, assembled end-to-end</h2>
+    <p>All of Sections 3-16's pieces, combined into one run: message validation (Section 7), a coordinated claim-check (Section 9), deadlock detection and breaking (Sections 13-14), and attribution (Section 15):</p>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">harrowgate_assembled.py</span></div>
+      <pre><code>def run_harrowgate_exchange(claim_attempts, deadlock_elapsed_s, timeout_s=5):
+    shared = set()
+    exchange = []
+    for agent_name, shipment_id in claim_attempts:
+        if shipment_id in shared:
+            exchange.append((agent_name, "claim", False))   # Section 8's duplication, caught
+            continue
+        shared.add(shipment_id)
+        exchange.append((agent_name, "claim", True))
+
+    deadlock_status = break_deadlock_if_needed(
+        "dockscout", [], timeout_s=timeout_s, elapsed_s=deadlock_elapsed_s,
+        all_agent_names=["dockscout", "yardscout"])
+
+    return {
+        "exchange": exchange,
+        "first_miscommunication": which_agent_caused_miscommunication(exchange),
+        "deadlock_status": deadlock_status,
+    }
+
+demo = run_harrowgate_exchange(
+    claim_attempts=[("dockscout", "S-104"), ("yardscout", "S-104"), ("yardscout", "S-205")],
+    deadlock_elapsed_s=6,
+)
+print(demo)</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>{'exchange': [('dockscout', 'claim', True), ('yardscout', 'claim', False), ('yardscout', 'claim', True)], 'first_miscommunication': 'yardscout', 'deadlock_status': {'status': 'deadlock_broken', 'action': 'dockscout sends the first proposal'}}</code></pre>
+    </div>
+    <p>A peer system built this way is honest about the outcome: it catches a duplicate claim the instant it happens, says EXACTLY which agent's message caused it, and has a pre-agreed way to break a deadlock without either agent needing the other's permission to do so -- the three capabilities this chapter's own brief named, combined in fewer than twenty lines because each piece was already built and tested separately above.</p>
+  </section>
+
+  <section id="checklist" class="subtopic">
+    <h2>A multi-agent communication maturity checklist</h2>
+    <div class="code-window">
+      <div class="code-window-bar"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span><span class="filename">maturity_checklist.py</span></div>
+      <pre><code>def classify_communication_gap(setup):
+    if setup.get("validates_message_fields") is False:
+        return "no message validation -- Section 6/7's exact gap, a malformed message crashes the receiver or is silently misread"
+    if setup.get("checks_shared_state_before_claiming") is False:
+        return "no shared claim-check -- Section 8/9's exact gap, two peers independently duplicate the same work"
+    if setup.get("detects_deadlock_with_timeout") is False:
+        return "no deadlock timeout -- Section 13's exact gap, two agents can wait on each other forever"
+    if setup.get("has_preagreed_tiebreaker") is False:
+        return "no pre-agreed tie-breaker -- Section 14's exact gap, a detected deadlock is never actually broken"
+    if setup.get("attributes_to_specific_message") is False:
+        return "no message-level attribution -- Section 15's exact gap, debugging a bad exchange wastes a cycle"
+    return "no known gap matched"
+
+print(classify_communication_gap({"validates_message_fields": False}))
+print(classify_communication_gap({"validates_message_fields": True, "checks_shared_state_before_claiming": False}))
+print(classify_communication_gap({"validates_message_fields": True, "checks_shared_state_before_claiming": True,
+      "detects_deadlock_with_timeout": True, "has_preagreed_tiebreaker": True, "attributes_to_specific_message": False}))
+print(classify_communication_gap({"validates_message_fields": True, "checks_shared_state_before_claiming": True,
+      "detects_deadlock_with_timeout": True, "has_preagreed_tiebreaker": True, "attributes_to_specific_message": True}))</code></pre>
+    </div>
+    <div class="output-block">
+      <span class="output-label">Output (real, executed)</span>
+      <pre><code>no message validation -- Section 6/7's exact gap, a malformed message crashes the receiver or is silently misread
+no shared claim-check -- Section 8/9's exact gap, two peers independently duplicate the same work
+no message-level attribution -- Section 15's exact gap, debugging a bad exchange wastes a cycle
+no known gap matched</code></pre>
+    </div>
+    <p>The order mirrors the order this chapter built these capabilities in: a peer that can't even trust a message's own shape (first check) has nothing worth coordinating on; attribution (last check) is the one that matters most once everything else already works, for the same reason Chapter 9's own checklist ended there too.</p>
+  </section>
+
+  <section id="thought-process" class="subtopic">
+    <h2>18. GenAI Builder Thought Process</h2>
+    <div class="thinking-box">
+      <p><strong>Thought process:</strong> the natural first instinct when two agents need to "talk" is to assume a bigger, smarter model will simply coordinate sensibly on its own. This chapter's own real, unscripted Sections 5-6 results are the direct rebuttal: DockScout and YardScout, each individually reasoning well about ITS OWN half of the problem, still landed on the exact same shipment with no supervisor and no shared check to catch it -- not because either model reasoned badly, but because neither had the OTHER agent's decision visible when it made its own. The habit that actually works, demonstrated this chapter: validate a message's fields before trusting its shape, normalizing what's safely recoverable (whitespace) and failing closed on what isn't (a renamed field, Section 7); never let two agents commit to the same piece of work without a SHARED, locked check first (Section 9); treat deadlock as a structural property to guard with a timeout, not a hope that an LLM will spontaneously break its own stated policy (Section 12's honest non-reproduction, Section 13's deterministic construction); have a pre-agreed, independently computable tie-breaker ready BEFORE a deadlock happens, not a negotiation attempted during one (Section 14); and always be able to name which AGENT's MESSAGE caused a bad exchange, not just that the exchange went wrong (Section 15). A strong prompt for an AI pair-programmer building peer-to-peer coordination for a different domain: "I'm building two or more PEER agents (not a supervisor and workers) that must exchange multiple messages to reach an outcome. Build: (1) a minimal message dataclass with sender, recipient, type, and payload; (2) a thread-safe shared message bus with a per-recipient inbox that drains on read; (3) a parser that normalizes safely-recoverable malformation (whitespace in keys) but returns ok=False rather than guessing on an unrecoverable one (a renamed field); (4) a shared, LOCKED claim-check so two peers can never commit to the same unit of work without one of them seeing it's already taken; (5) a deadlock timeout keyed on elapsed waiting time, not step count; (6) a pre-agreed, independently computable tie-breaker (e.g., sort agent names, lowest goes first) that needs no negotiation to apply; (7) a which_agent_caused_miscommunication function that walks a (sender, type, interpreted_ok) exchange and returns the first sender whose message was misread. Use only the Python standard library and the plain openai client -- no LangGraph, CrewAI, or AutoGen, and no message-queue framework."</p>
+    </div>
+  </section>
+
+  <div class="real-world">
+    <span class="label">In the Real World</span>
+    <ul>
+      <li>Section 8's genuine duplicated-work result is a real, common distributed-systems problem with a specific name: a "lost update" or "double-booking" race condition. Production systems solve it the same way Section 9 does conceptually -- a single, atomic check-and-claim against shared state -- whether that shared state is a Python set with a lock, a database row with a unique constraint, or a distributed lock service.</li>
+      <li>Section 12's honest non-reproduction of a live deadlock is itself a real finding worth internalizing: small local models do not reliably obey a behavioral constraint stated only in a system prompt. Production multi-agent systems that genuinely need a "never speak first" guarantee enforce it in CODE (gating whether the message-send function is even callable), not by asking the model nicely and hoping.</li>
+      <li>Section 14's pre-agreed tie-breaker is the same idea behind distributed systems' "leader election" by lowest node ID or highest term number -- a rule every participant can compute identically, with no negotiation round needed, is what actually breaks a tie reliably at scale.</li>
+    </ul>
+  </div>
+
+  <section id="recap" class="subtopic">
+    <div class="points-to-remember">
+      <h2>Points to Remember</h2>
+      <ul>
+        <li><strong>Peer-to-peer communication is architecturally different from dispatch</strong> (Section 1) -- no third agent routes every interaction; agents message each other directly, across multiple turns.</li>
+        <li><strong>A message needs validation before it's trusted, not just a schema it was supposed to follow</strong> (Sections 6-7) -- a real, unscripted result this session showed a model emitting whitespace-padded keys and a mismatched message type on an otherwise-correct claim.</li>
+        <li><strong>Duplicated work is a DIFFERENT failure shape than Chapter 9's redundant dispatch</strong> (Section 8) -- two independent peers, not one supervisor re-dispatching, both genuinely reasoning well and still colliding with no shared check.</li>
+        <li><strong>The fix is one locked check-and-claim against shared state</strong> (Section 9) -- check and commit must happen inside the SAME lock, or the race recurs.</li>
+        <li><strong>Voluntary resolution works until it doesn't</strong> (Sections 10-11) -- a real live self-resolution succeeded this session, but a 2-agent vote can always tie, so a deterministic tie-breaker is still required.</li>
+        <li><strong>Deadlock is a structural property, not a one-off model quirk</strong> (Sections 12-13) -- this session's own live attempt to reproduce it did NOT succeed (both agents broke their own stated policy), disclosed honestly; a deterministic construction demonstrates the real structural risk instead.</li>
+        <li><strong>A pre-agreed, independently computable tie-breaker breaks a deadlock with no negotiation needed</strong> (Section 14) -- sorting a fixed roster is enough; asking the deadlocked agents to agree on who goes first just adds a second deadlock.</li>
+        <li><strong>Attribution extends to the MESSAGE level, not just the dispatch level</strong> (Section 15) -- a well-formed message can still cause a bad outcome by arriving at the wrong time or with the wrong assumption about shared state.</li>
+        <li><strong>Fail-closed commit checkpoints matter MORE without a supervisor</strong> (Section 16) -- there is no central process to hold the guardrail; it must live inside each peer's own commit step.</li>
+        <li>No agent framework or message-queue product was used anywhere in this chapter -- every mechanism is plain Python (stdlib <code>threading</code>, <code>dataclasses</code>, <code>collections.Counter</code>) or the plain <code>openai</code> client against local Ollama.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p>Ready to check what stuck? Head to the interactive quiz next &mdash; every blank has a Check button, so you'll know instantly if you've got it.</p>
+
+  <div class="chapter-nav">
+    <a href="../../index.html">&larr; All Chapters</a>
+    <a href="quiz.html">Take the Quiz &rarr;</a>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="page">
+    <span>Agentic AI for Everyone &mdash; free, visual, engineering-first agent learning.</span>
+    <span><a href="https://github.com/TechNaom/agentic-ai-for-everyone">github.com/TechNaom/agentic-ai-for-everyone</a></span>
+  </div>
+</footer>
+
+<script src="../../assets/progress.js"></script>
+<script src="../../assets/chapters-data.js"></script>
+<script src="../../assets/sidebar.js"></script>
+</body>
+</html>

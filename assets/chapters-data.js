@@ -113,7 +113,8 @@ window.AAFE_MODULES = [
         id: "chapter-10",
         num: 10,
         title: "Multi-Agent Coordination and Communication",
-        description: "Message passing between agents, and the new failure modes (miscommunication, duplicated work, deadlock)."
+        description: "Peer-to-peer message passing between agents over a shared message bus, and the new failure modes: miscommunication, duplicated work, and deadlock.",
+        path: "chapters/chapter-10-multi-agent-coordination-and-communication/lesson.html"
       },
       {
         id: "chapter-11",
