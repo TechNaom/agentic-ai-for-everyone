@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# Local scratch work: drafts tested before being written into a lesson.
+scratchpad/
